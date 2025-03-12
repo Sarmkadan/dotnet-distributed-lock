@@ -7,7 +7,7 @@
     <RootNamespace>SarmKadan.DistributedLock</RootNamespace>
     <AssemblyName>SarmKadan.DistributedLock</AssemblyName>
     <PackageId>Zaiets.dotnet.distributed.lock</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
     <Description>Distributed locking library for .NET - Redis, SQLite, PostgreSQL backends with fencing tokens and auto-renewal</Description>
     <PackageTags>distributed-lock redis postgresql sqlite dotnet csharp</PackageTags>
