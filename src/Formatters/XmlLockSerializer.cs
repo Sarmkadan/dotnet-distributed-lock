@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -35,7 +36,7 @@ public class XmlLockSerializer
     /// </summary>
     public static string SerializeLock(Lock @lock)
     {
-        if (@lock == null)
+        if (@lock is null)
             return string.Empty;
 
         try
@@ -78,7 +79,7 @@ public class XmlLockSerializer
                 var lockDoc = new XmlDocument();
                 lockDoc.LoadXml(lockXml);
 
-                if (lockDoc.DocumentElement != null)
+                if (lockDoc.DocumentElement is not null)
                 {
                     var importedNode = xDoc.ImportNode(lockDoc.DocumentElement, true);
                     rootElement.AppendChild(importedNode);
@@ -146,7 +147,7 @@ public class XmlLockSerializer
                 var lockXml = lockElement.OuterXml;
                 var @lock = DeserializeLock(lockXml);
 
-                if (@lock != null)
+                if (@lock is not null)
                     locks.Add(@lock);
             }
 

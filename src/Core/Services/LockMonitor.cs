@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -11,7 +12,7 @@ namespace SarmKadan.DistributedLock.Services;
 /// <summary>
 /// Monitors locks and handles automatic renewal based on configuration.
 /// </summary>
-public class LockMonitor : IDisposable
+public sealed class LockMonitor : IDisposable
 {
     private readonly ILockService _lockService;
     private readonly ILogger<LockMonitor> _logger;
@@ -71,7 +72,7 @@ public class LockMonitor : IDisposable
     // Starts the monitoring loop
     public void StartMonitoring(TimeSpan? monitoringInterval = null)
     {
-        if (_cancellationTokenSource != null)
+        if (_cancellationTokenSource is not null)
         {
             _logger.LogWarning("Monitoring is already running");
             return;
@@ -87,14 +88,14 @@ public class LockMonitor : IDisposable
     // Stops the monitoring loop
     public async Task StopMonitoringAsync()
     {
-        if (_cancellationTokenSource == null)
+        if (_cancellationTokenSource is null)
         {
             _logger.LogWarning("Monitoring is not running");
             return;
         }
 
         _cancellationTokenSource.Cancel();
-        if (_monitoringTask != null)
+        if (_monitoringTask is not null)
         {
             await _monitoringTask;
         }

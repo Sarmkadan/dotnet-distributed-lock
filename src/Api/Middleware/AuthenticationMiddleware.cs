@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -10,7 +11,7 @@ namespace SarmKadan.DistributedLock.Api.Middleware;
 /// Supports simple API key authentication via headers.
 /// Can be extended to support JWT tokens, OAuth, or other schemes.
 /// </summary>
-public class AuthenticationMiddleware
+public sealed class AuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<AuthenticationMiddleware> _logger;
@@ -81,7 +82,7 @@ public class AuthenticationMiddleware
             return false;
 
         // In production environment, retrieve valid keys from secure store
-        var validKeys = Environment.GetEnvironmentVariable("VALID_API_KEYS")?.Split(';') ?? Array.Empty<string>();
+        var validKeys = Environment.GetEnvironmentVariable("VALID_API_KEYS")?.Split(';') ?? []<string>();
 
         if (validKeys.Length == 0)
         {

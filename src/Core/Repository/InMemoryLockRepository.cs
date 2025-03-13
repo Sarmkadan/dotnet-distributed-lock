@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -11,7 +12,7 @@ namespace SarmKadan.DistributedLock.Repository;
 /// In-memory implementation of ILockRepository for testing and development.
 /// Not suitable for production distributed locking.
 /// </summary>
-public class InMemoryLockRepository : ILockRepository
+public sealed class InMemoryLockRepository : ILockRepository
 {
     private readonly Dictionary<string, Lock> _locks = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();

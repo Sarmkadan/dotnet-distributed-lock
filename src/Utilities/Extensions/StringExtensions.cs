@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -54,7 +55,7 @@ public static class StringExtensions
     public static byte[] ToUtf8Bytes(this string? input)
     {
         return string.IsNullOrEmpty(input)
-            ? Array.Empty<byte>()
+            ? []<byte>()
             : System.Text.Encoding.UTF8.GetBytes(input);
     }
 
@@ -64,7 +65,7 @@ public static class StringExtensions
     public static byte[] ToAsciiBytes(this string? input)
     {
         return string.IsNullOrEmpty(input)
-            ? Array.Empty<byte>()
+            ? []<byte>()
             : System.Text.Encoding.ASCII.GetBytes(input);
     }
 
@@ -75,13 +76,13 @@ public static class StringExtensions
     public static byte[] FromHexString(this string? hexString)
     {
         if (string.IsNullOrEmpty(hexString) || hexString.Length % 2 != 0)
-            return Array.Empty<byte>();
+            return []<byte>();
 
         var bytes = new byte[hexString.Length / 2];
         for (int i = 0; i < hexString.Length; i += 2)
         {
             if (!byte.TryParse(hexString.Substring(i, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
-                return Array.Empty<byte>();
+                return []<byte>();
             bytes[i / 2] = b;
         }
 
