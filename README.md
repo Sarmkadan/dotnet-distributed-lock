@@ -1,3 +1,7 @@
+[![Build](https://github.com/sarmkadan/dotnet-distributed-lock/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/dotnet-distributed-lock/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
 # SarmKadan.DistributedLock
 
 A high-performance, production-ready distributed locking library for .NET with support for multiple backends including Redis, SQLite, and PostgreSQL. Features include fencing tokens to prevent zombie writes, automatic lock renewal, configurable acquisition strategies, comprehensive metrics, and built-in monitoring.
