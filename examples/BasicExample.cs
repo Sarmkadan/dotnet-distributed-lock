@@ -61,9 +61,9 @@ public class BasicExample
             Console.WriteLine("Attempting to acquire lock...");
             var @lock = await lockService.AcquireAsync(lockKey, ownerId);
 
-            Console.WriteLine($"✓ Lock acquired: {lock.Key}");
-            Console.WriteLine($"  Owner: {lock.OwnerId}");
-            Console.WriteLine($"  Expires at: {lock.ExpiresAt:O}");
+            Console.WriteLine($"✓ Lock acquired: {@lock.Key}");
+            Console.WriteLine($"  Owner: {@lock.OwnerId}");
+            Console.WriteLine($"  Expires at: {@lock.ExpiresAt:O}");
 
             // Simulate some work while holding the lock
             Console.WriteLine("  Performing critical work...");
