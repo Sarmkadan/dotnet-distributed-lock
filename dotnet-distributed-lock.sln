@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SarmKadan.DistributedLock", "SarmKadan.DistributedLock.csproj", "{315174D5-CE95-40FD-A52C-4142A8B21A41}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet-distributed-lock.Tests", "tests\dotnet-distributed-lock.Tests\dotnet-distributed-lock.Tests.csproj", "{A2F4E6D8-C0B2-4A82-9E72-1F3D5B7A9C0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{315174D5-CE95-40FD-A52C-4142A8B21A41}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{315174D5-CE95-40FD-A52C-4142A8B21A41}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{315174D5-CE95-40FD-A52C-4142A8B21A41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2F4E6D8-C0B2-4A82-9E72-1F3D5B7A9C0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2F4E6D8-C0B2-4A82-9E72-1F3D5B7A9C0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2F4E6D8-C0B2-4A82-9E72-1F3D5B7A9C0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2F4E6D8-C0B2-4A82-9E72-1F3D5B7A9C0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
