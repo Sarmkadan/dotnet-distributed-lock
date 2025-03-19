@@ -21,7 +21,7 @@ A high-performance, production-ready distributed locking library for .NET with s
 - [Benchmarks](#benchmarks)
 - [Troubleshooting](#troubleshooting)
 - [Testing](#testing)
-- [Ecosystem](#ecosystem)
+- [Related Projects](#related-projects)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -103,7 +103,7 @@ dotnet add package SarmKadan.DistributedLock
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="SarmKadan.DistributedLock" Version="1.2.0" />
+    <PackageReference Include="SarmKadan.DistributedLock" Version="1.0.0" />
 </ItemGroup>
 ```
 
@@ -1074,7 +1074,7 @@ The test suite covers unit tests for core services, lock acquisition logic, fenc
 LOCK_BACKEND=redis REDIS_URL=localhost:6379 dotnet test --filter Category=Integration
 ```
 
-## Ecosystem
+## Related Projects
 
 Part of a collection of .NET libraries and tools. See more at [github.com/sarmkadan](https://github.com/sarmkadan).
 

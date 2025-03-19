@@ -5,237 +5,252 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-01-15
+## [1.0.0] - 2025-09-20
 
 ### Added
 
-- **Webhook Integration**: Publish lock events to external HTTP endpoints for monitoring system integration
-  - New `WebhookPublisher` service for event delivery with retry support
-  - Configuration options: `WebhookEndpoint`, `WebhookTimeout`, `EnableWebhookRetry`, `MaxWebhookRetries`
-  - Supports event filtering and batching
-
-- **Cache Manager**: In-memory caching layer to reduce backend load
-  - Configurable TTL-based cache with LRU eviction
-  - Automatic cache invalidation on lock updates
+- **Caching Layer**: In-memory caching layer to reduce backend round-trips
+  - `LockCacheManager` with TTL-based expiry and LRU eviction
   - Configuration: `EnableCaching`, `CacheDurationSeconds`, `MaxCacheSize`
+  - Automatic cache invalidation on lock updates and releases
 
-- **Enhanced Metrics**: Extended metrics collection for better observability
-  - Lock contention indicators
-  - Renewal success rates
-  - Backend latency tracking
-  - Percentile-based latency metrics (p50, p95, p99)
+- **Webhook Integration**: Publish lock events to external HTTP endpoints
+  - `WebhookPublisher` with retry support and configurable timeout
+  - Configuration: `WebhookEndpoint`, `WebhookTimeout`, `EnableWebhookRetry`, `MaxWebhookRetries`
 
-- **Event Filtering**: Subscribe to specific event types or lock key patterns
-  - Pattern matching support for lock keys
-  - Event priority levels for critical operations
+- **Enhanced Metrics**: Extended metrics for production observability
+  - Lock contention tracking per key
+  - Renewal success rates and backend latency percentiles (p50, p95, p99)
+  - `ContentionMetrics` model for contention indicators
 
-### Changed
+- **API Controllers**: HTTP endpoints for lock management and health checks
+  - `DistributedLockController`, `HealthCheckController`, `MetricsController`
+  - Authentication, rate limiting, and request logging middleware
 
-- **Breaking Change**: `ILockRepository.CreateLockAsync()` now throws `LockAcquisitionException` instead of returning null
-  - Allows consistent error handling across backends
-  - Migration guide: Catch exception instead of checking for null
+- **Background Workers**: Worker services for operational concerns
+  - `LockRenewalWorker`: Background renewal processing
+  - `LockCleanupWorker`: Expired lock cleanup
+  - `HealthMonitoringWorker`: Periodic health checks
+  - `MetricsCollectionWorker`: Periodic metrics aggregation
 
-- **Performance**: Optimized Redis backend with pipeline support for batch operations
-  - Reduced round-trip time for multiple operations
-  - Better connection reuse with connection multiplexing
+- **Formatters and Exporters**: Lock state serialization
+  - `JsonLockSerializer`, `XmlLockSerializer`, `CsvLockExporter`
 
-- **Logging**: Improved structured logging with correlation IDs
-  - Trace lock operations across service boundaries
-  - JSON-formatted logs for better log aggregation
+- **DeadlockDetector**: Background detection of potential circular lock waits
 
 ### Fixed
 
-- Fixed race condition in SQLite backend during concurrent lock acquisition
-- Fixed PostgreSQL trigger cleanup timing issues with high-frequency operations
-- Fixed memory leak in `LockCacheManager` with long-lived applications
+- Fixed race condition in SQLite backend during concurrent lock acquisition under high load
+- Fixed memory growth in `LockCacheManager` when lock keys accumulate without eviction
+- Fixed PostgreSQL advisory lock cleanup on abnormal connection termination
 
-### Deprecated
+### Changed
 
-- `GetMetricsAsync()` in favor of `GetMetrics()` (synchronous access)
+- Marked `GetMetricsAsync()` deprecated; prefer synchronous `GetMetrics()`
+- Improved structured logging with correlation IDs across service boundaries
 
-## [1.1.0] - 2025-10-20
+## [0.8.0] - 2025-07-19
 
 ### Added
-
-- **Fencing Tokens**: Monotonic token generation and validation to prevent zombie writes
-  - `FencingTokenService` for token management
-  - Token validation before operations: `ValidateToken(resourceId, token)`
-  - Automatic token invalidation on lock expiration
-
-- **Lock Monitoring Service**: Automatic lock renewal for long-running operations
-  - `LockMonitor` for background renewal management
-  - Register locks for auto-renewal: `RegisterLock(key, owner, interval, duration)`
-  - Graceful startup/shutdown with cleanup
 
 - **Event System**: Pub/sub system for lock lifecycle events
-  - `LockEventBus` for event publishing
-  - `LockEventSubscriber` for event subscription
-  - Events: Acquired, Released, Renewed, Failed
+  - `LockEventBus` for internal event dispatch
+  - `LockEventPublisher` for raising events from the lock service
+  - `LockEventSubscriber` for consumer subscriptions
+  - Events: `LockAcquired`, `LockReleased`, `LockRenewed`, `LockFailed`
 
-- **Multiple Backend Support**: Support for Redis, PostgreSQL, and SQLite
-  - `RedisLockRepository`: High-performance Redis backend
-  - `PostgresLockRepository`: Strong consistency with PostgreSQL
-  - `SqliteLockRepository`: Lightweight file-based backend
+- **SQLite Backend**: Lightweight file-based lock storage
+  - `SqliteLockRepository` using `Microsoft.Data.Sqlite`
+  - Suitable for single-machine and embedded deployments
+  - Connection string options: file, shared-cache, and `:memory:` modes
 
-- **Configuration Options**: Comprehensive configuration support
-  - Backend selection
-  - Lock timing parameters (duration, timeout, renewal interval)
-  - Acquisition strategies (Blocking, NonBlocking, ExponentialBackoff, LinearBackoff)
-  - Feature toggles for auto-renewal, fencing tokens, metrics
+- **Multiple Acquisition Modes**: Configurable retry and backoff strategies
+  - `AcquisitionMode.Blocking`: spin-wait with configurable max retries
+  - `AcquisitionMode.NonBlocking`: single attempt, returns null on failure
+  - `AcquisitionMode.ExponentialBackoff`: doubling delay between attempts
+  - `AcquisitionMode.LinearBackoff`: fixed delay between attempts
+  - `RetryPolicyHelper` for retry orchestration
 
 ### Changed
 
-- Upgraded to .NET 10.0 (from .NET 9.0)
-- Improved error messages with more context
-- Enhanced API documentation with XML comments
+- `ServiceCollectionExtensions.AddDistributedLocking()` now registers all backend repositories, resolving the active one via `BackendType` configuration
+- Default `AcquisitionMode` changed from `NonBlocking` to `Blocking` to reduce accidental failure paths
 
 ### Fixed
 
-- Fixed timeout handling in PostgreSQL backend
+- Fixed `LockExpiredException` not being thrown when renewing an already-expired lock
+- Fixed missing `CancellationToken` propagation in `PostgresLockRepository`
 
-## [1.0.0] - 2025-08-01
+## [0.5.0] - 2025-05-24
 
 ### Added
 
-- **Core Lock Service**: Basic lock acquisition, renewal, and release operations
-  - `ILockService` interface with primary lock operations
-  - `AcquireAsync()` for blocking lock acquisition with retry logic
-  - `TryAcquireAsync()` for non-blocking attempts
-  - `ReleaseAsync()` for lock release
-  - `RenewAsync()` for lock duration extension
-  - `GetLockAsync()` and `IsLockedAsync()` for lock inspection
-  - `GetAllActiveLockAsync()` for listing all active locks
+- **Fencing Tokens**: Monotonic token generation to prevent zombie writes
+  - `FencingTokenService`: issue and validate tokens per resource
+  - `FencingToken` model with monotonically increasing sequence counter
+  - `InvalidFencingTokenException` thrown when a stale token is presented
+  - Configuration toggle: `UseFencingTokens = true`
 
-- **In-Memory Backend**: Simple in-memory lock storage
-  - `InMemoryLockRepository` implementation
-  - Uses `ReaderWriterLockSlim` for thread-safe access
-  - Suitable for development and testing
+- **Lock Monitoring Service**: Automatic lock renewal for long-running operations
+  - `LockMonitor` background service for renewal management
+  - `RegisterLock(key, owner, renewalInterval, duration)` and `UnregisterLock()`
+  - Configurable renewal interval via `DefaultRenewalInterval`
 
-- **Thread Safety**: Concurrent-safe implementation
-  - All operations are atomic
-  - Proper lock semantics with ownership validation
-  - Support for multiple concurrent owners
+- **PostgreSQL Backend**: Strong-consistency lock storage
+  - `PostgresLockRepository` using `Npgsql`
+  - Schema auto-creation on first use
+  - Row-level locking with `SELECT ... FOR UPDATE SKIP LOCKED`
 
-- **Async/Await Support**: Fully asynchronous API
-  - CancellationToken support on all operations
-  - Compatible with async/await patterns
+- **Extension Utilities**: Helper extensions for common patterns
+  - `StringExtensions`, `DateTimeExtensions`, `CollectionExtensions`, `ObjectExtensions`
+  - `ValidationHelper` for guard clauses
 
-- **Structured Logging**: Microsoft.Extensions.Logging integration
-  - Debug, Info, Warning, and Error level logs
-  - Log messages for all lock lifecycle events
+### Changed
 
-- **Exception Handling**: Custom exception types
-  - `LockAcquisitionException`: Lock acquisition failed
-  - `LockNotOwnedException`: Operation not permitted (ownership mismatch)
-  - `LockExpiredException`: Operation on expired lock
-  - `DistributedLockException`: Base exception type
+- `LockService.AcquireAsync()` now validates fencing token on each write when `UseFencingTokens` is enabled
+- `DistributedLockOptions` extended with fencing token and renewal configuration
 
-- **Dependency Injection**: Integration with Microsoft.Extensions.DependencyInjection
-  - `AddDistributedLocking()` extension method
-  - Configuration via `DistributedLockOptions`
-  - Easy service registration
+### Fixed
 
-- **Metrics Collection**: Performance tracking
-  - `LockMetrics` with acquisition statistics
-  - Success rate calculation
-  - Average acquisition time
-  - Active lock count
+- Fixed `InMemoryLockRepository` not respecting `CancellationToken` during blocking acquisition
+- Fixed timeout calculation rounding error causing locks to expire one tick early
 
-- **API Endpoints** (in Web API controller)
-  - GET `/api/locks` - List active locks
-  - POST `/api/locks/{key}/acquire` - Acquire lock
-  - POST `/api/locks/{key}/release` - Release lock
-  - GET `/api/locks/{key}` - Get lock details
-  - GET `/api/health` - Health check
-  - GET `/api/metrics` - Performance metrics
+## [0.2.0] - 2025-03-15
 
-- **Comprehensive Documentation**
-  - README with quick start guide
-  - API reference documentation
-  - Configuration examples
-  - Troubleshooting guide
+### Added
 
-### Security
+- **Redis Backend**: High-throughput distributed lock storage
+  - `RedisLockRepository` using `StackExchange.Redis`
+  - Atomic acquisition via Lua script (`SET NX PX`)
+  - Automatic expiry managed by Redis TTL
 
-- Ownership-based access control
-- Lock validation before operations
-- Exception-based error reporting
+- **Dependency Injection Integration**: Full DI support
+  - `ServiceCollectionExtensions.AddDistributedLocking()` extension method
+  - `DistributedLockOptions` configuration via `IOptions<T>`
+  - Backend registration by `BackendType` enum
+
+- **Comprehensive Exceptions**: Typed exception hierarchy
+  - `DistributedLockException` — base type
+  - `LockAcquisitionException` — acquisition failure
+  - `LockNotOwnedException` — ownership mismatch on release or renew
+  - `LockExpiredException` — operation on an expired lock
+
+- **Metrics Collection**: Performance counters on the lock service
+  - `LockMetrics` model: acquisition attempts, successes, failures, active count
+  - `AcquisitionSuccessRate` and `AverageAcquisitionTimeMs` calculations
+
+- **Structured Logging**: `Microsoft.Extensions.Logging` integration
+  - Debug/Info/Warning/Error log points at each lock lifecycle transition
+
+### Changed
+
+- `ILockRepository` interface updated with explicit `CreateLockAsync`, `DeleteLockAsync`, `GetLockAsync`, `RenewLockAsync`
+- `BackendType` enum added: `InMemory`, `Redis`, `PostgreSQL`, `SQLite`
+
+### Fixed
+
+- Fixed `InMemoryLockRepository` allowing acquisition of locks that had logically expired but not yet been cleaned up
+
+## [0.1.0] - 2025-02-01
+
+### Added
+
+- **Core Lock Service**: Initial implementation of `ILockService`
+  - `AcquireAsync()`: blocking acquisition with retry loop
+  - `TryAcquireAsync()`: non-blocking single attempt
+  - `ReleaseAsync()`: lock release with ownership validation
+  - `RenewAsync()`: extend lock expiry
+  - `GetLockAsync()` and `IsLockedAsync()` for inspection
+  - `GetAllActiveLockAsync()` for listing all held locks
+
+- **In-Memory Backend**: Thread-safe in-memory lock repository
+  - `InMemoryLockRepository` using `ReaderWriterLockSlim`
+  - Suitable for development, testing, and single-process deployments
+
+- **Core Models**
+  - `Lock`: lock state with key, owner, expiry, and status
+  - `LockAcquisition`: result wrapper for acquisition operations
+  - `LockConfiguration`: per-lock configuration overrides
+  - `LockRequestContext`: contextual metadata for lock operations
+
+- **Constants and Enumerations**
+  - `LockConstants`: default durations and limits
+  - `LockStatus`: `Active`, `Expired`, `Released`
+  - `AcquisitionMode`: `Blocking`, `NonBlocking`
+
+- **Solution Structure**: initial repository layout
+  - `src/Core/` for interfaces, models, services, and exceptions
+  - `tests/` for unit tests using xUnit, Moq, and FluentAssertions
+  - `.editorconfig`, `.gitignore`, `Makefile`, `docker-compose.yml`
 
 ---
 
 ## Upgrade Guide
 
-### From 1.1.0 to 1.2.0
+### From 0.8.0 to 1.0.0
 
-#### Breaking Changes
+Enable caching for read-heavy workloads:
 
-If you're calling `ILockRepository.CreateLockAsync()` directly:
-
-```csharp
-// Old code (1.1.0)
-var newLock = await repository.CreateLockAsync(...);
-if (newLock == null)
-{
-    // Handle failure
-}
-
-// New code (1.2.0)
-try
-{
-    var newLock = await repository.CreateLockAsync(...);
-}
-catch (LockAcquisitionException)
-{
-    // Handle failure
-}
-```
-
-#### Recommended Updates
-
-1. Enable webhook integration for monitoring:
-```csharp
-options.WebhookEndpoint = "https://monitoring.example.com/locks";
-```
-
-2. Enable caching to improve performance:
 ```csharp
 options.EnableCaching = true;
 options.CacheDurationSeconds = 30;
 ```
 
-3. Use new metrics methods:
+Add webhook notifications for monitoring:
+
 ```csharp
-var metrics = lockService.GetMetrics(); // Synchronous
+options.WebhookEndpoint = "https://monitoring.example.com/locks";
+options.EnableWebhookRetry = true;
 ```
 
-### From 1.0.0 to 1.1.0
+Replace any calls to `GetMetricsAsync()` with synchronous `GetMetrics()`.
 
-1. Update service registration to include new services:
+### From 0.5.0 to 0.8.0
+
+Update service registration to include the desired `AcquisitionMode`:
+
 ```csharp
 services.AddDistributedLocking(options =>
 {
     options.BackendType = BackendType.Redis;
-    options.ConnectionString = "localhost:6379";
-    
-    // New in 1.1.0
-    options.UseFencingTokens = true;
-    options.EnableAutoRenewal = true;
+    options.DefaultAcquisitionMode = AcquisitionMode.ExponentialBackoff;
+    options.DefaultMaxRetries = 5;
 });
 ```
 
-2. If using auto-renewal:
+Subscribe to lock lifecycle events:
+
+```csharp
+var subscriber = serviceProvider.GetRequiredService<LockEventSubscriber>();
+subscriber.SubscribeToAcquiredEvent(e => Console.WriteLine($"Acquired: {e.LockKey}"));
+```
+
+### From 0.2.0 to 0.5.0
+
+Enable fencing tokens if your workload requires zombie-write protection:
+
+```csharp
+options.UseFencingTokens = true;
+```
+
+Register `LockMonitor` for long-running operations that need auto-renewal:
+
 ```csharp
 var monitor = serviceProvider.GetRequiredService<LockMonitor>();
 monitor.RegisterLock(lockKey, ownerId, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
 monitor.StartMonitoring(TimeSpan.FromSeconds(1));
 ```
 
-3. Subscribe to events:
+### From 0.1.0 to 0.2.0
+
+Add the backend package and update service registration:
+
 ```csharp
-var subscriber = serviceProvider.GetRequiredService<LockEventSubscriber>();
-subscriber.SubscribeToAcquiredEvent(@event =>
+// Redis
+services.AddDistributedLocking(options =>
 {
-    Console.WriteLine($"Lock acquired: {event.LockKey}");
+    options.BackendType = BackendType.Redis;
+    options.ConnectionString = "localhost:6379";
 });
 ```
 
@@ -243,61 +258,23 @@ subscriber.SubscribeToAcquiredEvent(@event =>
 
 ## Known Issues
 
-### v1.2.0
+### v1.0.0
 
-- Webhook delivery may retry indefinitely if endpoint is unreachable - fixed in development branch
-- Cache invalidation latency up to TTL duration - by design
+- Webhook delivery retries indefinitely if the endpoint is unreachable and `EnableWebhookRetry = true` — set `MaxWebhookRetries` to bound retries
+- Cache invalidation is eventually consistent up to `CacheDurationSeconds`
 
-### v1.1.0
+### v0.8.0
 
-- PostgreSQL backend does not support connection pooling configuration - fixed in 1.2.0
-- SQLite shared cache mode has concurrency limitations - documented in troubleshooting
-
----
-
-## Migration from Other Libraries
-
-### From Medallion
-
-```csharp
-// Old: Medallion
-using (var lockHandle = await client.AcquireLockAsync(...))
-{
-    // Work
-}
-
-// New: SarmKadan.DistributedLock
-using (await lockService.AcquireAsync(...))
-{
-    // Work
-}
-```
-
-### From DistributedLock
-
-```csharp
-// Old: DistributedLock
-await @lock.DeferAsync(...);
-
-// New: SarmKadan.DistributedLock
-monitor.RegisterLock(...); // Auto-renewal instead
-```
+- SQLite shared-cache mode has write-concurrency limitations — use file mode with WAL for higher concurrency
 
 ---
 
 ## Roadmap
 
-### Upcoming Features (v1.3.0)
+### Upcoming (v1.1.0)
 
 - [ ] MongoDB backend support
 - [ ] DynamoDB backend support
-- [ ] Lock priority levels
-- [ ] Deadlock detection and resolution
-- [ ] Metrics export (Prometheus, StatsD)
-
-### Future Considerations
-
-- Read-write locks (shared vs. exclusive)
-- Semaphore support (multiple holders)
-- Distributed transactions support
-- Integration with distributed tracing (OpenTelemetry)
+- [ ] Semaphore support (multiple concurrent holders)
+- [ ] OpenTelemetry tracing integration
+- [ ] Prometheus metrics export
