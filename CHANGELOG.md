@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-12
+
+### Added
+
+- **Distributed Semaphore**: Fair concurrent access control with configurable holder limits
+  - `IDistributedSemaphore` interface with `AcquireAsync` and `ReleaseAsync`
+  - Configurable `DefaultMaxConcurrent` per resource
+  - Backend-agnostic implementation across Redis, PostgreSQL, SQLite, and InMemory
+
+- **Fair Queuing**: FIFO-ordered lock acquisition to prevent starvation under contention
+  - `UseFairQueuing` option (enabled by default)
+  - `QueueTimeout` for bounding maximum wait time
+  - Per-backend queue implementations with atomic dequeue
+
+- **Priority Escalation**: Priority-based queue ordering with automatic escalation
+  - `LockPriority` enum (Low, Normal, High, Critical)
+  - `EnablePriorityEscalation` with configurable `EscalationThreshold`
+  - `LockRequestContext.Priority` for per-request priority assignment
+
+- **Docker Support**: Production-ready container configuration
+  - Multi-stage Dockerfile with Alpine base and non-root user
+  - `docker-compose.yml` with app, PostgreSQL, and Redis services
+  - Built-in `HEALTHCHECK` against `/health` endpoint
+
+- **Health Check Endpoints**: Liveness and readiness probes
+  - `/health` - basic liveness check
+  - `/health/ready` - readiness with backend connectivity verification
+
+- **Integration Test Suite**: Comprehensive test coverage with xUnit
+  - Unit tests for core services with NSubstitute mocks
+  - Edge case tests for concurrency, null inputs, and empty collections
+  - Configuration validation tests
+
+- **Migration Guide**: Step-by-step upgrade path from v1.x to v2.0
+
+### Changed
+
+- Upgraded to .NET 10.0
+- Default acquisition mode changed to fair queuing (FIFO)
+- `LockRequestContext` extended with `Priority` property
+- `GetMetrics()` extended with semaphore and queue statistics
+- Modern C# features adopted throughout (records, primary constructors, required members)
+
+### Fixed
+
+- Race condition in fair queue dequeue under high concurrency
+- Memory leak in `LockCacheManager` when cache eviction races with renewal
+- PostgreSQL backend not releasing advisory locks on connection pool timeout
+- SQLite WAL checkpoint not triggered during lock cleanup worker cycle
+
 ## [1.0.0] - 2025-09-20
 
 ### Added
