@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -42,7 +43,7 @@ public abstract class LockEventSubscriber
 /// <summary>
 /// Example subscriber that logs all lock events.
 /// </summary>
-public class LoggingLockEventSubscriber : LockEventSubscriber
+public sealed class LoggingLockEventSubscriber : LockEventSubscriber
 {
     public LoggingLockEventSubscriber(ILogger<LoggingLockEventSubscriber> logger) : base(logger)
     {
@@ -138,7 +139,7 @@ public class LoggingLockEventSubscriber : LockEventSubscriber
 /// <summary>
 /// Subscriber that tracks metrics based on lock events.
 /// </summary>
-public class MetricsTrackingEventSubscriber : LockEventSubscriber
+public sealed class MetricsTrackingEventSubscriber : LockEventSubscriber
 {
     private long _acquisitions;
     private long _releases;
@@ -233,13 +234,13 @@ public static class LockEventSubscriberExtensions
         var publisher = serviceProvider.GetRequiredService<ILockEventPublisher>();
 
         var loggingSubscriber = serviceProvider.GetService<LoggingLockEventSubscriber>();
-        if (loggingSubscriber != null)
+        if (loggingSubscriber is not null)
         {
             await loggingSubscriber.RegisterAsync(publisher);
         }
 
         var metricsSubscriber = serviceProvider.GetService<MetricsTrackingEventSubscriber>();
-        if (metricsSubscriber != null)
+        if (metricsSubscriber is not null)
         {
             await metricsSubscriber.RegisterAsync(publisher);
         }

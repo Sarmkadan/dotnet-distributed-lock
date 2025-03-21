@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -93,7 +94,7 @@ public class MetricsExample
         foreach (var owner in new[] { "worker-2", "worker-3", "worker-4" })
         {
             var acquired = await lockService.TryAcquireAsync(contestedKey, owner);
-            if (acquired == null)
+            if (acquired is null)
             {
                 Console.WriteLine($"  ✗ {owner} could not acquire (already held)");
             }

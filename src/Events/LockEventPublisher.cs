@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -22,7 +23,7 @@ public interface ILockEventPublisher
 /// Suitable for single-instance deployments. For distributed systems,
 /// consider using a message broker (RabbitMQ, Kafka, etc).
 /// </summary>
-public class InMemoryLockEventPublisher : ILockEventPublisher
+public sealed class InMemoryLockEventPublisher : ILockEventPublisher
 {
     private readonly Dictionary<Type, List<Delegate>> _subscribers = new();
     private readonly ILogger<InMemoryLockEventPublisher> _logger;
@@ -87,7 +88,7 @@ public class InMemoryLockEventPublisher : ILockEventPublisher
 
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : LockEvent
     {
-        if (handler == null)
+        if (handler is null)
             throw new ArgumentNullException(nameof(handler));
 
         var eventType = typeof(TEvent);
@@ -139,7 +140,7 @@ public class InMemoryLockEventPublisher : ILockEventPublisher
 /// <summary>
 /// No-op implementation for when events are disabled or in testing.
 /// </summary>
-public class NoOpLockEventPublisher : ILockEventPublisher
+public sealed class NoOpLockEventPublisher : ILockEventPublisher
 {
     public Task PublishAsync<TEvent>(TEvent @event) where TEvent : LockEvent
         => Task.CompletedTask;
