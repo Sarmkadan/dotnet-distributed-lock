@@ -75,9 +75,9 @@ public class EventHandlingExample
         const string lockKey1 = "resource-1";
         const string owner1 = "worker-1";
 
-        var @lock = await lockService.AcquireAsync(lockKey1, owner1);
-        await Task.Delay(1000);
-        await lockService.ReleaseAsync(lockKey1, owner1);
+        var @lock = await lockService.AcquireAsync(lockKey1, owner1).ConfigureAwait(false);
+        await Task.Delay(1000).ConfigureAwait(false);
+        await lockService.ReleaseAsync(lockKey1, owner1).ConfigureAwait(false);
 
         Console.WriteLine("=====================================\n");
 
@@ -88,16 +88,16 @@ public class EventHandlingExample
         var owner2a = "worker-2a";
         var owner2b = "worker-2b";
 
-        await lockService.AcquireAsync(lockKey2, owner2a);
+        await lockService.AcquireAsync(lockKey2, owner2a).ConfigureAwait(false);
 
         // Try to acquire same lock with different owner (non-blocking)
-        var acquired = await lockService.TryAcquireAsync(lockKey2, owner2b);
+        var acquired = await lockService.TryAcquireAsync(lockKey2, owner2b).ConfigureAwait(false);
         if (acquired is null)
         {
             Console.WriteLine("[INFO] Second owner could not acquire lock (as expected)\n");
         }
 
-        await lockService.ReleaseAsync(lockKey2, owner2a);
+        await lockService.ReleaseAsync(lockKey2, owner2a).ConfigureAwait(false);
 
         Console.WriteLine("=====================================\n");
 
@@ -109,9 +109,9 @@ public class EventHandlingExample
             var key = $"rapid-lock-{i}";
             var owner = $"process-{i}";
 
-            var l = await lockService.AcquireAsync(key, owner);
-            await Task.Delay(200);
-            await lockService.ReleaseAsync(key, owner);
+            var l = await lockService.AcquireAsync(key, owner).ConfigureAwait(false);
+            await Task.Delay(200).ConfigureAwait(false);
+            await lockService.ReleaseAsync(key, owner).ConfigureAwait(false);
         }
 
         Console.WriteLine("=====================================\n");

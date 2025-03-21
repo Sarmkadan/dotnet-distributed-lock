@@ -64,7 +64,7 @@ public class LockServiceTests
 
         // Act
         var (success, @lock, errorMessage) =
-            await _service.TryAcquireAsync("resource:checkout", "worker-1", TimeSpan.FromSeconds(30));
+            await _service.TryAcquireAsync("resource:checkout", "worker-1", TimeSpan.FromSeconds(30)).ConfigureAwait(false);
 
         // Assert
         success.Should().BeTrue();
@@ -85,7 +85,7 @@ public class LockServiceTests
 
         // Act
         var (success, @lock, errorMessage) =
-            await _service.TryAcquireAsync("resource:checkout", "worker-2");
+            await _service.TryAcquireAsync("resource:checkout", "worker-2").ConfigureAwait(false);
 
         // Assert
         success.Should().BeFalse();
@@ -103,7 +103,7 @@ public class LockServiceTests
 
         // Act
         var (success, @lock, errorMessage) =
-            await _service.TryAcquireAsync("resource:checkout", "worker-1");
+            await _service.TryAcquireAsync("resource:checkout", "worker-1").ConfigureAwait(false);
 
         // Assert
         success.Should().BeFalse();
@@ -124,7 +124,7 @@ public class LockServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var renewed = await _service.RenewAsync("resource:orders", "worker-1");
+        var renewed = await _service.RenewAsync("resource:orders", "worker-1").ConfigureAwait(false);
 
         // Assert
         renewed.Should().BeTrue();
@@ -139,7 +139,7 @@ public class LockServiceTests
             .ReturnsAsync(false);
 
         // Act
-        var renewed = await _service.RenewAsync("resource:orders", "worker-99");
+        var renewed = await _service.RenewAsync("resource:orders", "worker-99").ConfigureAwait(false);
 
         // Assert
         renewed.Should().BeFalse();
@@ -154,7 +154,7 @@ public class LockServiceTests
             .ThrowsAsync(new Exception("network timeout"));
 
         // Act
-        var renewed = await _service.RenewAsync("resource:orders", "worker-1");
+        var renewed = await _service.RenewAsync("resource:orders", "worker-1").ConfigureAwait(false);
 
         // Assert
         renewed.Should().BeFalse();
@@ -173,7 +173,7 @@ public class LockServiceTests
             .ReturnsAsync((Lock?)null);
 
         // Act
-        var released = await _service.ReleaseAsync("resource:missing", "worker-1");
+        var released = await _service.ReleaseAsync("resource:missing", "worker-1").ConfigureAwait(false);
 
         // Assert
         released.Should().BeFalse();
@@ -198,7 +198,7 @@ public class LockServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var released = await _service.ReleaseAsync("resource:payments", "worker-1");
+        var released = await _service.ReleaseAsync("resource:payments", "worker-1").ConfigureAwait(false);
 
         // Assert
         released.Should().BeTrue();
@@ -220,7 +220,7 @@ public class LockServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var isLocked = await _service.IsLockedAsync("resource:active");
+        var isLocked = await _service.IsLockedAsync("resource:active").ConfigureAwait(false);
 
         // Assert
         isLocked.Should().BeTrue();
@@ -235,7 +235,7 @@ public class LockServiceTests
             .ThrowsAsync(new Exception("connection refused"));
 
         // Act
-        var isLocked = await _service.IsLockedAsync("resource:flaky");
+        var isLocked = await _service.IsLockedAsync("resource:flaky").ConfigureAwait(false);
 
         // Assert — service should swallow the exception and default to false
         isLocked.Should().BeFalse();
@@ -259,7 +259,7 @@ public class LockServiceTests
             .ReturnsAsync(locks);
 
         // Act
-        var result = await _service.GetAllActiveLockAsync();
+        var result = await _service.GetAllActiveLockAsync().ConfigureAwait(false);
 
         // Assert
         result.Should().HaveCount(2);
@@ -274,7 +274,7 @@ public class LockServiceTests
             .ThrowsAsync(new Exception("storage error"));
 
         // Act
-        var result = await _service.GetAllActiveLockAsync();
+        var result = await _service.GetAllActiveLockAsync().ConfigureAwait(false);
 
         // Assert
         result.Should().BeEmpty();
@@ -292,7 +292,7 @@ public class LockServiceTests
             .Setup(r => r.AcquireAsync(It.IsAny<Lock>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        await _service.TryAcquireAsync("resource:metrics-test", "owner-1", TimeSpan.FromSeconds(10));
+        await _service.TryAcquireAsync("resource:metrics-test", "owner-1", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
 
         // Act
         var metrics = _service.GetMetrics();
@@ -318,7 +318,7 @@ public class InMemoryLockRepositoryTests
         var @lock = new Lock("resource:new", "owner-1", TimeSpan.FromSeconds(30));
 
         // Act
-        var acquired = await _repository.AcquireAsync(@lock);
+        var acquired = await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Assert
         acquired.Should().BeTrue();
@@ -329,11 +329,11 @@ public class InMemoryLockRepositoryTests
     {
         // Arrange — first acquisition succeeds
         var first = new Lock("resource:held", "owner-1", TimeSpan.FromSeconds(30));
-        await _repository.AcquireAsync(first);
+        await _repository.AcquireAsync(first).ConfigureAwait(false);
 
         // Act — second attempt by different owner
         var second = new Lock("resource:held", "owner-2", TimeSpan.FromSeconds(30));
-        var acquired = await _repository.AcquireAsync(second);
+        var acquired = await _repository.AcquireAsync(second).ConfigureAwait(false);
 
         // Assert
         acquired.Should().BeFalse();
@@ -347,11 +347,11 @@ public class InMemoryLockRepositoryTests
         {
             ExpiresAt = DateTime.UtcNow.AddSeconds(-1)
         };
-        await _repository.AcquireAsync(expired);
+        await _repository.AcquireAsync(expired).ConfigureAwait(false);
 
         // Act — new owner acquires the expired slot
         var fresh = new Lock("resource:expired", "owner-2", TimeSpan.FromSeconds(30));
-        var acquired = await _repository.AcquireAsync(fresh);
+        var acquired = await _repository.AcquireAsync(fresh).ConfigureAwait(false);
 
         // Assert
         acquired.Should().BeTrue();
@@ -365,7 +365,7 @@ public class InMemoryLockRepositoryTests
     public async Task GetByKeyAsync_WhenKeyDoesNotExist_ReturnsNull()
     {
         // Act
-        var result = await _repository.GetByKeyAsync("resource:ghost");
+        var result = await _repository.GetByKeyAsync("resource:ghost").ConfigureAwait(false);
 
         // Assert
         result.Should().BeNull();
@@ -376,10 +376,10 @@ public class InMemoryLockRepositoryTests
     {
         // Arrange
         var @lock = new Lock("resource:exists", "owner-1", TimeSpan.FromSeconds(30));
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act
-        var retrieved = await _repository.GetByKeyAsync("resource:exists");
+        var retrieved = await _repository.GetByKeyAsync("resource:exists").ConfigureAwait(false);
 
         // Assert
         retrieved.Should().NotBeNull();
@@ -395,14 +395,14 @@ public class InMemoryLockRepositoryTests
     {
         // Arrange
         var @lock = new Lock("resource:release", "owner-1", TimeSpan.FromSeconds(30));
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act
-        var released = await _repository.ReleaseAsync("resource:release", "owner-1");
+        var released = await _repository.ReleaseAsync("resource:release", "owner-1").ConfigureAwait(false);
 
         // Assert
         released.Should().BeTrue();
-        var check = await _repository.GetByKeyAsync("resource:release");
+        var check = await _repository.GetByKeyAsync("resource:release").ConfigureAwait(false);
         check.Should().BeNull();
     }
 
@@ -411,10 +411,10 @@ public class InMemoryLockRepositoryTests
     {
         // Arrange
         var @lock = new Lock("resource:owned", "owner-1", TimeSpan.FromSeconds(30));
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act — wrong owner tries to release
-        var released = await _repository.ReleaseAsync("resource:owned", "impostor");
+        var released = await _repository.ReleaseAsync("resource:owned", "impostor").ConfigureAwait(false);
 
         // Assert
         released.Should().BeFalse();
@@ -432,10 +432,10 @@ public class InMemoryLockRepositoryTests
         {
             Status = LockStatus.Held
         };
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act
-        var renewed = await _repository.RenewAsync("resource:renew", "owner-1", TimeSpan.FromSeconds(60));
+        var renewed = await _repository.RenewAsync("resource:renew", "owner-1", TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
         // Assert
         renewed.Should().BeTrue();
@@ -449,10 +449,10 @@ public class InMemoryLockRepositoryTests
         {
             Status = LockStatus.Held
         };
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act
-        var renewed = await _repository.RenewAsync("resource:no-renew", "owner-2", TimeSpan.FromSeconds(60));
+        var renewed = await _repository.RenewAsync("resource:no-renew", "owner-2", TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
         // Assert
         renewed.Should().BeFalse();
@@ -467,10 +467,10 @@ public class InMemoryLockRepositoryTests
     {
         // Arrange
         var @lock = new Lock("resource:active", "owner-1", TimeSpan.FromSeconds(30));
-        await _repository.AcquireAsync(@lock);
+        await _repository.AcquireAsync(@lock).ConfigureAwait(false);
 
         // Act
-        var exists = await _repository.ExistsAsync("resource:active");
+        var exists = await _repository.ExistsAsync("resource:active").ConfigureAwait(false);
 
         // Assert
         exists.Should().BeTrue();
@@ -485,15 +485,15 @@ public class InMemoryLockRepositoryTests
         {
             ExpiresAt = DateTime.UtcNow.AddSeconds(-1)
         };
-        await _repository.AcquireAsync(valid);
-        await _repository.AcquireAsync(expired);
+        await _repository.AcquireAsync(valid).ConfigureAwait(false);
+        await _repository.AcquireAsync(expired).ConfigureAwait(false);
 
         // Act
-        var deleted = await _repository.DeleteExpiredLockAsync();
+        var deleted = await _repository.DeleteExpiredLockAsync().ConfigureAwait(false);
 
         // Assert
         deleted.Should().Be(1);
-        (await _repository.ExistsAsync("resource:valid")).Should().BeTrue();
+        (await _repository.ExistsAsync("resource:valid")).Should().BeTrue().ConfigureAwait(false);
     }
 
     // -------------------------------------------------------------------------
@@ -504,18 +504,18 @@ public class InMemoryLockRepositoryTests
     public async Task GetAllActiveLockAsync_ReturnsOnlyNonExpiredLocks()
     {
         // Arrange
-        await _repository.ClearAllAsync();
+        await _repository.ClearAllAsync().ConfigureAwait(false);
 
         var active = new Lock("res:a", "owner-1", TimeSpan.FromSeconds(30));
         var stale = new Lock("res:b", "owner-2", TimeSpan.FromSeconds(30))
         {
             ExpiresAt = DateTime.UtcNow.AddSeconds(-5)
         };
-        await _repository.AcquireAsync(active);
-        await _repository.AcquireAsync(stale);
+        await _repository.AcquireAsync(active).ConfigureAwait(false);
+        await _repository.AcquireAsync(stale).ConfigureAwait(false);
 
         // Act
-        var result = (await _repository.GetAllActiveLockAsync()).ToList();
+        var result = (await _repository.GetAllActiveLockAsync()).ToList().ConfigureAwait(false);
 
         // Assert
         result.Should().HaveCount(1);

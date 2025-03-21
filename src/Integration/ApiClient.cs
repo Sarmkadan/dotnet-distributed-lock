@@ -47,10 +47,10 @@ public class HttpLockApiClient : ILockApiClient
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("/api/distributed-lock/acquire", content, cancellationToken);
+            var response = await _httpClient.PostAsync("/api/distributed-lock/acquire", content, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<LockResponse>(responseJson, _jsonOptions);
         }
         catch (HttpRequestException ex)
@@ -100,7 +100,7 @@ public class HttpLockApiClient : ILockApiClient
 
             response.EnsureSuccessStatusCode();
 
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<RenewLockResponse>(responseJson, _jsonOptions);
         }
         catch (HttpRequestException ex)
@@ -124,7 +124,7 @@ public class HttpLockApiClient : ILockApiClient
 
             response.EnsureSuccessStatusCode();
 
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<LockStatusResponse>(responseJson, _jsonOptions);
         }
         catch (HttpRequestException ex)

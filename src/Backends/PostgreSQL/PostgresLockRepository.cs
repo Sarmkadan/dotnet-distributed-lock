@@ -36,12 +36,12 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         if (_initialized) return;
 
-        await _initSemaphore.WaitAsync();
+        await _initSemaphore.WaitAsync().ConfigureAwait(false);
         try
         {
             if (!_initialized)
             {
-                await InitializeSchemaAsync();
+                await InitializeSchemaAsync().ConfigureAwait(false);
                 _initialized = true;
             }
         }
@@ -55,7 +55,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
             await using (var command = connection.CreateCommand())
             {
                 command.CommandText = @"
@@ -77,7 +77,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                     CREATE INDEX IF NOT EXISTS idx_acquired_at ON distributed_locks(acquired_at);
                 ";
 
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
         }
 
@@ -88,11 +88,11 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = @"
@@ -110,7 +110,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                     command.Parameters.AddWithValue("@duration", (int)@lock.Duration.TotalSeconds);
                     command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
 
-                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    var result = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                     @lock.Status = Enums.LockStatus.Acquired;
                     return result > 0;
                 }
@@ -127,11 +127,11 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT lock_data FROM distributed_locks WHERE lock_key = @key";
@@ -162,7 +162,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAsync(key, cancellationToken);
+            var @lock = await GetByKeyAsync(key, cancellationToken).ConfigureAwait(false);
             if (@lock is not null && @lock.OwnerId == ownerId && !@lock.IsExpired)
                 return @lock;
 
@@ -179,11 +179,11 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = @"
@@ -200,7 +200,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                     command.Parameters.AddWithValue("@renewal_count", @lock.RenewalCount);
                     command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
 
-                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    var result = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                     return result > 0;
                 }
             }
@@ -216,12 +216,12 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken);
+            var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken).ConfigureAwait(false);
             if (@lock is null)
                 return false;
 
             @lock.Renew(newDuration);
-            return await UpdateAsync(@lock, cancellationToken);
+            return await UpdateAsync(@lock, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -234,18 +234,18 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND owner_id = @owner";
                     command.Parameters.AddWithValue("@key", key);
                     command.Parameters.AddWithValue("@owner", ownerId);
 
-                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    var result = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                     return result > 0;
                 }
             }
@@ -259,7 +259,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
 
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
-        var @lock = await GetByKeyAsync(key, cancellationToken);
+        var @lock = await GetByKeyAsync(key, cancellationToken).ConfigureAwait(false);
         return @lock is not null && !@lock.IsExpired;
     }
 
@@ -267,12 +267,12 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
             var locks = new List<Lock>();
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at > now()";
@@ -302,7 +302,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var allLocks = await GetAllActiveLockAsync(cancellationToken);
+            var allLocks = await GetAllActiveLockAsync(cancellationToken).ConfigureAwait(false);
             return allLocks.Where(l => l.OwnerId == ownerId);
         }
         catch (Exception ex)
@@ -316,15 +316,15 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "DELETE FROM distributed_locks WHERE expires_at <= now()";
-                    return await command.ExecuteNonQueryAsync(cancellationToken);
+                    return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -339,15 +339,15 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            await EnsureInitializedAsync();
+            await EnsureInitializedAsync().ConfigureAwait(false);
 
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
-                await connection.OpenAsync(cancellationToken);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "DELETE FROM distributed_locks";
-                    return await command.ExecuteNonQueryAsync(cancellationToken);
+                    return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
         }

@@ -75,7 +75,7 @@ public sealed class InMemoryLockEventPublisher : ILockEventPublisher
         {
             try
             {
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

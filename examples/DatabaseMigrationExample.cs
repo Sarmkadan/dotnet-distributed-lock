@@ -38,7 +38,7 @@ public class DatabaseMigrationExample
         var instance2 = RunMigrationAsync(lockService, "instance-2");
         var instance3 = RunMigrationAsync(lockService, "instance-3");
 
-        await Task.WhenAll(instance1, instance2, instance3);
+        await Task.WhenAll(instance1, instance2, instance3).ConfigureAwait(false);
     }
 
     private static async Task RunMigrationAsync(ILockService lockService, string instanceId)
@@ -58,12 +58,12 @@ public class DatabaseMigrationExample
             Console.WriteLine($"[{instanceId}] ✓ Lock acquired, running migrations");
 
             // Run migrations (simulate with delay)
-            await ExecuteMigrationsAsync(instanceId);
+            await ExecuteMigrationsAsync(instanceId).ConfigureAwait(false);
 
             Console.WriteLine($"[{instanceId}] ✓ Migrations completed");
 
             // Release the lock
-            await lockService.ReleaseAsync(MigrationLockKey, instanceId);
+            await lockService.ReleaseAsync(MigrationLockKey, instanceId).ConfigureAwait(false);
             Console.WriteLine($"[{instanceId}] ✓ Lock released");
         }
         catch (LockAcquisitionException ex)
@@ -87,7 +87,7 @@ public class DatabaseMigrationExample
         foreach (var migration in migrations)
         {
             Console.WriteLine($"[{instanceId}]   - {migration}");
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
         }
     }
 }

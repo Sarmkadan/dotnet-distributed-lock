@@ -92,7 +92,7 @@ public sealed class InMemoryLockEventBus : ILockEventBus
 
         if (tasks.Any())
         {
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
     }
 

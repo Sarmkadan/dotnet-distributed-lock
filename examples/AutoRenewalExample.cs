@@ -40,7 +40,7 @@ public class AutoRenewalExample
         {
             // Acquire the lock with 10-second duration
             Console.WriteLine($"Acquiring lock with 10-second duration...");
-            await lockService.AcquireAsync(lockKey, ownerId, TimeSpan.FromSeconds(10));
+            await lockService.AcquireAsync(lockKey, ownerId, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
             Console.WriteLine("✓ Lock acquired\n");
 
             // Register for auto-renewal every 5 seconds, extending by 10 seconds each time
@@ -70,7 +70,7 @@ public class AutoRenewalExample
             for (int i = 0; i < 30; i++)
             {
                 var elapsed = (DateTime.UtcNow - operationStart).TotalSeconds;
-                var lockInfo = await lockService.GetLockAsync(lockKey);
+                var lockInfo = await lockService.GetLockAsync(lockKey).ConfigureAwait(false);
 
                 if (lockInfo is not null)
                 {
@@ -79,7 +79,7 @@ public class AutoRenewalExample
                     renewalCount = lockInfo.RenewalCount;
                 }
 
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(false);
             }
 
             Console.WriteLine($"\n✓ Operation completed successfully");
@@ -89,9 +89,9 @@ public class AutoRenewalExample
         {
             // Stop monitoring and release the lock
             Console.WriteLine("\nCleaning up...");
-            await monitor.StopMonitoringAsync();
+            await monitor.StopMonitoringAsync().ConfigureAwait(false);
             monitor.UnregisterLock(lockKey, ownerId);
-            await lockService.ReleaseAsync(lockKey, ownerId);
+            await lockService.ReleaseAsync(lockKey, ownerId).ConfigureAwait(false);
             Console.WriteLine("✓ Lock released and monitor stopped");
         }
     }

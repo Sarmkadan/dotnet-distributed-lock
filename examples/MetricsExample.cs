@@ -40,7 +40,7 @@ public class MetricsExample
 
         // Simulate lock operations
         Console.WriteLine("Simulating lock operations...\n");
-        await SimulateLockOperationsAsync(lockService);
+        await SimulateLockOperationsAsync(lockService).ConfigureAwait(false);
 
         Console.WriteLine("\nGenerating metrics report...\n");
 
@@ -69,14 +69,14 @@ public class MetricsExample
                     TimeSpan.FromSeconds(5)
                 );
                 Console.WriteLine($"  ✓ Lock acquired: {key} by {owner}");
-                await lockService.ReleaseAsync(key, owner);
+                await lockService.ReleaseAsync(key, owner).ConfigureAwait(false);
             }
             catch (LockAcquisitionException)
             {
                 Console.WriteLine($"  ✗ Lock already held: {key}");
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(false);
         }
 
         Console.WriteLine();
@@ -87,13 +87,13 @@ public class MetricsExample
         var owner1 = "worker-1";
 
         // Owner 1 holds the lock
-        await lockService.AcquireAsync(contestedKey, owner1);
+        await lockService.AcquireAsync(contestedKey, owner1).ConfigureAwait(false);
         Console.WriteLine($"  ✓ Lock held by {owner1}");
 
         // Other owners try to acquire (will fail)
         foreach (var owner in new[] { "worker-2", "worker-3", "worker-4" })
         {
-            var acquired = await lockService.TryAcquireAsync(contestedKey, owner);
+            var acquired = await lockService.TryAcquireAsync(contestedKey, owner).ConfigureAwait(false);
             if (acquired is null)
             {
                 Console.WriteLine($"  ✗ {owner} could not acquire (already held)");
@@ -101,7 +101,7 @@ public class MetricsExample
         }
 
         // Release the lock
-        await lockService.ReleaseAsync(contestedKey, owner1);
+        await lockService.ReleaseAsync(contestedKey, owner1).ConfigureAwait(false);
         Console.WriteLine($"  ✓ Lock released by {owner1}");
     }
 

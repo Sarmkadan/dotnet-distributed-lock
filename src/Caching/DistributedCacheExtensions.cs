@@ -34,7 +34,7 @@ public static class DistributedCacheExtensions
 
         try
         {
-            var bytes = await cache.GetAsync(key, cancellationToken);
+            var bytes = await cache.GetAsync(key, cancellationToken).ConfigureAwait(false);
 
             if (bytes is null || bytes.Length == 0)
                 return null;
@@ -72,7 +72,7 @@ public static class DistributedCacheExtensions
                 options.AbsoluteExpirationRelativeToNow = expiration;
             }
 
-            await cache.SetAsync(key, bytes, options, cancellationToken);
+            await cache.SetAsync(key, bytes, options, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -92,16 +92,16 @@ public static class DistributedCacheExtensions
         CancellationToken cancellationToken = default) where T : class
     {
         // Try to get from cache
-        var cached = await cache.GetAsJsonAsync<T>(key, cancellationToken);
+        var cached = await cache.GetAsJsonAsync<T>(key, cancellationToken).ConfigureAwait(false);
         if (cached is not null)
             return cached;
 
         // Not in cache, create via factory
-        var value = await factory();
+        var value = await factory().ConfigureAwait(false);
 
         if (value is not null)
         {
-            await cache.SetAsJsonAsync(key, value, expiration, cancellationToken);
+            await cache.SetAsJsonAsync(key, value, expiration, cancellationToken).ConfigureAwait(false);
         }
 
         return value;
@@ -121,7 +121,7 @@ public static class DistributedCacheExtensions
             {
                 try
                 {
-                    await cache.RemoveAsync(key);
+                    await cache.RemoveAsync(key).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -144,7 +144,7 @@ public static class DistributedCacheExtensions
 
         try
         {
-            var bytes = await cache.GetAsync(key, cancellationToken);
+            var bytes = await cache.GetAsync(key, cancellationToken).ConfigureAwait(false);
             return bytes is not null && bytes.Length > 0;
         }
         catch
@@ -166,7 +166,7 @@ public static class DistributedCacheExtensions
 
         if (expiration > TimeSpan.Zero)
         {
-            var bytes = await cache.GetAsync(key, cancellationToken);
+            var bytes = await cache.GetAsync(key, cancellationToken).ConfigureAwait(false);
 
             if (bytes is not null)
             {
@@ -175,7 +175,7 @@ public static class DistributedCacheExtensions
                     AbsoluteExpirationRelativeToNow = expiration
                 };
 
-                await cache.SetAsync(key, bytes, options, cancellationToken);
+                await cache.SetAsync(key, bytes, options, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -218,7 +218,7 @@ public static class DistributedCacheExtensions
                 SlidingExpiration = slidingExpiration
             };
 
-            await cache.SetAsync(key, bytes, options, cancellationToken);
+            await cache.SetAsync(key, bytes, options, cancellationToken).ConfigureAwait(false);
         }
         catch
         {

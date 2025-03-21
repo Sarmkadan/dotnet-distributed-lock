@@ -40,7 +40,7 @@ public class FencingTokenExample
 
         // Acquire lock with short 3-second duration
         Console.WriteLine("1. Worker acquires lock (3-second duration)...");
-        await lockService.AcquireAsync(resourceId, ownerId, TimeSpan.FromSeconds(3));
+        await lockService.AcquireAsync(resourceId, ownerId, TimeSpan.FromSeconds(3)).ConfigureAwait(false);
         Console.WriteLine("   ✓ Lock acquired\n");
 
         // Issue a fencing token
@@ -61,8 +61,8 @@ public class FencingTokenExample
 
         for (int i = 0; i < 5; i++)
         {
-            var isLocked = await lockService.IsLockedAsync(resourceId);
-            var lockInfo = await lockService.GetLockAsync(resourceId);
+            var isLocked = await lockService.IsLockedAsync(resourceId).ConfigureAwait(false);
+            var lockInfo = await lockService.GetLockAsync(resourceId).ConfigureAwait(false);
 
             if (lockInfo is not null)
             {
@@ -74,7 +74,7 @@ public class FencingTokenExample
                 Console.WriteLine($"   [{i}s] Lock has expired!");
             }
 
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
         }
 
         Console.WriteLine();
@@ -95,7 +95,7 @@ public class FencingTokenExample
         Console.WriteLine("6. Safe write pattern with token validation:\n");
 
         // Re-acquire lock for new work
-        await lockService.AcquireAsync(resourceId, ownerId, TimeSpan.FromSeconds(5));
+        await lockService.AcquireAsync(resourceId, ownerId, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         var newToken = tokenService.IssueToken(resourceId);
 
         Console.WriteLine("   Attempting write operation...");
@@ -103,7 +103,7 @@ public class FencingTokenExample
         if (tokenService.ValidateToken(resourceId, newToken))
         {
             Console.WriteLine("   ✓ Token validated, writing data...");
-            await SimulateWriteAsync();
+            await SimulateWriteAsync().ConfigureAwait(false);
             Console.WriteLine("   ✓ Write completed safely\n");
         }
         else
@@ -111,7 +111,7 @@ public class FencingTokenExample
             Console.WriteLine("   ✗ Token invalid, aborting write (lock expired)\n");
         }
 
-        await lockService.ReleaseAsync(resourceId, ownerId);
+        await lockService.ReleaseAsync(resourceId, ownerId).ConfigureAwait(false);
     }
 
     private static Task SimulateWriteAsync()
