@@ -211,4 +211,22 @@ public sealed class InMemoryLockRepository : ILockRepository
             _lockSlim.ExitWriteLock();
         }
     }
+
+    public Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
+    {
+        _lockSlim.EnterReadLock();
+        try
+        {
+            if (_locks.TryGetValue(key, out var @lock))
+            {
+                // If lock exists, is not expired, and fencing token matches
+                return Task.FromResult(!@lock.IsExpired && @lock.FencingToken?.SequenceNumber == (long)fencingToken);
+            }
+            return Task.FromResult(false);
+        }
+        finally
+        {
+            _lockSlim.ExitReadLock();
+        }
+    }
 }
