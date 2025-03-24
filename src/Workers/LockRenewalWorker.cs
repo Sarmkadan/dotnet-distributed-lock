@@ -6,6 +6,7 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
+using SarmKadan.DistributedLock.Core.Exceptions;
 using System.Collections.Concurrent;
 using SarmKadan.DistributedLock.Core.Services;
 using SarmKadan.DistributedLock.Utilities.Extensions;
@@ -131,10 +132,13 @@ public class LockRenewalWorker : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to renew lock: {LockId}", schedule.LockId);
+            _logger.LogError(ex, "Failed to renew lock: {LockId}", schedule.LockId); // Change to Error
 
-            // On failure, retry sooner rather than later
-            schedule.NextRenewalTime = DateTime.UtcNow.AddSeconds(_options.RetryDelaySeconds);
+            // Propagate the exception as LockRenewalFailedException
+            throw new LockRenewalFailedException(
+                schedule.LockId,
+                $"Lock renewal failed for lock ID '{schedule.LockId}'.",
+                ex);
         }
     }
 
