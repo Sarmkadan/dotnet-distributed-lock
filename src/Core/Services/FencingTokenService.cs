@@ -103,28 +103,6 @@ public sealed class FencingTokenService
 
     // Increments the token sequence (creates a new token generation)
     public FencingToken IncrementToken(string lockKey)
-        {
-            _lockSlim.EnterWriteLock();
-            try
-            {
-                if (_tokens.TryGetValue(lockKey, out var currentToken))
-                {
-                    var newToken = currentToken.IncrementSequence();
-                    _tokens[lockKey] = newToken;
-                    _logger.LogDebug("Incremented fencing token for {LockKey}", lockKey);
-                    return newToken;
-                }
-
-                var sequenceNumber = Interlocked.Increment(ref _sequenceCounter);
-                var token = new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
-                _tokens[lockKey] = token;
-                return token;
-            }
-            finally
-            {
-                _lockSlim.ExitWriteLock();
-            }
-        }
     {
         _lockSlim.EnterWriteLock();
         try
