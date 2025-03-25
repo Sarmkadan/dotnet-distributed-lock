@@ -834,6 +834,71 @@ services.AddDistributedLocking(options =>
 
 ## Advanced Features
 
+### Configurable Retry Policy
+
+By default the library uses exponential backoff with jitter to avoid thundering-herd behaviour
+when many waiters compete for the same lock. The built-in `DefaultLockRetryPolicy` is configured
+through `DistributedLockOptions`:
+
+```csharp
+services.AddDistributedLocking(options =>
+{
+    options.BackendType = BackendType.Redis;
+    options.ConnectionString = "localhost:6379";
+
+    // Retry policy — exponential backoff with full jitter (defaults shown)
+    options.RetryPolicyMaxRetries     = 3;       // maximum acquisition attempts
+    options.RetryPolicyInitialDelayMs = 100;     // starting backoff in milliseconds
+    options.RetryPolicyMaxDelayMs     = 5000;    // backoff cap in milliseconds
+    options.RetryPolicyJitterFactor   = 0.2;     // ±20 % random jitter per delay step
+});
+```
+
+#### Plugging in a Custom Policy
+
+Implement `ILockRetryPolicy` and pass it directly to the overload of `AddDistributedLocking`
+that accepts a policy instance. This is the recommended approach for Polly integration or
+any scenario requiring dynamic retry behaviour.
+
+```csharp
+// Example: Polly-based retry policy wrapper
+public class PollyLockRetryPolicy : ILockRetryPolicy
+{
+    private readonly ResiliencePipeline _pipeline;
+
+    public PollyLockRetryPolicy()
+    {
+        _pipeline = new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 5,
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromMilliseconds(50),
+                MaxDelay = TimeSpan.FromSeconds(2),
+            })
+            .Build();
+    }
+
+    public int MaxRetries => 5;
+
+    public async Task<TimeSpan> GetNextDelay(int attemptNumber, CancellationToken cancellationToken)
+    {
+        // Polly controls the actual execution; return the conceptual delay for callers that need it.
+        var delay = TimeSpan.FromMilliseconds(50 * Math.Pow(2, attemptNumber));
+        await Task.Delay(delay, cancellationToken);
+        return delay;
+    }
+}
+
+// DI registration with a custom policy:
+services.AddDistributedLocking(new PollyLockRetryPolicy(), options =>
+{
+    options.BackendType = BackendType.Redis;
+    options.ConnectionString = "localhost:6379";
+});
+```
+
 ### Webhook Integration
 
 Publish lock events to external webhooks:
