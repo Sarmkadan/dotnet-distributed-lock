@@ -1,0 +1,94 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distlock-app-dev
+    ports:
+      - "8080:8080"
+      - "5000:5000"  # Debug port
+      - "5001:5001"  # Alternative debug port
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DistributedLock__BackendType=Redis
+      - DistributedLock__ConnectionString=distlock-redis:6379
+      - DistributedLock__EnableCaching=true
+      - DistributedLock__UseFencingTokens=true
+      - DOTNET_USE_POLLING_FILE_WATCHER=1  # For hot reload in containers
+      - DOTNET_STARTUP_HOOKS=/app/hot-reload-hook.so
+    volumes:
+      - ./src:/app/src:ro  # Mount source code for hot reload
+      - ./SarmKadan.DistributedLock.csproj:/app/SarmKadan.DistributedLock.csproj:ro
+      - ./dotnet-distributed-lock.sln:/app/dotnet-distributed-lock.sln:ro
+      - app-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - distlock-network
+    # Enable hot reload when in development
+    command: >
+      sh -c "dotnet watch --project SarmKadan.DistributedLock.csproj run
+      --urls http://0.0.0.0:8080"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: distlock-postgres-dev
+    environment:
+      POSTGRES_DB: distributed_locks
+      POSTGRES_USER: lockuser
+      POSTGRES_PASSWORD: lockpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker-init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lockuser -d distributed_locks"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - distlock-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: distlock-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - distlock-network
+
+volumes:
+  app-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  distlock-network:
+    driver: bridge
