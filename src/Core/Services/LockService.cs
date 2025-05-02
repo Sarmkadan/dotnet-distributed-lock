@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace SarmKadan.DistributedLock.Services;
 /// <summary>
 /// Core service for managing distributed locks with retry logic and auto-renewal support.
 /// </summary>
-public class LockService : ILockService
+public sealed class LockService : ILockService
 {
     private readonly ILockRepository _repository;
     private readonly ILogger<LockService> _logger;
@@ -85,7 +86,7 @@ public class LockService : ILockService
             var (success, @lock, errorMessage) = await TryAcquireAsync(lockKey, ownerId, duration, cancellationToken);
             acquisition.RecordAttempt(success, errorMessage);
 
-            if (success && @lock != null)
+            if (success && @lock is not null)
             {
                 _logger.LogInformation("Lock acquired successfully on attempt {Attempt} for {LockKey}", attempt + 1, lockKey);
                 return @lock;
@@ -141,7 +142,7 @@ public class LockService : ILockService
         try
         {
             var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken);
-            if (@lock == null)
+            if (@lock is null)
             {
                 _logger.LogWarning("Lock not found for release: {LockKey}", lockKey);
                 return false;

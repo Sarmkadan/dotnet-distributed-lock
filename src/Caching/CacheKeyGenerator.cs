@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -118,7 +119,7 @@ public static class CacheKeyGenerator
     /// </summary>
     public static string GenerateTagKey(params string[] tags)
     {
-        if (tags == null || tags.Length == 0)
+        if (tags is null || tags.Length == 0)
             throw new ArgumentException("At least one tag is required");
 
         var tagStr = string.Join(":", tags);

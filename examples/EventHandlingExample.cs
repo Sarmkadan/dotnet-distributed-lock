@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -91,7 +92,7 @@ public class EventHandlingExample
 
         // Try to acquire same lock with different owner (non-blocking)
         var acquired = await lockService.TryAcquireAsync(lockKey2, owner2b);
-        if (acquired == null)
+        if (acquired is null)
         {
             Console.WriteLine("[INFO] Second owner could not acquire lock (as expected)\n");
         }

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -27,7 +28,7 @@ public abstract class LockEvent
 /// <summary>
 /// Event raised when a lock is successfully acquired.
 /// </summary>
-public class LockAcquiredEvent : LockEvent
+public sealed class LockAcquiredEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string LockName { get; init; }
@@ -40,7 +41,7 @@ public class LockAcquiredEvent : LockEvent
 /// <summary>
 /// Event raised when a lock is released before expiration.
 /// </summary>
-public class LockReleasedEvent : LockEvent
+public sealed class LockReleasedEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string LockName { get; init; }
@@ -53,7 +54,7 @@ public class LockReleasedEvent : LockEvent
 /// <summary>
 /// Event raised when a lock expires without being released.
 /// </summary>
-public class LockExpiredEvent : LockEvent
+public sealed class LockExpiredEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string LockName { get; init; }
@@ -65,7 +66,7 @@ public class LockExpiredEvent : LockEvent
 /// <summary>
 /// Event raised when a lock is renewed by its owner.
 /// </summary>
-public class LockRenewedEvent : LockEvent
+public sealed class LockRenewedEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string LockName { get; init; }
@@ -78,7 +79,7 @@ public class LockRenewedEvent : LockEvent
 /// <summary>
 /// Event raised when a lock acquisition fails.
 /// </summary>
-public class LockAcquisitionFailedEvent : LockEvent
+public sealed class LockAcquisitionFailedEvent : LockEvent
 {
     public required string LockName { get; init; }
     public required string RequesterId { get; init; }
@@ -90,7 +91,7 @@ public class LockAcquisitionFailedEvent : LockEvent
 /// Event raised when there is contention for a lock.
 /// Multiple parties are attempting to acquire the same lock.
 /// </summary>
-public class LockContentionEvent : LockEvent
+public sealed class LockContentionEvent : LockEvent
 {
     public required string LockName { get; init; }
     public required int ContentionLevel { get; init; }
@@ -102,7 +103,7 @@ public class LockContentionEvent : LockEvent
 /// Event raised when a lock operation takes longer than expected.
 /// Could indicate performance degradation.
 /// </summary>
-public class LockPerformanceEvent : LockEvent
+public sealed class LockPerformanceEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string OperationType { get; init; }
@@ -114,7 +115,7 @@ public class LockPerformanceEvent : LockEvent
 /// <summary>
 /// Event raised when a lock operation encounters an error.
 /// </summary>
-public class LockErrorEvent : LockEvent
+public sealed class LockErrorEvent : LockEvent
 {
     public required string LockId { get; init; }
     public required string OperationType { get; init; }

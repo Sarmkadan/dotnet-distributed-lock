@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -170,7 +171,7 @@ public class JsonLockSerializer<T> : ILockSerializer<T> where T : class
 
     public string Serialize(T data)
     {
-        if (data == null)
+        if (data is null)
             return string.Empty;
 
         try

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -93,7 +94,7 @@ public class HttpWebhookPublisher : IWebhookPublisher
         Lock lockData,
         CancellationToken cancellationToken)
     {
-        if (_config.Endpoints == null || _config.Endpoints.Count == 0)
+        if (_config.Endpoints is null || _config.Endpoints.Count == 0)
         {
             _logger.LogWarning("No webhook endpoints configured for event: {EventType}", eventType);
             return;
