@@ -45,4 +45,7 @@ public interface ILockRepository
 
     // Clears all locks (typically used for testing or reset scenarios)
     Task<int> ClearAllAsync(CancellationToken cancellationToken = default);
+
+    // Validates if a given fencing token is still the latest for a lock.
+    Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default);
 }
