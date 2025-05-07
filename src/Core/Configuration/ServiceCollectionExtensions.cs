@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Enums;
 using SarmKadan.DistributedLock.Repository;
 using SarmKadan.DistributedLock.Services;
-using SarmKadan.DistributedLock.Core.Services.RetryPolicy;
 
 namespace SarmKadan.DistributedLock.Configuration;
 

@@ -6,6 +6,8 @@
 
 namespace SarmKadan.DistributedLock.Core.Exceptions;
 
+using SarmKadan.DistributedLock.Exceptions;
+
 /// <summary>
 /// Exception thrown when a distributed lock renewal operation fails.
 /// </summary>
