@@ -13,17 +13,59 @@ namespace SarmKadan.DistributedLock.Models;
 /// </summary>
 public class Lock
 {
+    /// <summary>
+    /// The unique identifier for the lock key.
+    /// </summary>
     public string Key { get; set; }
+    
+    /// <summary>
+    /// The identifier for the lock owner.
+    /// </summary>
     public string OwnerId { get; set; }
+    
+    /// <summary>
+    /// The fencing token associated with the lock (optional).
+    /// </summary>
     public FencingToken? FencingToken { get; set; }
+    
+    /// <summary>
+    /// The current status of the lock.
+    /// </summary>
     public LockStatus Status { get; set; }
+    
+    /// <summary>
+    /// The timestamp when the lock was acquired.
+    /// </summary>
     public DateTime AcquiredAt { get; set; }
+    
+    /// <summary>
+    /// The timestamp when the lock expires.
+    /// </summary>
     public DateTime ExpiresAt { get; set; }
+    
+    /// <summary>
+    /// The timestamp when the lock was last renewed (optional).
+    /// </summary>
     public DateTime? RenewedAt { get; set; }
+    
+    /// <summary>
+    /// The number of times the lock has been renewed.
+    /// </summary>
     public int RenewalCount { get; set; }
+    
+    /// <summary>
+    /// The duration for which the lock is held.
+    /// </summary>
     public TimeSpan Duration { get; set; }
+    
+    /// <summary>
+    /// Optional metadata associated with the lock.
+    /// </summary>
     public string? Metadata { get; set; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Lock"/> class.
+    /// </summary>
     public Lock()
     {
         Key = string.Empty;
@@ -35,6 +77,12 @@ public class Lock
         RenewalCount = 0;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Lock"/> class with specified parameters.
+    /// </summary>
+    /// <param name="key">The unique lock key.</param>
+    /// <param name="ownerId">The unique owner identifier.</param>
+    /// <param name="duration">The duration to hold the lock.</param>
     public Lock(string key, string ownerId, TimeSpan duration)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -58,13 +106,19 @@ public class Lock
         RenewalCount = 0;
     }
 
-    // Checks if the lock has expired
+    /// <summary>
+    /// Checks if the lock has expired.
+    /// </summary>
     public bool IsExpired => DateTime.UtcNow > ExpiresAt;
 
-    // Checks if the lock is still valid (acquired and not expired)
+    /// <summary>
+    /// Checks if the lock is still valid (acquired and not expired).
+    /// </summary>
     public bool IsValid => Status == LockStatus.Held && !IsExpired;
 
-    // Checks if the lock is close to expiration (within 25% of its lifetime)
+    /// <summary>
+    /// Checks if the lock is close to expiration (within 25% of its lifetime).
+    /// </summary>
     public bool IsCloseToExpiration
     {
         get
@@ -75,7 +129,11 @@ public class Lock
         }
     }
 
-    // Renews the lock by extending its expiration time
+    /// <summary>
+    /// Renews the lock by extending its expiration time.
+    /// </summary>
+    /// <param name="newDuration">The new duration for the lock (optional).</param>
+    /// <exception cref="Exceptions.LockExpiredException">Thrown if the lock is already expired.</exception>
     public void Renew(TimeSpan? newDuration = null)
     {
         if (IsExpired)
@@ -88,20 +146,27 @@ public class Lock
         Status = LockStatus.Held;
     }
 
-    // Marks the lock as released
+    /// <summary>
+    /// Marks the lock as released.
+    /// </summary>
     public void Release()
     {
         Status = LockStatus.Released;
         ExpiresAt = DateTime.UtcNow;
     }
 
-    // Validates ownership of the lock
+    /// <summary>
+    /// Validates ownership of the lock.
+    /// </summary>
+    /// <param name="providedOwnerId">The owner ID to validate.</param>
+    /// <exception cref="Exceptions.LockNotOwnedException">Thrown if the provided owner ID does not match.</exception>
     public void ValidateOwnership(string providedOwnerId)
     {
         if (OwnerId != providedOwnerId)
             throw new Exceptions.LockNotOwnedException(Key, OwnerId, providedOwnerId);
     }
 
+    /// <inheritdoc/>
     public override string ToString() =>
         $"Lock(Key={Key}, Owner={OwnerId}, Status={Status}, ExpiresAt={ExpiresAt:O}, IsValid={IsValid})";
 }
