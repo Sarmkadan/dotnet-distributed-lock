@@ -9,6 +9,9 @@ using SarmKadan.DistributedLock.Workers;
 
 namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 
+/// <summary>
+/// Benchmark for lock cleanup operations.
+/// </summary>
 [MemoryDiagnoser]
 [RankColumn]
 public class LockCleanupBenchmark
@@ -16,6 +19,9 @@ public class LockCleanupBenchmark
     private IServiceProvider? _serviceProvider;
     private LockCleanupWorker? _cleanupWorker;
 
+    /// <summary>
+    /// Sets up the benchmark by creating a service provider and a lock cleanup worker.
+    /// </summary>
     [GlobalSetup]
     public void GlobalSetup()
     {
@@ -40,6 +46,9 @@ public class LockCleanupBenchmark
         );
     }
 
+    /// <summary>
+    /// Cleans up the service provider and any other resources used by the benchmark.
+    /// </summary>
     [GlobalCleanup]
     public void GlobalCleanup()
     {
@@ -49,6 +58,12 @@ public class LockCleanupBenchmark
         }
     }
 
+    /// <summary>
+    /// Benchmark for cleaning up 1000 expired locks.
+    /// </summary>
+    /// <remarks>
+    /// This is a simplified cleanup benchmark.
+    /// </remarks>
     [Benchmark(Description = "Clean up 1000 expired locks")]
     public async Task Cleanup_1000_Expired_Locks()
     {
