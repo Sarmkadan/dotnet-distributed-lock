@@ -6,7 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
-using SarmKadan.DistributedLock.Core.Repository;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Repository;
 
 /// <summary>
 /// Background worker that monitors the health of the distributed lock system.
@@ -100,7 +102,7 @@ public class HealthMonitoringWorker : BackgroundService
         {
             // Attempt to get a non-existent lock (should return null, not throw)
             var testLockId = $"__health_check_{DateTime.UtcNow.Ticks}";
-            var result = await _repository.GetLockAsync(testLockId);
+            var result = await _repository.GetByKeyAsync(testLockId);
 
             // If we get here without exception, backend is responding
             _healthStatus.BackendConnected = true;

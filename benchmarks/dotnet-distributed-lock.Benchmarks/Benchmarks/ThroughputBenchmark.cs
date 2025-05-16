@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock;
 using SarmKadan.DistributedLock.Backends;
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Services;
 
 namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 

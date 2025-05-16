@@ -2,6 +2,9 @@ using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock;
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Repository;
 using SarmKadan.DistributedLock.Workers;
 
 namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
@@ -31,9 +34,9 @@ public class LockCleanupBenchmark
 
         _serviceProvider = services.BuildServiceProvider();
         _cleanupWorker = new LockCleanupWorker(
-            _serviceProvider.GetRequiredService<ILockService>(),
-            null!, // ILogger is fine being null for benchmarks if not used
-            TimeSpan.FromSeconds(1)
+            _serviceProvider.GetRequiredService<ILockRepository>(),
+            _serviceProvider.GetRequiredService<ILogger<LockCleanupWorker>>(),
+            new LockCleanupWorkerOptions { CleanupIntervalMs = 1000 }
         );
     }
 
@@ -50,6 +53,6 @@ public class LockCleanupBenchmark
     public async Task Cleanup_1000_Expired_Locks()
     {
         // This is a simplified cleanup benchmark
-        await _cleanupWorker!.ExecuteAsync(CancellationToken.None);
+        await _cleanupWorker!.RunCleanupOnceAsync(CancellationToken.None);
     }
 }

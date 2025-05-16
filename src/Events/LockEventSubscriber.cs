@@ -6,6 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Events;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 /// <summary>
 /// Base class for subscribing to lock events.
 /// Implements common subscription patterns and error handling.
