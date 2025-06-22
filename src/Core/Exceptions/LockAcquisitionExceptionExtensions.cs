@@ -14,18 +14,20 @@ namespace SarmKadan.DistributedLock.Exceptions;
 /// </summary>
 public static class LockAcquisitionExceptionExtensions
 {
+    private const int DefaultTimeoutThresholdMs = 5000;
+
     /// <summary>
     /// Creates a detailed error message that includes retry suggestions based on the current retry count.
     /// </summary>
     /// <param name="exception">The lock acquisition exception.</param>
     /// <param name="maxRetries">The maximum number of retries configured for the operation.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxRetries"/> is less than 0.</exception>
     /// <returns>A formatted error message with retry analysis.</returns>
     public static string ToDetailedErrorMessage(this LockAcquisitionException exception, int maxRetries)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxRetries);
 
         var builder = new StringBuilder();
         builder.AppendLine($"Failed to acquire distributed lock '{exception.LockKey}'");
@@ -57,29 +59,25 @@ public static class LockAcquisitionExceptionExtensions
     /// Determines whether the lock acquisition failure was due to a timeout vs. other reasons.
     /// </summary>
     /// <param name="exception">The lock acquisition exception.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
     /// <returns>True if the failure was timeout-related; otherwise false.</returns>
     public static bool IsTimeoutRelated(this LockAcquisitionException exception)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         // Timeout-related failures typically have very short timeouts
-        return exception.Timeout.TotalMilliseconds < 5000;
+        return exception.Timeout.TotalMilliseconds < DefaultTimeoutThresholdMs;
     }
 
     /// <summary>
     /// Creates a simplified error message suitable for logging without sensitive information.
     /// </summary>
     /// <param name="exception">The lock acquisition exception.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
     /// <returns>A sanitized error message for logging purposes.</returns>
     public static string ToLoggableMessage(this LockAcquisitionException exception)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         return $"Lock acquisition failed for key '{exception.LockKey}' after {exception.RetryCount} retries within {exception.Timeout.TotalSeconds}s";
     }
@@ -89,13 +87,13 @@ public static class LockAcquisitionExceptionExtensions
     /// </summary>
     /// <param name="exception">The lock acquisition exception.</param>
     /// <param name="baseDelayMs">The base delay in milliseconds to use for calculations.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="baseDelayMs"/> is less than 0.</exception>
     /// <returns>A suggested retry delay in milliseconds.</returns>
     public static int CalculateSuggestedRetryDelay(this LockAcquisitionException exception, int baseDelayMs = 100)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentOutOfRangeException.ThrowIfNegative(baseDelayMs);
 
         // Exponential backoff with jitter
         // Base delay * 2^retryCount, with some randomness to avoid thundering herd
