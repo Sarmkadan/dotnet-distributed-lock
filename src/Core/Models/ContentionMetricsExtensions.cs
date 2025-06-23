@@ -20,11 +20,11 @@ public static class ContentionMetricsExtensions
     /// Returns 0 when no waiters have been observed.
     /// </summary>
     /// <param name="metrics">The contention metrics instance.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
     /// <returns>The current contention percentage (0-100).</returns>
     public static double GetContentionPercentage(this ContentionMetrics metrics)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
         var current = metrics.CurrentWaiters;
         var peak = metrics.PeakWaiters;
@@ -37,31 +37,32 @@ public static class ContentionMetricsExtensions
     /// </summary>
     /// <param name="metrics">The contention metrics instance.</param>
     /// <param name="includeHistory">Whether to include historical data in the summary.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
     /// <returns>A formatted string with the metrics summary.</returns>
     public static string ToDetailedString(this ContentionMetrics metrics, bool includeHistory = true)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
         var sb = new StringBuilder();
         sb.AppendLine($"Lock Metrics: {metrics.LockKey}");
-        sb.AppendLine($"  Current Waiters: {metrics.CurrentWaiters}");
-        sb.AppendLine($"  Peak Waiters: {metrics.PeakWaiters}");
-        sb.AppendLine($"  Contention Events: {metrics.TotalContentionEvents}");
-        sb.AppendLine($"  Total Waiters: {metrics.TotalWaiters}");
-        sb.AppendLine($"  Deadlocks: {metrics.DeadlocksDetected}");
-        sb.AppendLine($"  Average Wait: {metrics.AverageWaitTimeMs:F2}ms");
-        sb.AppendLine($"  Created: {metrics.CreatedAt:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"  Last Updated: {metrics.LastUpdatedAt:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($" Current Waiters: {metrics.CurrentWaiters}");
+        sb.AppendLine($" Peak Waiters: {metrics.PeakWaiters}");
+        sb.AppendLine($" Contention Events: {metrics.TotalContentionEvents}");
+        sb.AppendLine($" Total Waiters: {metrics.TotalWaiters}");
+        sb.AppendLine($" Deadlocks: {metrics.DeadlocksDetected}");
+        sb.AppendLine($" Average Wait: {metrics.AverageWaitTimeMs:F2}ms");
+        sb.AppendLine($" Created: {metrics.CreatedAt:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($" Last Updated: {metrics.LastUpdatedAt:yyyy-MM-dd HH:mm:ss}");
 
         if (includeHistory && metrics.TotalContentionEvents > 0)
         {
             var contentionPct = metrics.GetContentionPercentage();
-            sb.AppendLine($"  Current Contention: {contentionPct:F1}%");
+            sb.AppendLine($" Current Contention: {contentionPct:F1}%");
 
             if (metrics.TotalWaiters > 100)
             {
-                sb.AppendLine($"  Waiter Throughput: {metrics.TotalWaiters / Math.Max(1, (metrics.LastUpdatedAt - metrics.CreatedAt).TotalSeconds):F2} waiters/sec");
+                var durationSeconds = Math.Max(1, (metrics.LastUpdatedAt - metrics.CreatedAt).TotalSeconds);
+                sb.AppendLine($" Waiter Throughput: {metrics.TotalWaiters / durationSeconds:F2} waiters/sec");
             }
         }
 
@@ -75,14 +76,14 @@ public static class ContentionMetricsExtensions
     /// <param name="metrics">The contention metrics instance.</param>
     /// <param name="thresholdWaiters">Minimum waiter count to consider as high contention. Default is 5.</param>
     /// <param name="thresholdPercentage">Minimum contention percentage to consider as high contention. Default is 50.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
     /// <returns>True if high contention is detected; otherwise false.</returns>
     public static bool IsHighContention(this ContentionMetrics metrics, int thresholdWaiters = 5, double thresholdPercentage = 50d)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
-        if (thresholdWaiters < 0) thresholdWaiters = 0;
-        if (thresholdPercentage < 0) thresholdPercentage = 0;
+        thresholdWaiters = Math.Max(0, thresholdWaiters);
+        thresholdPercentage = Math.Max(0, thresholdPercentage);
 
         var current = metrics.CurrentWaiters;
         var contentionPct = metrics.GetContentionPercentage();
@@ -96,14 +97,15 @@ public static class ContentionMetricsExtensions
     /// </summary>
     /// <param name="metrics">The contention metrics instance.</param>
     /// <param name="targetContentionPercentage">The target contention percentage to calculate savings against. Default is 10%.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
     /// <returns>Estimated time saved in milliseconds.</returns>
     public static double GetEstimatedTimeSaved(this ContentionMetrics metrics, double targetContentionPercentage = 10d)
     {
-        if (metrics == null)
-            throw new ArgumentNullException(nameof(metrics));
+        ArgumentNullException.ThrowIfNull(metrics);
 
-        if (targetContentionPercentage < 0) targetContentionPercentage = 0;
-        if (targetContentionPercentage >= 100) return 0d;
+        targetContentionPercentage = Math.Max(0, targetContentionPercentage);
+        if (targetContentionPercentage >= 100)
+            return 0d;
 
         var currentWaiters = metrics.CurrentWaiters;
         var peakWaiters = metrics.PeakWaiters;
