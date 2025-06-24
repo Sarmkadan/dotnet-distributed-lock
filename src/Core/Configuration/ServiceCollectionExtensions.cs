@@ -6,6 +6,9 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Backends.PostgreSQL;
+using SarmKadan.DistributedLock.Backends.Redis;
+using SarmKadan.DistributedLock.Backends.SQLite;
 using SarmKadan.DistributedLock.Enums;
 using SarmKadan.DistributedLock.Repository;
 using SarmKadan.DistributedLock.Services;
@@ -29,10 +32,14 @@ public static class ServiceCollectionExtensions
     /// services.AddDistributedLocking(myCustomPolicy, options => { ... });
     /// </code>
     /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the configuration is invalid.</exception>
     public static IServiceCollection AddDistributedLocking(
         this IServiceCollection services,
         Action<DistributedLockOptions>? configureOptions = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         var options = new DistributedLockOptions();
         configureOptions?.Invoke(options);
 
@@ -63,6 +70,8 @@ public static class ServiceCollectionExtensions
     /// The retry policy to use for lock acquisition attempts. Must not be null.
     /// </param>
     /// <param name="configureOptions">Optional callback to configure additional options.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="retryPolicy"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the configuration is invalid.</exception>
     /// <example>
     /// <code>
     /// // Plug in a custom Polly-based retry policy:
@@ -78,6 +87,7 @@ public static class ServiceCollectionExtensions
         ILockRetryPolicy retryPolicy,
         Action<DistributedLockOptions>? configureOptions = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(retryPolicy);
 
         var options = new DistributedLockOptions();
@@ -112,11 +122,21 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers the appropriate lock repository based on the backend type.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="backendType">The backend type to use for lock storage.</param>
+    /// <param name="connectionString">The connection string for the backend storage.</param>
+    /// <returns>The configured service collection.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is null or empty.</exception>
+    /// <exception cref="NotSupportedException">Thrown when the backend type is not supported.</exception>
     private static IServiceCollection AddRepository(
         this IServiceCollection services,
         BackendType backendType,
         string connectionString)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(connectionString, nameof(connectionString));
+
         return backendType switch
         {
             BackendType.InMemory => services.AddSingleton<ILockRepository, InMemoryLockRepository>(),
@@ -127,22 +147,30 @@ public static class ServiceCollectionExtensions
         };
     }
 
-    // Placeholder methods for backend-specific repositories
     private static IServiceCollection AddRedisRepository(this IServiceCollection services, string connectionString)
     {
-        // Implementation for Redis repository registration
-        throw new NotImplementedException("Redis repository not yet implemented");
+        return services.AddSingleton<ILockRepository>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<RedisLockRepository>>();
+            return new RedisLockRepository(connectionString, logger);
+        });
     }
 
     private static IServiceCollection AddSqliteRepository(this IServiceCollection services, string connectionString)
     {
-        // Implementation for SQLite repository registration
-        throw new NotImplementedException("SQLite repository not yet implemented");
+        return services.AddSingleton<ILockRepository>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<SqliteLockRepository>>();
+            return new SqliteLockRepository(connectionString, logger);
+        });
     }
 
     private static IServiceCollection AddPostgresRepository(this IServiceCollection services, string connectionString)
     {
-        // Implementation for PostgreSQL repository registration
-        throw new NotImplementedException("PostgreSQL repository not yet implemented");
+        return services.AddSingleton<ILockRepository>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<PostgresLockRepository>>();
+            return new PostgresLockRepository(connectionString, logger);
+        });
     }
 }
