@@ -26,6 +26,8 @@ public static class LockRenewalWorkerExtensions
     /// <param name="fencingToken">The fencing token to use for renewal operations.</param>
     /// <param name="renewalInterval">The interval at which the lock should be renewed.</param>
     /// <returns>True if the lock was successfully registered; false if already registered.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="worker"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lockId"/> is null or whitespace.</exception>
     public static bool TryRegisterForRenewal(
         this LockRenewalWorker worker,
         string lockId,
@@ -51,6 +53,8 @@ public static class LockRenewalWorkerExtensions
     /// </summary>
     /// <param name="worker">The lock renewal worker instance.</param>
     /// <param name="lockId">The unique identifier of the lock to unregister.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="worker"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lockId"/> is null or whitespace.</exception>
     public static void SafeUnregisterFromRenewal(
         this LockRenewalWorker worker,
         string lockId)
@@ -73,7 +77,9 @@ public static class LockRenewalWorkerExtensions
     /// </summary>
     /// <param name="worker">The lock renewal worker instance.</param>
     /// <param name="lockId">The unique identifier of the lock.</param>
-    /// <returns>The time remaining until next renewal, or null if lock is not registered.</returns>
+    /// <returns>The time remaining until next renewal, or null if lock is not registered or renewal is not due.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="worker"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lockId"/> is null or whitespace.</exception>
     public static TimeSpan? GetTimeUntilNextRenewal(
         this LockRenewalWorker worker,
         string lockId)
@@ -81,23 +87,7 @@ public static class LockRenewalWorkerExtensions
         ArgumentNullException.ThrowIfNull(worker);
         ArgumentException.ThrowIfNullOrWhiteSpace(lockId);
 
-        if (worker is LockRenewalWorker renewalWorker)
-        {
-            var scheduleField = typeof(LockRenewalWorker)
-                .GetField(
-                    "_renewalSchedules",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            if (scheduleField?.GetValue(renewalWorker) is System.Collections.Concurrent.ConcurrentDictionary<string, dynamic> renewalSchedules)
-            {
-                if (renewalSchedules.TryGetValue(lockId, out var schedule) && schedule.NextRenewalTime > DateTime.UtcNow)
-                {
-                    return schedule.NextRenewalTime - DateTime.UtcNow;
-                }
-            }
-        }
-
-        return null;
+        return worker.GetTimeUntilNextRenewal(lockId);
     }
 
     /// <summary>
@@ -107,6 +97,8 @@ public static class LockRenewalWorkerExtensions
     /// <param name="lockId">The unique identifier of the lock.</param>
     /// <param name="newRenewalInterval">The new interval at which the lock should be renewed.</param>
     /// <returns>True if the interval was successfully updated; false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="worker"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lockId"/> is null or whitespace.</exception>
     public static bool TryUpdateRenewalInterval(
         this LockRenewalWorker worker,
         string lockId,
