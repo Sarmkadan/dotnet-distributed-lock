@@ -4,95 +4,62 @@ namespace SarmKadan.DistributedLock.Api.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-
 /// <summary>
-/// Extension methods for <see cref="HealthCheckController"/> providing additional health monitoring capabilities.
+/// Extension methods for health check responses providing additional functionality for health status evaluation.
 /// </summary>
 public static class HealthCheckControllerExtensions
 {
     /// <summary>
-    /// Creates a standardized health check response with additional metadata.
+    /// Determines if the health check response indicates a healthy state.
     /// </summary>
-    /// <param name="controller">The health check controller instance.</param>
-    /// <param name="status">The health status to report.</param>
-    /// <param name="responseTimeMs">The response time in milliseconds.</param>
-    /// <returns>An ActionResult containing the health check response.</returns>
-    public static ActionResult<HealthCheckResponse> CreateHealthResponse(
-        this HealthCheckController controller,
-        string status,
-        long responseTimeMs = 0)
-    {
-        ArgumentNullException.ThrowIfNull(controller);
-
-        ArgumentException.ThrowIfNullOrWhiteSpace(status);
-
-        return new HealthCheckResponse
-        {
-            Status = status,
-            Timestamp = DateTime.UtcNow,
-            Version = controller.Version,
-            Details = new HealthDetails
-            {
-                BackendConnected = controller.BackendConnected,
-                ErrorMessage = controller.ErrorMessage
-            },
-            ResponseTimeMs = responseTimeMs
-        };
-    }
-
-    /// <summary>
-    /// Creates a detailed health response with runtime information.
-    /// </summary>
-    /// <param name="controller">The health check controller instance.</param>
-    /// <param name="status">The health status to report.</param>
-    /// <param name="responseTimeMs">The response time in milliseconds.</param>
-    /// <returns>An ActionResult containing the detailed health response.</returns>
-    public static ActionResult<DetailedHealthResponse> CreateDetailedResponse(
-        this HealthCheckController controller,
-        string status,
-        long responseTimeMs = 0)
-    {
-        ArgumentNullException.ThrowIfNull(controller);
-
-        ArgumentException.ThrowIfNullOrWhiteSpace(status);
-
-        return new DetailedHealthResponse
-        {
-            Status = status,
-            Timestamp = DateTime.UtcNow,
-            Version = controller.Version,
-            ResponseTimeMs = responseTimeMs,
-            Runtime = new RuntimeInfo
-            {
-                Framework = controller.Runtime?.Framework ?? ".NET 10.0",
-                Uptime = controller.Runtime?.Uptime ?? TimeSpan.FromMilliseconds(Environment.TickCount64)
-            }
-        };
-    }
-
-    /// <summary>
-    /// Determines if the health check indicates a healthy state.
-    /// </summary>
-    /// <param name="controller">The health check controller instance.</param>
+    /// <param name="response">The health check response to evaluate.</param>
     /// <returns>True if the status is 'healthy' or 'ready'; otherwise false.</returns>
-    public static bool IsHealthy(this HealthCheckController controller)
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="response"/> is null.</exception>
+    public static bool IsHealthy(this HealthCheckResponse response)
     {
-        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentNullException.ThrowIfNull(response);
 
-        return controller.Status?.Equals("healthy", StringComparison.OrdinalIgnoreCase) == true ||
-               controller.Status?.Equals("ready", StringComparison.OrdinalIgnoreCase) == true;
+        return response.Status.Equals("healthy", StringComparison.OrdinalIgnoreCase) ||
+               response.Status.Equals("ready", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// Determines if the health check indicates a degraded or unhealthy state.
+    /// Determines if the health check response indicates a degraded or unhealthy state.
     /// </summary>
-    /// <param name="controller">The health check controller instance.</param>
+    /// <param name="response">The health check response to evaluate.</param>
     /// <returns>True if the status indicates degraded/unhealthy; otherwise false.</returns>
-    public static bool IsUnhealthy(this HealthCheckController controller)
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="response"/> is null.</exception>
+    public static bool IsUnhealthy(this HealthCheckResponse response)
     {
-        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentNullException.ThrowIfNull(response);
 
-        return !controller.IsHealthy();
+        return !response.IsHealthy();
+    }
+
+    /// <summary>
+    /// Determines if the detailed health response indicates a healthy state.
+    /// </summary>
+    /// <param name="response">The detailed health response to evaluate.</param>
+    /// <returns>True if the status is 'healthy' or 'ready'; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="response"/> is null.</exception>
+    public static bool IsHealthy(this DetailedHealthResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return response.Status.Equals("healthy", StringComparison.OrdinalIgnoreCase) ||
+               response.Status.Equals("ready", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines if the detailed health response indicates a degraded or unhealthy state.
+    /// </summary>
+    /// <param name="response">The detailed health response to evaluate.</param>
+    /// <returns>True if the status indicates degraded/unhealthy; otherwise false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="response"/> is null.</exception>
+    public static bool IsUnhealthy(this DetailedHealthResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return !response.IsHealthy();
     }
 }
