@@ -284,7 +284,7 @@ public class LockingRealWorldIntegrationTests
                     contentionLockKey, workerId, duration);
 
                 stopwatch.Stop();
-                await _deadlockDetector.RecordWaitEndedAsync(workerId, contentionLockKey, stopwatch.ElapsedMilliseconds);
+                await _deadlockDetector.RecordWaitEndedAsync(workerId, contentionLockKey, stopwatch.Elapsed.TotalMilliseconds);
 
                 if (acquired)
                 {

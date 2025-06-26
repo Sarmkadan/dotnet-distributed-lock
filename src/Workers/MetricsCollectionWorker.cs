@@ -83,7 +83,7 @@ public class MetricsCollectionWorker : BackgroundService
             }
 
             _logger.LogDebug(
-                "Collected metrics - Cache: {CachedItems} items, {HitRate:F2}% hit rate",
+                "Collected metrics - Cache: {CachedItems} items, {HitRate:P2} hit rate",
                 snapshot.CacheStatistics.CachedItems,
                 snapshot.CacheStatistics.HitRate);
         }

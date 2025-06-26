@@ -48,6 +48,8 @@ public interface IDeadlockDetector
     /// <summary>
     /// Determines whether registering <paramref name="ownerId"/> as a waiter for <paramref name="lockKey"/>
     /// would create a circular wait (deadlock) based on the current ownership and wait-for state.
+    /// When a cycle is found the detector logs a warning and increments the deadlock counter
+    /// for <paramref name="lockKey"/>.
     /// </summary>
     /// <param name="ownerId">Candidate waiter to evaluate.</param>
     /// <param name="lockKey">Lock the candidate wants to acquire.</param>
@@ -93,13 +95,7 @@ public sealed class DeadlockDetector : IDeadlockDetector
         ArgumentNullException.ThrowIfNull(ownerId);
         ArgumentNullException.ThrowIfNull(lockKey);
 
-        if (WouldDeadlock(ownerId, lockKey))
-        {
-            GetOrCreateMetrics(lockKey).RecordDeadlock();
-            _logger.LogWarning(
-                "Potential deadlock: owner {OwnerId} waiting for lock {LockKey} would form a circular wait chain",
-                ownerId, lockKey);
-        }
+        WouldDeadlock(ownerId, lockKey);
 
         _waitingFor[ownerId] = lockKey;
         GetOrCreateMetrics(lockKey).RecordWaiterAdded();
@@ -161,7 +157,14 @@ public sealed class DeadlockDetector : IDeadlockDetector
                 break; // no one holds this lock — chain ends, no deadlock
 
             if (holder == ownerId)
-                return true; // circular dependency detected
+            {
+                // Circular dependency detected: record it against the requested lock.
+                GetOrCreateMetrics(lockKey).RecordDeadlock();
+                _logger.LogWarning(
+                    "Potential deadlock: owner {OwnerId} waiting for lock {LockKey} would form a circular wait chain",
+                    ownerId, lockKey);
+                return true;
+            }
 
             if (!visitedHolders.Add(holder))
                 break; // already visited this holder; avoid infinite loop on concurrent state changes

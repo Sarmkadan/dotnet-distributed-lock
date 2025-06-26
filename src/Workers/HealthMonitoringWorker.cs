@@ -65,15 +65,24 @@ public class HealthMonitoringWorker : BackgroundService
 
         try
         {
-            // Test backend connectivity
-            await TestBackendConnectivityAsync(cancellationToken);
+            // Test backend connectivity, bounded by the configured check timeout
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(_options.CheckTimeout);
+
+            await TestBackendConnectivityAsync(timeoutCts.Token);
 
             stopwatch.Stop();
             _healthStatus.LastCheckTime = DateTime.UtcNow;
             _healthStatus.IsHealthy = true;
             _healthStatus.CheckDurationMs = stopwatch.ElapsedMilliseconds;
+            _healthStatus.ConsecutiveFailures = 0;
+            _healthStatus.LastErrorMessage = null;
 
             _logger.LogDebug("Health check passed in {DurationMs}ms", stopwatch.ElapsedMilliseconds);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -102,7 +111,7 @@ public class HealthMonitoringWorker : BackgroundService
         {
             // Attempt to get a non-existent lock (should return null, not throw)
             var testLockId = $"__health_check_{DateTime.UtcNow.Ticks}";
-            var result = await _repository.GetByKeyAsync(testLockId);
+            await _repository.GetByKeyAsync(testLockId, cancellationToken);
 
             // If we get here without exception, backend is responding
             _healthStatus.BackendConnected = true;
@@ -115,10 +124,10 @@ public class HealthMonitoringWorker : BackgroundService
     }
 
     /// <summary>
-    /// Sends an alert when the system becomes unhealthy.
-    /// Can be extended to integrate with alerting systems.
+    /// Records a failed check and escalates to a critical log entry once the
+    /// configured failure threshold is reached.
     /// </summary>
-    private async Task AlertUnhealthyStatusAsync(Exception ex)
+    private Task AlertUnhealthyStatusAsync(Exception ex)
     {
         _healthStatus.ConsecutiveFailures++;
 
@@ -128,11 +137,9 @@ public class HealthMonitoringWorker : BackgroundService
                 "Health monitoring: System is unhealthy after {Failures} consecutive failures: {Message}",
                 _healthStatus.ConsecutiveFailures,
                 ex.Message);
-
-            // TODO: Integrate with alerting service (PagerDuty, Slack, etc)
         }
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <summary>

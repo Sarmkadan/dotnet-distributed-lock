@@ -67,33 +67,25 @@ public class LockCleanupWorker : BackgroundService
     }
 
     /// <summary>
-    /// Performs the cleanup operation.
-    /// Retrieves all locks and removes expired ones.
+    /// Performs the cleanup operation by deleting expired locks from the repository.
     /// </summary>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     private async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Starting lock cleanup sweep");
 
-        try
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var cleaned = await _repository.DeleteExpiredLockAsync(cancellationToken);
+        stopwatch.Stop();
+
+        Interlocked.Add(ref _cleanedCount, cleaned);
+
+        if (cleaned > 0 || _options.VerboseLogging)
         {
-            var before = DateTime.UtcNow;
-            var cleaned = 0;
-
-            // Get all locks from repository
-            // Note: This assumes the repository supports batch operations
-            // Implementation may vary based on backend type
-
-            // For now, we log the operation
             _logger.LogInformation(
                 "Lock cleanup completed: cleaned {Count} locks in {ElapsedMs}ms",
                 cleaned,
-                (DateTime.UtcNow - before).TotalMilliseconds);
-
-            _cleanedCount += cleaned;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to perform lock cleanup");
+                stopwatch.Elapsed.TotalMilliseconds);
         }
     }
 

@@ -114,7 +114,7 @@ public static class DateTimeExtensions
         if (timeSpan.TotalDays < 30)
             return $"{(int)timeSpan.TotalDays} day{(timeSpan.TotalDays >= 2 ? "s" : "")} ago";
 
-        return dateTime.ToString("yyyy-MM-dd");
+        return dateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>
