@@ -17,8 +17,8 @@ public static class ObjectExtensions
     /// <summary>
     /// Deep clones an object using JSON serialization.
     /// Works with any serializable object, avoiding shallow copy issues.
-    /// Note: This method requires objects to be JSON serializable.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when JSON serialization or deserialization fails.</exception>
     public static T? DeepClone<T>(this T? obj) where T : class
     {
         if (obj is null)
@@ -29,40 +29,46 @@ public static class ObjectExtensions
             var json = JsonSerializer.Serialize(obj);
             return JsonSerializer.Deserialize<T>(json);
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            throw new InvalidOperationException("Failed to deep clone object. Ensure the object is JSON serializable.", ex);
         }
     }
 
     /// <summary>
     /// Serializes an object to JSON string with pretty printing.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the input object is null.</exception>
     public static string ToJsonString<T>(this T obj) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
+
         try
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
             return JsonSerializer.Serialize(obj, options);
         }
-        catch
+        catch (Exception ex)
         {
-            return string.Empty;
+            throw new InvalidOperationException("Failed to serialize object to JSON string.", ex);
         }
     }
 
     /// <summary>
     /// Serializes an object to JSON string (compact format).
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the input object is null.</exception>
     public static string ToCompactJsonString<T>(this T obj) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
+
         try
         {
             return JsonSerializer.Serialize(obj);
         }
-        catch
+        catch (Exception ex)
         {
-            return string.Empty;
+            throw new InvalidOperationException("Failed to serialize object to compact JSON string.", ex);
         }
     }
 
@@ -78,6 +84,9 @@ public static class ObjectExtensions
     /// Attempts to cast an object to a target type safely.
     /// Returns true if cast succeeds, false otherwise.
     /// </summary>
+    /// <param name="obj">The object to cast.</param>
+    /// <param name="result">The cast result, or null if cast fails.</param>
+    /// <returns>True if cast succeeds, false otherwise.</returns>
     public static bool TryCast<T>(this object obj, out T? result) where T : class
     {
         result = null;
@@ -94,8 +103,14 @@ public static class ObjectExtensions
     /// Creates a hashcode from an object based on specific property values.
     /// Useful for distributed lock identifiers.
     /// </summary>
+    /// <param name="obj">The object to compute hash for.</param>
+    /// <param name="propertyValues">Property values to include in hash computation.</param>
+    /// <returns>The computed hash code.</returns>
     public static int ComputeHash<T>(this T obj, params object?[] propertyValues) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(propertyValues);
+
         var hash = 17;
         foreach (var value in propertyValues)
         {
@@ -109,8 +124,12 @@ public static class ObjectExtensions
     /// Executes an action on the object and returns the object for chaining.
     /// Allows fluent API style operations.
     /// </summary>
+    /// <param name="obj">The object to operate on.</param>
+    /// <param name="action">The action to execute.</param>
+    /// <returns>The original object for method chaining.</returns>
     public static T Tap<T>(this T obj, Action<T> action) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
         action?.Invoke(obj);
         return obj;
     }
@@ -119,10 +138,13 @@ public static class ObjectExtensions
     /// Converts an object to another type using transformation function.
     /// Returns default value if transformation fails.
     /// </summary>
+    /// <param name="obj">The object to transform.</param>
+    /// <param name="mapper">The transformation function.</param>
+    /// <returns>The transformed result, or null if transformation fails.</returns>
     public static TResult? MapTo<T, TResult>(this T obj, Func<T, TResult?> mapper) where T : class where TResult : class
     {
-        if (obj is null)
-            return null;
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(mapper);
 
         try
         {
@@ -138,6 +160,7 @@ public static class ObjectExtensions
     /// Gets a string representation of an object's type name.
     /// Strips namespaces and generic parameters for brevity.
     /// </summary>
+    /// <returns>The simplified type name.</returns>
     public static string GetSimpleTypeName<T>(this T obj) where T : class
     {
         var typeName = typeof(T).Name;
@@ -148,8 +171,14 @@ public static class ObjectExtensions
     /// <summary>
     /// Validates an object against a predicate and returns the result.
     /// </summary>
+    /// <param name="obj">The object to validate.</param>
+    /// <param name="predicate">The validation predicate.</param>
+    /// <returns>True if object is not null and predicate returns true, false otherwise.</returns>
     public static bool Validate<T>(this T obj, Func<T, bool> predicate) where T : class
     {
-        return obj is not null && predicate(obj);
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        return predicate(obj);
     }
 }
