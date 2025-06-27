@@ -81,4 +81,19 @@ Lock? newest = await repository.GetNewestActiveLockAsync();
 double avgDuration = await repository.GetAverageLockDurationAsync();
 ```
 
+## LockCleanupWorkerExtensions
+
+The `LockCleanupWorkerExtensions` class provides utility methods for running lock cleanup tasks. It allows you to run a cleanup task once with a specified timeout, get the number of cleaned locks, and configure the worker for testing purposes.
+
+### Usage Example
+
+```csharp
+var worker = new LockCleanupWorker();
+var cleanedCount = await LockCleanupWorkerExtensions.RunCleanupOnceAsyncWithStats(worker);
+Console.WriteLine($"Cleaned {cleanedCount.CleanedCount} locks in {cleanedCount.Duration}");
+
+var testWorker = LockCleanupWorkerExtensions.WithTestInterval(worker, TimeSpan.FromMinutes(1));
+LockCleanupWorkerExtensions.LogConfiguration(testWorker);
+```
+
 // existing content ...
