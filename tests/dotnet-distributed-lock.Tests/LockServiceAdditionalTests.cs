@@ -8,17 +8,27 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Provides additional tests for <see cref="LockService"/> focusing on edge cases and error handling.
+/// </summary>
 public class LockServiceAdditionalTests
 {
     private readonly Mock<ILockRepository> _repositoryMock;
     private readonly LockService _service;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LockServiceAdditionalTests"/> class with mocked dependencies.
+    /// </summary>
     public LockServiceAdditionalTests()
     {
         _repositoryMock = new Mock<ILockRepository>();
         _service = new LockService(_repositoryMock.Object, NullLogger<LockService>.Instance);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.ReleaseAsync(string, string, CancellationToken)"/> returns false when the lock does not exist in the repository.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task ReleaseAsync_WhenLockDoesNotExist_ReturnsFalse()
     {
@@ -34,6 +44,10 @@ public class LockServiceAdditionalTests
         released.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.ReleaseAsync(string, string, CancellationToken)"/> returns false when the repository throws an exception.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task ReleaseAsync_WhenRepositoryThrows_ReturnsFalse()
     {
@@ -53,6 +67,10 @@ public class LockServiceAdditionalTests
         released.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.RenewAsync(string, string, TimeSpan, CancellationToken)"/> returns false when the lock does not exist in the repository.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task RenewAsync_WhenLockDoesNotExist_ReturnsFalse()
     {
@@ -68,6 +86,10 @@ public class LockServiceAdditionalTests
         renewed.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.GetLockAsync(string, CancellationToken)"/> returns null when the lock does not exist in the repository.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task GetLockAsync_WhenLockDoesNotExist_ReturnsNull()
     {
@@ -83,6 +105,10 @@ public class LockServiceAdditionalTests
         @lock.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.IsLockedAsync(string, CancellationToken)"/> returns false when the repository throws an exception.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task IsLockedAsync_WhenRepositoryThrows_ReturnsFalse()
     {
@@ -98,6 +124,10 @@ public class LockServiceAdditionalTests
         isLocked.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LockService.GetAllActiveLockAsync(CancellationToken)"/> returns an empty enumerable when the repository throws an exception.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task GetAllActiveLockAsync_WhenRepositoryThrows_ReturnsEmptyEnumerable()
     {
