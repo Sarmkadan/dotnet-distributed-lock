@@ -96,4 +96,31 @@ var testWorker = LockCleanupWorkerExtensions.WithTestInterval(worker, TimeSpan.F
 LockCleanupWorkerExtensions.LogConfiguration(testWorker);
 ```
 
+## AdvancedConcurrencyTestsExtensions
+
+The `AdvancedConcurrencyTestsExtensions` class provides utility methods for advanced concurrency tests. It allows you to measure lock acquisition time, verify lock repository consistency, and count active locks.
+
+### Usage Example
+
+```csharp
+var (acquired, lockState, attempts) = await AdvancedConcurrencyTestsExtensions.AcquireWithRetryAsync(
+    lockKey: "my-resource",
+    requesterId: "worker-1",
+    mode: LockMode.Exclusive,
+    timeout: TimeSpan.FromSeconds(30)
+);
+Console.WriteLine($"Acquired: {acquired}, Lock State: {lockState}, Attempts: {attempts}");
+
+var activeLockCount = await AdvancedConcurrencyTestsExtensions.CountActiveLocksAsync();
+Console.WriteLine($"Active Locks: {activeLockCount}");
+
+var (acquired2, lockState2, elapsedTime) = await AdvancedConcurrencyTestsExtensions.MeasureAcquisitionTimeAsync(
+    lockKey: "my-resource",
+    requesterId: "worker-1",
+    mode: LockMode.Exclusive,
+    timeout: TimeSpan.FromSeconds(30)
+);
+Console.WriteLine($"Acquired: {acquired2}, Lock State: {lockState2}, Elapsed Time: {elapsedTime}");
+```
+
 // existing content ...
