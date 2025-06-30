@@ -7,10 +7,16 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="InMemoryLockCacheManager"/> class, ensuring correct behavior of cache operations such as Get, Set, Remove, and statistics tracking.
+/// </summary>
 public class InMemoryLockCacheManagerTests
 {
     private readonly InMemoryLockCacheManager _cache;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryLockCacheManagerTests"/> class, setting up an empty <see cref="InMemoryLockCacheManager"/> for testing.
+    /// </summary>
     public InMemoryLockCacheManagerTests()
     {
         _cache = new InMemoryLockCacheManager();
@@ -20,6 +26,10 @@ public class InMemoryLockCacheManagerTests
     // GetAsync
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns null when the cache is empty.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAsync_WithEmptyCache_ReturnsNull()
     {
@@ -30,6 +40,10 @@ public class InMemoryLockCacheManagerTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns the expected lock after it has been set.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAsync_AfterSet_ReturnsCachedLock()
     {
@@ -49,6 +63,10 @@ public class InMemoryLockCacheManagerTests
         cached.OwnerId.Should().Be("owner-1");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns null when the requested key is null.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAsync_WithNullId_ReturnsNull()
     {
@@ -59,6 +77,10 @@ public class InMemoryLockCacheManagerTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns null when the requested key is empty.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAsync_WithEmptyId_ReturnsNull()
     {
@@ -73,6 +95,10 @@ public class InMemoryLockCacheManagerTests
     // SetAsync
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> does not throw an exception when the lock is null.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task SetAsync_WithNullLock_DoesNotThrow()
     {
@@ -80,6 +106,10 @@ public class InMemoryLockCacheManagerTests
         await _cache.Invoking(c => c.SetAsync(null!)).Should().NotThrowAsync();
     }
 
+    /// <summary>
+    /// Verifies that a lock stored via <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> can be retrieved.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task SetAsync_StoreLock_CanBeRetrieved()
     {
@@ -95,6 +125,10 @@ public class InMemoryLockCacheManagerTests
         retrieved!.Key.Should().Be("lock:test");
     }
 
+    /// <summary>
+    /// Verifies that multiple locks stored via <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> can all be retrieved.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task SetAsync_MultiipleLocks_AllCanBeRetrieved()
     {
@@ -118,6 +152,10 @@ public class InMemoryLockCacheManagerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> overwrites an existing lock if the key is the same.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task SetAsync_OverwriteExistingLock()
     {
@@ -140,6 +178,10 @@ public class InMemoryLockCacheManagerTests
     // RemoveAsync
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.RemoveAsync(string)"/> successfully removes a lock from the cache.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task RemoveAsync_RemovesLock()
     {
@@ -155,6 +197,10 @@ public class InMemoryLockCacheManagerTests
         cached.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.RemoveAsync(string)"/> does not throw when removing a non-existent lock.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task RemoveAsync_WithNonexistentLock_DoesNotThrow()
     {
@@ -162,6 +208,10 @@ public class InMemoryLockCacheManagerTests
         await _cache.Invoking(c => c.RemoveAsync("lock:ghost")).Should().NotThrowAsync();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.RemoveAsync(string)"/> does not throw when the key is empty.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task RemoveAsync_WithEmptyId_DoesNotThrow()
     {
@@ -173,6 +223,10 @@ public class InMemoryLockCacheManagerTests
     // GetAllAsync
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAllAsync()"/> returns an empty list when the cache is empty.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAllAsync_WithEmptyCache_ReturnsEmptyList()
     {
@@ -183,6 +237,10 @@ public class InMemoryLockCacheManagerTests
         all.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAllAsync()"/> returns all cached locks.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAllAsync_ReturnsAllCachedLocks()
     {
@@ -204,6 +262,10 @@ public class InMemoryLockCacheManagerTests
         all.Select(l => l.Key).Should().Contain(new[] { "lock:1", "lock:2", "lock:3", "lock:4", "lock:5" });
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAllAsync()"/> does not return locks that have been removed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetAllAsync_DoesNotReturnRemovedLocks()
     {
@@ -227,6 +289,10 @@ public class InMemoryLockCacheManagerTests
     // ClearAsync
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.ClearAsync()"/> removes all locks from the cache.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task ClearAsync_RemovesAllLocks()
     {
@@ -245,6 +311,10 @@ public class InMemoryLockCacheManagerTests
         all.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.ClearAsync()"/> does not throw when the cache is empty.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task ClearAsync_WithEmptyCache_DoesNotThrow()
     {
@@ -256,6 +326,10 @@ public class InMemoryLockCacheManagerTests
     // Hit/Miss Statistics
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetStatistics()"/> returns zero hits and misses in the initial state.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_InitialState_HasZeroHitsAndMisses()
     {
@@ -267,6 +341,10 @@ public class InMemoryLockCacheManagerTests
         stats.Misses.Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetStatistics()"/> records a hit after a successful cache look-up.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_AfterCacheHit_RecordsHit()
     {
@@ -283,6 +361,10 @@ public class InMemoryLockCacheManagerTests
         stats.Misses.Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetStatistics()"/> records a miss after an unsuccessful cache look-up.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_AfterCacheMiss_RecordsMiss()
     {
@@ -295,6 +377,10 @@ public class InMemoryLockCacheManagerTests
         stats.Misses.Should().Be(1);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetStatistics()"/> correctly calculates the cache hit rate.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_CalculatesHitRate()
     {
@@ -314,6 +400,10 @@ public class InMemoryLockCacheManagerTests
         stats.HitRate.Should().BeApproximately(0.75, 0.01); // 3/4 = 75%
     }
 
+    /// <summary>
+    /// Verifies that the hit rate is zero when there are only misses.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_WithOnlyMisses_HitRateIsZero()
     {
@@ -327,6 +417,10 @@ public class InMemoryLockCacheManagerTests
         stats.HitRate.Should().Be(0);
     }
 
+    /// <summary>
+    /// Verifies that the hit rate is one when there are only hits.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task GetStatistics_WithOnlyHits_HitRateIsOne()
     {
@@ -348,6 +442,10 @@ public class InMemoryLockCacheManagerTests
     // Configuration
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that <see cref="InMemoryLockCacheManager"/> respects the provided <see cref="CacheConfiguration"/>.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task Constructor_WithCustomConfiguration_UsesIt()
     {
@@ -370,6 +468,10 @@ public class InMemoryLockCacheManagerTests
     // Concurrency
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Verifies that concurrent access (sets and gets) maintains cache consistency.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task ConcurrentAccess_SetAndGet_MaintainsConsistency()
     {
@@ -390,6 +492,10 @@ public class InMemoryLockCacheManagerTests
         results.Should().AllSatisfy(r => r.Should().NotBeNull());
     }
 
+    /// <summary>
+    /// Verifies that concurrent mixed operations (set, remove, get) maintain cache consistency.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
     public async Task ConcurrentAccess_SetRemoveGet_MaintainsConsistency()
     {
