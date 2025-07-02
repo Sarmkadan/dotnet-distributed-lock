@@ -24,8 +24,7 @@ public class LockAcquisitionTests
 
     /// <summary>
     /// Tests that the constructor correctly initializes all properties when valid arguments are provided.
-    /// Verifies that LockKey, RequesterId, Mode, Timeout, MaxRetries, AttemptCount, IsSuccessful, Attempts, and Id
-    /// are set to their expected values.
+    /// Verifies that <c>LockKey</c>, <c>RequesterId</c>, <c>Mode</c>, <c>Timeout</c>, <c>MaxRetries</c>, <c>AttemptCount</c>, <c>IsSuccessful</c>, <c>Attempts</c>, and <c>Id</c> are set to their expected values.
     /// </summary>
     [Fact]
     public void Constructor_WithValidArguments_SetsPropertiesCorrectly()
@@ -64,12 +63,12 @@ public class LockAcquisitionTests
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("lockKey");
     }
+
     /// <summary>
     /// Tests that the constructor throws an <see cref="ArgumentException"/> when a null or whitespace requester ID is provided.
     /// Verifies that the exception has the correct parameter name.
     /// </summary>
     /// <param name="requesterId">The null or whitespace requester ID to test with.</param>
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -86,11 +85,11 @@ public class LockAcquisitionTests
     // RecordAttempt
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
-    /// Tests that <see cref="LockAcquisition.RecordAttempt(Boolean)"/> sets IsSuccessful to true and records the acquisition timestamp when the attempt succeeds.
-    /// Verifies that AcquiredAt is set to a recent timestamp and attempt tracking is updated correctly.
+    /// Tests that <see cref="LockAcquisition.RecordAttempt(bool)"/> sets <c>IsSuccessful</c> to true and records the acquisition timestamp when the attempt succeeds.
+    /// Verifies that <c>AcquiredAt</c> is set to a recent timestamp and attempt tracking is updated correctly.
     /// </summary>
+    [Fact]
     public void RecordAttempt_WhenSucceeded_SetsIsSuccessfulAndRecordsAcquiredAt()
     {
         // Arrange
@@ -105,13 +104,13 @@ public class LockAcquisitionTests
         acquisition.AcquiredAt!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
         acquisition.AttemptCount.Should().Be(1);
         acquisition.Attempts.Should().HaveCount(1);
-    /// <summary>
-    /// Tests that <see cref="LockAcquisition.RecordAttempt(Boolean, String)"/> increments attempt count and stores error message when the attempt fails.
-    /// Verifies that IsSuccessful remains false, AcquiredAt remains null, and attempt tracking is updated correctly.
-    /// </summary>
         acquisition.Attempts[0].Succeeded.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockAcquisition.RecordAttempt(bool, string)"/> increments attempt count and stores error message when the attempt fails.
+    /// Verifies that <c>IsSuccessful</c> remains false, <c>AcquiredAt</c> remains null, and attempt tracking is updated correctly.
+    /// </summary>
     [Fact]
     public void RecordAttempt_WhenFailed_IncrementsCountAndStoresErrorMessage()
     {
@@ -133,11 +132,11 @@ public class LockAcquisitionTests
     // CanRetry
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
     /// Tests that <see cref="LockAcquisition.CanRetry"/> returns true when attempts remain within the max retries limit.
-    /// Verifies that CanRetry property returns true when AttemptCount is less than MaxRetries.
+    /// Verifies that <c>CanRetry</c> property returns true when <c>AttemptCount</c> is less than <c>MaxRetries</c>.
     /// </summary>
+    [Fact]
     public void CanRetry_WhenAttemptsRemaining_ReturnsTrue()
     {
         // Arrange — 1 attempt, 3 max retries
@@ -145,22 +144,18 @@ public class LockAcquisitionTests
         acquisition.RecordAttempt(false, "busy");
 
         // Act & Assert
-    /// <summary>
-    /// Tests that <see cref="LockAcquisition.CanRetry"/> returns false when max retries have been exhausted.
-    /// Verifies that CanRetry property returns false when AttemptCount equals MaxRetries.
-    /// </summary>
         acquisition.CanRetry.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockAcquisition.CanRetry"/> returns false when max retries have been exhausted.
+    /// Verifies that <c>CanRetry</c> property returns false when <c>AttemptCount</c> equals <c>MaxRetries</c>.
+    /// </summary>
     [Fact]
     public void CanRetry_WhenMaxRetriesExhausted_ReturnsFalse()
     {
         // Arrange — 2 attempts equal to max retries
         var acquisition = new LockAcquisition("resource:db", "worker-1", AcquisitionMode.Blocking, TimeSpan.FromSeconds(5), 2);
-    /// <summary>
-    /// Tests that <see cref="LockAcquisition.CanRetry"/> returns false after a successful acquisition, regardless of remaining retries.
-    /// Verifies that CanRetry property returns false when IsSuccessful is true, short-circuiting retry eligibility.
-    /// </summary>
         acquisition.RecordAttempt(false, "busy");
         acquisition.RecordAttempt(false, "busy");
 
@@ -168,6 +163,10 @@ public class LockAcquisitionTests
         acquisition.CanRetry.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockAcquisition.CanRetry"/> returns false after a successful acquisition, regardless of remaining retries.
+    /// Verifies that <c>CanRetry</c> property returns false when <c>IsSuccessful</c> is true, short‑circuiting retry eligibility.
+    /// </summary>
     [Fact]
     public void CanRetry_AfterSuccessfulAcquisition_ReturnsFalse()
     {
@@ -183,11 +182,11 @@ public class LockAcquisitionTests
     // AverageAttemptTime
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
     /// Tests that <see cref="LockAcquisition.AverageAttemptTime"/> returns the correct average duration when multiple attempts have been recorded with timing information.
-    /// Verifies that the average is calculated correctly as (100ms + 300ms) / 2 = 200ms.
+    /// Verifies that the average is calculated correctly as (100 ms + 300 ms) / 2 = 200 ms.
     /// </summary>
+    [Fact]
     public void AverageAttemptTime_WithMultipleTimedAttempts_ReturnsCorrectAverage()
     {
         // Arrange
@@ -196,13 +195,13 @@ public class LockAcquisitionTests
         acquisition.RecordAttempt(false, null, TimeSpan.FromMilliseconds(300));
 
         // Act & Assert — (100 + 300) / 2 = 200 ms
-    /// <summary>
-    /// Tests that <see cref="LockAcquisition.AverageAttemptTime"/> returns TimeSpan.Zero when no attempts have been recorded.
-    /// Verifies that the AverageAttemptTime property returns zero when the Attempts collection is empty.
-    /// </summary>
         acquisition.AverageAttemptTime.TotalMilliseconds.Should().BeApproximately(200, 1);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockAcquisition.AverageAttemptTime"/> returns <see cref="TimeSpan.Zero"/> when no attempts have been recorded.
+    /// Verifies that the <c>AverageAttemptTime</c> property returns zero when the <c>Attempts</c> collection is empty.
+    /// </summary>
     [Fact]
     public void AverageAttemptTime_WithNoAttempts_ReturnsZero()
     {
@@ -217,11 +216,11 @@ public class LockAcquisitionTests
     // ToString
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
     /// Tests that <see cref="LockAcquisition.ToString"/> includes the lock key, requester ID, and acquisition mode in its string representation.
     /// Verifies that the string output contains the expected components for debugging and logging purposes.
     /// </summary>
+    [Fact]
     public void ToString_ContainsLockKeyRequesterIdAndMode()
     {
         // Arrange
@@ -237,21 +236,21 @@ public class LockAcquisitionTests
     }
 }
 
-    /// <summary>
-    /// Contains unit tests for the <see cref="LockConfiguration"/> class, which represents configuration settings for acquiring distributed locks.
-    /// Tests cover constructor validation, and configuration validation rules.
-    /// </summary>
+/// <summary>
+/// Contains unit tests for the <see cref="LockConfiguration"/> class, which represents configuration settings for acquiring distributed locks.
+/// Tests cover constructor validation and configuration validation rules.
+/// </summary>
 public class LockConfigurationTests
 {
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
     /// Tests that the constructor correctly initializes default values when a valid lock key is provided.
-    /// Verifies that AutoRenewal, UseFencingToken, MaxRetries, and LockDuration are set to their expected default values.
+    /// Verifies that <c>AutoRenewal</c>, <c>UseFencingToken</c>, <c>MaxRetries</c>, and <c>LockDuration</c> are set to their expected default values.
     /// </summary>
+    [Fact]
     public void Constructor_WithValidKey_SetsDefaultValues()
     {
         // Act
@@ -264,12 +263,12 @@ public class LockConfigurationTests
         config.MaxRetries.Should().Be(Constants.LockConstants.DefaultMaxRetries);
         config.LockDuration.Should().Be(Constants.LockConstants.DefaultLockTimeout);
     }
+
     /// <summary>
     /// Tests that the constructor throws an <see cref="ArgumentException"/> when a null or whitespace lock key is provided.
     /// Verifies that the exception has the correct parameter name.
     /// </summary>
     /// <param name="key">The null or whitespace lock key to test with.</param>
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -278,10 +277,6 @@ public class LockConfigurationTests
         // Act
         var act = () => new LockConfiguration(key);
 
-    /// <summary>
-    /// Tests that <see cref="LockConfiguration.Validate"/> returns no validation errors when using default configuration.
-    /// Verifies that IsValid property returns true when all configuration values are within acceptable ranges.
-    /// </summary>
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("lockKey");
     }
@@ -290,12 +285,12 @@ public class LockConfigurationTests
     // Validate / IsValid
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that <see cref="LockConfiguration.Validate"/> returns no validation errors when using the default configuration.
+    /// Verifies that <c>IsValid</c> property returns true when all configuration values are within acceptable ranges.
+    /// </summary>
     [Fact]
     public void Validate_WithDefaultConfig_ReturnsNoErrors()
-    /// <summary>
-    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when AutoRenewal is enabled with RenewalInterval equal to LockDuration.
-    /// Verifies that IsValid property returns false when the auto-renewal invariant is violated.
-    /// </summary>
     {
         // Arrange
         var config = new LockConfiguration("resource:orders");
@@ -308,14 +303,14 @@ public class LockConfigurationTests
         config.IsValid.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when <c>AutoRenewal</c> is enabled with <c>RenewalInterval</c> equal to <c>LockDuration</c>.
+    /// Verifies that <c>IsValid</c> property returns false when the auto‑renewal invariant is violated.
+    /// </summary>
     [Fact]
     public void Validate_WithAutoRenewalAndRenewalIntervalEqualToDuration_ReturnsError()
     {
-    /// <summary>
-    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when MaxRetries is set to a negative value.
-    /// Verifies that IsValid property returns false and error messages contain "negative".
-    /// </summary>
-        // Arrange — renewal interval == lock duration violates the auto-renewal invariant
+        // Arrange — renewal interval == lock duration violates the auto‑renewal invariant
         var config = new LockConfiguration("resource:orders")
         {
             AutoRenewal = true,
@@ -328,13 +323,13 @@ public class LockConfigurationTests
 
         // Assert
         errors.Should().NotBeEmpty();
-    /// <summary>
-    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when LockDuration is set below the minimum allowed duration.
-    /// Verifies that IsValid property returns false when the lock duration is too short (less than 1 second).
-    /// </summary>
         config.IsValid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when <c>MaxRetries</c> is set to a negative value.
+    /// Verifies that <c>IsValid</c> property returns false and error messages contain the word “negative”.
+    /// </summary>
     [Fact]
     public void Validate_WithNegativeMaxRetries_ReturnsError()
     {
@@ -352,10 +347,14 @@ public class LockConfigurationTests
         config.IsValid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockConfiguration.Validate"/> returns a validation error when <c>LockDuration</c> is set below the minimum allowed duration.
+    /// Verifies that <c>IsValid</c> property returns false when the lock duration is too short (less than 1 second).
+    /// </summary>
     [Fact]
     public void Validate_WithDurationBelowMinimum_ReturnsError()
     {
-        // Arrange — minimum is 1s
+        // Arrange — minimum is 1 s
         var config = new LockConfiguration("resource:orders")
         {
             LockDuration = TimeSpan.FromMilliseconds(500)
@@ -370,21 +369,21 @@ public class LockConfigurationTests
     }
 }
 
-    /// <summary>
-    /// Contains unit tests for the <see cref="DistributedLockOptions"/> class, which represents global configuration options for the distributed lock system.
-    /// Tests cover validation of backend type, connection strings, and timing configurations.
-    /// </summary>
+/// <summary>
+/// Contains unit tests for the <see cref="DistributedLockOptions"/> class, which represents global configuration options for the distributed lock system.
+/// Tests cover validation of backend type, connection strings, and timing configurations.
+/// </summary>
 public class DistributedLockOptionsTests
 {
     // -------------------------------------------------------------------------
     // Validate / IsValid
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
-    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns no validation errors when using default options.
-    /// Verifies that IsValid property returns true when all options are within acceptable ranges for the InMemory backend.
+    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns no validation errors when using the default options.
+    /// Verifies that <c>IsValid</c> property returns true when all options are within acceptable ranges for the <c>InMemory</c> backend.
     /// </summary>
+    [Fact]
     public void Validate_WithDefaultOptions_ReturnsNoErrors()
     {
         // Arrange — InMemory backend needs no connection string
@@ -395,13 +394,13 @@ public class DistributedLockOptionsTests
 
         // Assert
         errors.Should().BeEmpty();
-    /// <summary>
-    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns a validation error when using a non-InMemory backend with an empty connection string.
-    /// Verifies that IsValid property returns false and error messages contain "Connection string".
-    /// </summary>
         options.IsValid.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns a validation error when using a non‑<c>InMemory</c> backend with an empty connection string.
+    /// Verifies that <c>IsValid</c> property returns false and error messages contain “Connection string”.
+    /// </summary>
     [Fact]
     public void Validate_WithNonInMemoryBackendAndEmptyConnectionString_ReturnsError()
     {
@@ -413,10 +412,6 @@ public class DistributedLockOptionsTests
         };
 
         // Act
-    /// <summary>
-    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns a validation error when DefaultRenewalInterval exceeds DefaultLockDuration.
-    /// Verifies that IsValid property returns false and error messages contain "less than lock duration".
-    /// </summary>
         var errors = options.Validate().ToList();
 
         // Assert
@@ -424,6 +419,10 @@ public class DistributedLockOptionsTests
         options.IsValid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="DistributedLockOptions.Validate"/> returns a validation error when <c>DefaultRenewalInterval</c> exceeds <c>DefaultLockDuration</c>.
+    /// Verifies that <c>IsValid</c> property returns false and error messages contain “less than lock duration”.
+    /// </summary>
     [Fact]
     public void Validate_WhenRenewalIntervalExceedsLockDuration_ReturnsError()
     {
@@ -443,50 +442,52 @@ public class DistributedLockOptionsTests
     }
 }
 
-    /// <summary>
-    /// Contains unit tests for the <see cref="LockMetrics"/> class, which tracks acquisition and renewal metrics for distributed locks.
-    /// Tests cover success rates, counter increments, active lock tracking, and timing measurements.
-    /// </summary>
+/// <summary>
+/// Contains unit tests for the <see cref="LockMetrics"/> class, which tracks acquisition and renewal metrics for distributed locks.
+/// Tests cover success rates, counter increments, active lock tracking, and timing measurements.
+/// </summary>
 public class LockMetricsTests
 {
     // -------------------------------------------------------------------------
     // AcquisitionSuccessRate
     // -------------------------------------------------------------------------
 
-    [Fact]
     /// <summary>
     /// Tests that <see cref="LockMetrics.AcquisitionSuccessRate"/> returns 0 when no acquisition attempts have been recorded.
-    /// Verifies that the success rate calculation returns 0 when TotalAcquisitionAttempts is 0.
+    /// Verifies that the success rate calculation returns 0 when <c>TotalAcquisitionAttempts</c> is 0.
     /// </summary>
+    [Fact]
     public void AcquisitionSuccessRate_WithNoAttempts_ReturnsZero()
     {
         // Arrange
         var metrics = new LockMetrics();
 
         // Act & Assert
-    /// <summary>
-    /// Tests that <see cref="LockMetrics.AcquisitionSuccessRate"/> returns 100% when only successful acquisitions have been recorded.
-    /// Verifies that the success rate calculation returns 100 when all attempts are successful.
-    /// </summary>
         metrics.AcquisitionSuccessRate.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.AcquisitionSuccessRate"/> returns 100 % when only successful acquisitions have been recorded.
+    /// Verifies that the success rate calculation returns 100 when all attempts are successful.
+    /// </summary>
     [Fact]
     public void AcquisitionSuccessRate_WithOnlySuccesses_Returns100Percent()
     {
         // Arrange
         var metrics = new LockMetrics();
-    /// <summary>
-    /// Tests that <see cref="LockMetrics.AcquisitionSuccessRate"/> returns the correct percentage when both successful and failed acquisitions have been recorded.
-    /// Verifies that the success rate calculation returns 50% when 1 out of 2 attempts succeeded.
-    /// </summary>
+
+        // Act
         metrics.RecordSuccessfulAcquisition(50);
         metrics.RecordSuccessfulAcquisition(75);
 
-        // Act & Assert
+        // Assert
         metrics.AcquisitionSuccessRate.Should().Be(100);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.AcquisitionSuccessRate"/> returns the correct percentage when both successful and failed acquisitions have been recorded.
+    /// Verifies that the success rate calculation returns 50 % when 1 out of 2 attempts succeeded.
+    /// </summary>
     [Fact]
     public void AcquisitionSuccessRate_WithMixedResults_ReturnsCorrectPercentage()
     {
@@ -503,6 +504,9 @@ public class LockMetricsTests
     // RecordSuccessfulAcquisition / RecordRelease
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.RecordSuccessfulAcquisition(double)"/> increments counters and active lock count, and updates the average acquisition time.
+    /// </summary>
     [Fact]
     public void RecordSuccessfulAcquisition_IncrementsCountersAndActiveLocks()
     {
@@ -519,6 +523,9 @@ public class LockMetricsTests
         metrics.AverageAcquisitionTimeMs.Should().BeApproximately(120, 0.01);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.RecordRelease(double)"/> decrements the current active lock count and records the hold time.
+    /// </summary>
     [Fact]
     public void RecordRelease_DecrementsCurrentActiveLocksAndRecordsHoldTime()
     {
@@ -539,6 +546,9 @@ public class LockMetricsTests
     // RenewalSuccessRate
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.RenewalSuccessRate"/> returns 0 when no renewals have been recorded.
+    /// </summary>
     [Fact]
     public void RenewalSuccessRate_WithNoRenewals_ReturnsZero()
     {
@@ -549,6 +559,9 @@ public class LockMetricsTests
         metrics.RenewalSuccessRate.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that <see cref="LockMetrics.RenewalSuccessRate"/> returns 100 % after successful renewals have been recorded.
+    /// </summary>
     [Fact]
     public void RenewalSuccessRate_AfterSuccessfulRenewals_Returns100Percent()
     {
