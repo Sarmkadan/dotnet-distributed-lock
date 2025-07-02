@@ -9,11 +9,27 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Contains advanced concurrency tests for distributed lock operations under high load and stress scenarios.
+/// Tests various edge cases including high contention, rapid acquire/release cycles, concurrent operations,
+/// renewal under load, expiration handling, and error recovery to ensure thread safety and consistency.
+/// </summary>
 public class AdvancedConcurrencyTests
 {
+    /// <summary>
+    /// The in-memory lock repository used for testing distributed lock operations.
+    /// </summary>
     private readonly InMemoryLockRepository _repository;
+
+    /// <summary>
+    /// The lock service instance that manages distributed lock acquisition, renewal, and release operations.
+    /// </summary>
     private readonly LockService _service;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdvancedConcurrencyTests"/> class.
+    /// Sets up an in-memory lock repository and a lock service for testing distributed lock operations.
+    /// </summary>
     public AdvancedConcurrencyTests()
     {
         _repository = new InMemoryLockRepository();
@@ -24,6 +40,11 @@ public class AdvancedConcurrencyTests
     // High Contention Scenarios
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that under high contention with many workers racing for the same lock,
+    /// only one worker can successfully acquire the lock while all others fail.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task HighContention_ManyWorkersRacingForSameLock()
     {
@@ -53,6 +74,11 @@ public class AdvancedConcurrencyTests
         winners.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Tests that multiple locks can be acquired concurrently without interference,
+    /// ensuring that workers acquiring different locks don't block each other.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task HighContention_MultipleLocksWithoutInterference()
     {
@@ -87,6 +113,11 @@ public class AdvancedConcurrencyTests
     // Renewal Under Load
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that simultaneous renewal and acquisition operations work correctly under load,
+    /// ensuring that lock renewals don't interfere with new acquisition attempts.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task RenewalUnderLoad_SimultaneousRenewalsAndAcquisitions()
     {
@@ -124,6 +155,11 @@ public class AdvancedConcurrencyTests
     // Rapid Release and Reacquisition
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests rapid acquire-release-acquire sequences to ensure that lock state is properly cleaned up
+    /// and locks can be reacquired by different owners in quick succession.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task RapidCycle_AcquireReleaseAcquireSequence()
     {
@@ -158,6 +194,11 @@ public class AdvancedConcurrencyTests
     // Concurrent Operations on Multiple Keys
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests concurrent operations across many lock keys with many workers to ensure
+    /// that the system can handle high parallelism without race conditions or deadlocks.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task ConcurrentOperations_ManyKeysWithManyWorkers()
     {
@@ -206,6 +247,11 @@ public class AdvancedConcurrencyTests
     // Lock Lifecycle Stress Test
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests the complete lock lifecycle (acquire, renew, release) repeatedly under stress
+    /// to ensure all operations remain consistent and no resource leaks occur.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task CompleteLifecycleStress_AcquireRenewReleaseRepeatedly()
     {
@@ -236,6 +282,11 @@ public class AdvancedConcurrencyTests
     // Concurrent Metrics Tracking
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that metrics tracking remains accurate under concurrent load with many simultaneous operations,
+    /// ensuring that the metrics service correctly counts successful acquisitions and releases.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task MetricsUnderConcurrentLoad_CorrectlyTrackOperations()
     {
@@ -272,6 +323,11 @@ public class AdvancedConcurrencyTests
     // Expiration Handling Under Load
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that expired locks are properly handled and can be reacquired by new owners,
+    /// ensuring that the expiration mechanism works correctly under load.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task ExpirationHandling_LocksExpireAndCanBeReacquired()
     {
@@ -307,6 +363,11 @@ public class AdvancedConcurrencyTests
     // State Consistency Under Concurrent Errors
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests error recovery scenarios to ensure that the repository remains consistent
+    /// even when operations fail or when invalid operations are attempted.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task ErrorRecovery_RepositoryRemainsConsistentAfterFailures()
     {
@@ -338,6 +399,11 @@ public class AdvancedConcurrencyTests
     // Lock Fairness Test
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests lock fairness to ensure that under concurrent access, some workers are able to acquire locks
+    /// rather than a single worker monopolizing all lock acquisitions.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Fact]
     public async Task LockFairness_SomeWorkersCanAcquire()
     {
