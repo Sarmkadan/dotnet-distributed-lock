@@ -11,10 +11,16 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Tests for the DeadlockDetector class.
+/// </summary>
 public class DeadlockDetectorTests
 {
     private readonly DeadlockDetector _detector = new(NullLogger<DeadlockDetector>.Instance);
 
+    /// <summary>
+    /// Tests that the constructor throws an ArgumentNullException when the logger is null.
+    /// </summary>
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
@@ -29,6 +35,9 @@ public class DeadlockDetectorTests
     // WouldDeadlock Tests
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that WouldDeadlock returns false when there are no existing ownerships.
+    /// </summary>
     [Fact]
     public void WouldDeadlock_WithNoExistingOwnership_ReturnsFalse()
     {
@@ -39,6 +48,9 @@ public class DeadlockDetectorTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that WouldDeadlock returns true when there is a simple circular wait.
+    /// </summary>
     [Fact]
     public async Task WouldDeadlock_WithSimpleCircularWait_ReturnsTrue()
     {
@@ -59,6 +71,9 @@ public class DeadlockDetectorTests
         isDeadlock.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that WouldDeadlock returns false when there is no circular wait.
+    /// </summary>
     [Fact]
     public void WouldDeadlock_WithoutCircularWait_ReturnsFalse()
     {
@@ -75,6 +90,9 @@ public class DeadlockDetectorTests
         isDeadlock.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that WouldDeadlock detects a deadlock with a longer chain.
+    /// </summary>
     [Fact]
     public async Task WouldDeadlock_WithLongerChain_DetectsDeadlock()
     {
@@ -99,6 +117,9 @@ public class DeadlockDetectorTests
     // RecordAcquired and RecordReleased
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that RecordWaitingAsync throws an ArgumentNullException when the owner ID is null.
+    /// </summary>
     [Fact]
     public async Task RecordWaitingAsync_WithNullOwnerId_ThrowsArgumentNullException()
     {
@@ -107,6 +128,9 @@ public class DeadlockDetectorTests
             .Should().ThrowAsync<ArgumentNullException>().WithParameterName("ownerId");
     }
 
+    /// <summary>
+    /// Tests that RecordWaitingAsync throws an ArgumentNullException when the lock key is null.
+    /// </summary>
     [Fact]
     public async Task RecordWaitingAsync_WithNullLockKey_ThrowsArgumentNullException()
     {
@@ -115,6 +139,9 @@ public class DeadlockDetectorTests
             .Should().ThrowAsync<ArgumentNullException>().WithParameterName("lockKey");
     }
 
+    /// <summary>
+    /// Tests that RecordWaitingAsync tracks a waiter.
+    /// </summary>
     [Fact]
     public async Task RecordWaitingAsync_TracksWaiter()
     {
@@ -127,6 +154,9 @@ public class DeadlockDetectorTests
         metrics!.CurrentWaiters.Should().Be(1);
     }
 
+    /// <summary>
+    /// Tests that RecordAcquired registers ownership.
+    /// </summary>
     [Fact]
     public void RecordAcquired_RegistersOwnership()
     {
@@ -138,6 +168,9 @@ public class DeadlockDetectorTests
         isDeadlock.Should().BeFalse(); // owner-B waiting for lock:1 (owned by owner-A) is not a deadlock by itself
     }
 
+    /// <summary>
+    /// Tests that RecordReleased clears ownership.
+    /// </summary>
     [Fact]
     public void RecordReleased_ClearsOwnership()
     {
@@ -152,6 +185,9 @@ public class DeadlockDetectorTests
         isDeadlock.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that RecordReleased does not remove ownership when the owner is incorrect.
+    /// </summary>
     [Fact]
     public void RecordReleased_WithWrongOwner_DoesNotRemove()
     {
@@ -170,6 +206,9 @@ public class DeadlockDetectorTests
     // Metrics
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that GetMetrics returns null when there is no data.
+    /// </summary>
     [Fact]
     public async Task GetMetrics_WithNoData_ReturnsNull()
     {
@@ -180,6 +219,9 @@ public class DeadlockDetectorTests
         metrics.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that GetMetrics returns metrics after a waiter is added.
+    /// </summary>
     [Fact]
     public async Task GetMetrics_AfterWaiterAdded_ReturnsMetrics()
     {
@@ -195,6 +237,9 @@ public class DeadlockDetectorTests
         metrics.CurrentWaiters.Should().Be(1);
     }
 
+    /// <summary>
+    /// Tests that GetMetrics increments the deadlock counter after a deadlock is detected.
+    /// </summary>
     [Fact]
     public async Task GetMetrics_AfterDeadlockDetected_IncrementsCounter()
     {
@@ -211,6 +256,9 @@ public class DeadlockDetectorTests
         metrics!.DeadlocksDetected.Should().BeGreaterThan(0);
     }
 
+    /// <summary>
+    /// Tests that GetAllMetrics returns all tracked locks.
+    /// </summary>
     [Fact]
     public async Task GetAllMetrics_ReturnsAllTrackedLocks()
     {
@@ -231,6 +279,9 @@ public class DeadlockDetectorTests
     // RecordWaitEnded
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that RecordWaitEndedAsync removes a waiter.
+    /// </summary>
     [Fact]
     public async Task RecordWaitEndedAsync_RemovesWaiter()
     {
@@ -245,6 +296,9 @@ public class DeadlockDetectorTests
         metrics!.CurrentWaiters.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that RecordWaitEndedAsync records the wait time.
+    /// </summary>
     [Fact]
     public async Task RecordWaitEndedAsync_RecordsWaitTime()
     {
@@ -259,6 +313,9 @@ public class DeadlockDetectorTests
         metrics!.AverageWaitTimeMs.Should().BeApproximately(1234.5, 0.1);
     }
 
+    /// <summary>
+    /// Tests that RecordWaitEndedAsync calculates the average wait time for multiple waits.
+    /// </summary>
     [Fact]
     public async Task RecordWaitEndedAsync_MultipleWaits_CalculatesAverageWaitTime()
     {
@@ -279,6 +336,9 @@ public class DeadlockDetectorTests
     // Concurrency
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tests that concurrent waiting and acquisition maintains consistency.
+    /// </summary>
     [Fact]
     public async Task ConcurrentWaitingAndAcquisition_MaintainsConsistency()
     {
