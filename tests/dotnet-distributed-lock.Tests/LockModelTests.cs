@@ -12,12 +12,17 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="Lock"/> and <see cref="FencingToken"/> model classes.
+/// Tests various scenarios including constructor validation, expiration checks,
+/// renewal operations, ownership validation, and fencing token functionality.
+/// </summary>
 public class LockModelTests
 {
-    // -------------------------------------------------------------------------
-    // Lock constructor
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that the <see cref="Lock"/> constructor correctly sets all properties
+    /// when provided with valid arguments.
+    /// </summary>
     [Fact]
     public void Constructor_WithValidArguments_SetsPropertiesCorrectly()
     {
@@ -39,9 +44,14 @@ public class LockModelTests
         @lock.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.Add(duration), TimeSpan.FromSeconds(2));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="Lock"/> constructor throws <see cref="ArgumentException"/>
+    /// when the key parameter is null or whitespace.
+    /// </summary>
+    /// <param name="key">The invalid key value to test.</param>
     [Theory]
     [InlineData("")]
-    [InlineData("   ")]
+    [InlineData(" ")]
     public void Constructor_WithNullOrWhiteSpaceKey_ThrowsArgumentException(string key)
     {
         // Act
@@ -51,6 +61,10 @@ public class LockModelTests
         act.Should().Throw<ArgumentException>().WithParameterName("key");
     }
 
+    /// <summary>
+    /// Tests that the <see cref="Lock"/> constructor throws <see cref="ArgumentException"/>
+    /// when the ownerId parameter is empty.
+    /// </summary>
     [Fact]
     public void Constructor_WithEmptyOwnerId_ThrowsArgumentException()
     {
@@ -61,6 +75,10 @@ public class LockModelTests
         act.Should().Throw<ArgumentException>().WithParameterName("ownerId");
     }
 
+    /// <summary>
+    /// Tests that the <see cref="Lock"/> constructor throws <see cref="ArgumentException"/>
+    /// when the duration parameter is below the minimum allowed value.
+    /// </summary>
     [Fact]
     public void Constructor_WithDurationBelowMinimum_ThrowsArgumentException()
     {
@@ -74,10 +92,10 @@ public class LockModelTests
         act.Should().Throw<ArgumentException>().WithParameterName("duration");
     }
 
-    // -------------------------------------------------------------------------
-    // Lock.IsExpired / IsValid
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that <see cref="Lock.IsExpired"/> returns true when the lock's expiration time
+    /// is in the past.
+    /// </summary>
     [Fact]
     public void IsExpired_WhenExpiresAtIsInThePast_ReturnsTrue()
     {
@@ -91,6 +109,10 @@ public class LockModelTests
         @lock.IsExpired.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.IsExpired"/> returns false when the lock's expiration time
+    /// is in the future.
+    /// </summary>
     [Fact]
     public void IsExpired_WhenExpiresAtIsInTheFuture_ReturnsFalse()
     {
@@ -101,6 +123,10 @@ public class LockModelTests
         @lock.IsExpired.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.IsValid"/> returns true when the lock's status is Held
+    /// and it has not expired.
+    /// </summary>
     [Fact]
     public void IsValid_WhenStatusIsHeldAndNotExpired_ReturnsTrue()
     {
@@ -114,6 +140,10 @@ public class LockModelTests
         @lock.IsValid.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.IsValid"/> returns false when the lock's status is Acquiring
+    /// (not yet Held).
+    /// </summary>
     [Fact]
     public void IsValid_WhenStatusIsAcquiredNotHeld_ReturnsFalse()
     {
@@ -124,6 +154,10 @@ public class LockModelTests
         @lock.IsValid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.IsValid"/> returns false when the lock has expired,
+    /// even if its status is Held.
+    /// </summary>
     [Fact]
     public void IsValid_WhenExpired_ReturnsFalse()
     {
@@ -138,10 +172,10 @@ public class LockModelTests
         @lock.IsValid.Should().BeFalse();
     }
 
-    // -------------------------------------------------------------------------
-    // Lock.IsCloseToExpiration
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that <see cref="Lock.IsCloseToExpiration"/> returns true when the remaining time
+    /// until expiration is less than 25% of the total duration.
+    /// </summary>
     [Fact]
     public void IsCloseToExpiration_WhenRemainingTimeLessThan25Percent_ReturnsTrue()
     {
@@ -155,6 +189,10 @@ public class LockModelTests
         @lock.IsCloseToExpiration.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.IsCloseToExpiration"/> returns false when the remaining time
+    /// until expiration is more than 25% of the total duration.
+    /// </summary>
     [Fact]
     public void IsCloseToExpiration_WhenRemainingTimeMoreThan25Percent_ReturnsFalse()
     {
@@ -168,10 +206,10 @@ public class LockModelTests
         @lock.IsCloseToExpiration.Should().BeFalse();
     }
 
-    // -------------------------------------------------------------------------
-    // Lock.Renew
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that <see cref="Lock.Renew"/> increments the renewal count and sets the RenewedAt timestamp
+    /// when the lock has not expired and its status is Held.
+    /// </summary>
     [Fact]
     public void Renew_WhenNotExpired_IncrementsRenewalCountAndSetsRenewedAt()
     {
@@ -191,6 +229,10 @@ public class LockModelTests
         @lock.Status.Should().Be(LockStatus.Held);
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.Renew(TimeSpan)"/> extends the lock's expiration time
+    /// by the specified duration when the lock has not expired.
+    /// </summary>
     [Fact]
     public void Renew_WithNewDuration_ExtendsByNewDuration()
     {
@@ -208,6 +250,10 @@ public class LockModelTests
         @lock.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.Add(extendBy), TimeSpan.FromSeconds(2));
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.Renew"/> throws <see cref="LockExpiredException"/>
+    /// when attempting to renew an expired lock.
+    /// </summary>
     [Fact]
     public void Renew_WhenExpired_ThrowsLockExpiredException()
     {
@@ -225,10 +271,10 @@ public class LockModelTests
             .Which.LockKey.Should().Be("key");
     }
 
-    // -------------------------------------------------------------------------
-    // Lock.Release
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that <see cref="Lock.Release"/> sets the lock's status to Released
+    /// and immediately expires the lock.
+    /// </summary>
     [Fact]
     public void Release_SetsStatusToReleasedAndExpiresImmediately()
     {
@@ -246,10 +292,10 @@ public class LockModelTests
         @lock.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
-    // -------------------------------------------------------------------------
-    // Lock.ValidateOwnership
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that <see cref="Lock.ValidateOwnership"/> does not throw an exception
+    /// when the provided owner ID matches the lock's owner.
+    /// </summary>
     [Fact]
     public void ValidateOwnership_WithCorrectOwner_DoesNotThrow()
     {
@@ -260,6 +306,10 @@ public class LockModelTests
         @lock.Invoking(l => l.ValidateOwnership("owner-A")).Should().NotThrow();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Lock.ValidateOwnership"/> throws <see cref="LockNotOwnedException"/>
+    /// when the provided owner ID does not match the lock's owner.
+    /// </summary>
     [Fact]
     public void ValidateOwnership_WithWrongOwner_ThrowsLockNotOwnedException()
     {
@@ -274,10 +324,10 @@ public class LockModelTests
             .Which.ProvidedOwnerId.Should().Be("impostor");
     }
 
-    // -------------------------------------------------------------------------
-    // FencingToken
-    // -------------------------------------------------------------------------
-
+    /// <summary>
+    /// Tests that the <see cref="FencingToken"/> constructor throws <see cref="ArgumentException"/>
+    /// when the sequenceNumber parameter is negative.
+    /// </summary>
     [Fact]
     public void FencingToken_Constructor_WithNegativeSequenceNumber_ThrowsArgumentException()
     {
@@ -288,9 +338,14 @@ public class LockModelTests
         act.Should().Throw<ArgumentException>().WithParameterName("sequenceNumber");
     }
 
+    /// <summary>
+    /// Tests that the <see cref="FencingToken"/> constructor throws <see cref="ArgumentException"/>
+    /// when the token parameter is null or whitespace.
+    /// </summary>
+    /// <param name="token">The invalid token value to test.</param>
     [Theory]
     [InlineData("")]
-    [InlineData("   ")]
+    [InlineData(" ")]
     public void FencingToken_Constructor_WithEmptyToken_ThrowsArgumentException(string token)
     {
         // Act
@@ -300,6 +355,10 @@ public class LockModelTests
         act.Should().Throw<ArgumentException>().WithParameterName("token");
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IncrementSequence"/> creates a new token
+    /// with an incremented sequence number and a different token string.
+    /// </summary>
     [Fact]
     public void FencingToken_IncrementSequence_CreatesTokenWithSequencePlusOne()
     {
@@ -314,6 +373,10 @@ public class LockModelTests
         incremented.Token.Should().NotBe(original.Token);
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IsGreaterThan"/> returns true when the token's sequence number
+    /// is higher than the compared token's sequence number.
+    /// </summary>
     [Fact]
     public void FencingToken_IsGreaterThan_WhenSequenceIsHigher_ReturnsTrue()
     {
@@ -325,6 +388,10 @@ public class LockModelTests
         newer.IsGreaterThan(older).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IsGreaterThan"/> returns false when the token's sequence number
+    /// is lower than the compared token's sequence number.
+    /// </summary>
     [Fact]
     public void FencingToken_IsGreaterThan_WhenSequenceIsLower_ReturnsFalse()
     {
@@ -336,6 +403,10 @@ public class LockModelTests
         older.IsGreaterThan(newer).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IsGreaterThan"/> returns true when compared to null,
+    /// following the null comparison semantics of the method.
+    /// </summary>
     [Fact]
     public void FencingToken_IsGreaterThan_WhenComparedToNull_ReturnsTrue()
     {
@@ -346,6 +417,10 @@ public class LockModelTests
         token.IsGreaterThan(null!).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IsValid(TimeSpan)"/> returns true when the token
+    /// is within its valid lifetime period.
+    /// </summary>
     [Fact]
     public void FencingToken_IsValid_WhenWithinLifetime_ReturnsTrue()
     {
@@ -356,6 +431,10 @@ public class LockModelTests
         token.IsValid(TimeSpan.FromHours(1)).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.IsValid(TimeSpan)"/> returns false when the token's
+    /// lifetime has been exceeded.
+    /// </summary>
     [Fact]
     public void FencingToken_IsValid_WhenLifetimeExceeded_ReturnsFalse()
     {
@@ -366,6 +445,10 @@ public class LockModelTests
         token.IsValid(TimeSpan.FromSeconds(1)).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.Equals"/> returns true when two tokens have the same token string
+    /// and sequence number, regardless of their issue timestamps.
+    /// </summary>
     [Fact]
     public void FencingToken_Equals_WithSameTokenAndSequence_ReturnsTrue()
     {
@@ -378,6 +461,10 @@ public class LockModelTests
         t1.Should().Be(t2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.CompareTo"/> returns a negative value when the token's sequence number
+    /// is lower than the compared token's sequence number.
+    /// </summary>
     [Fact]
     public void FencingToken_CompareTo_WithHigherSequenceOther_ReturnsNegative()
     {
@@ -389,6 +476,10 @@ public class LockModelTests
         lower.CompareTo(higher).Should().BeNegative();
     }
 
+    /// <summary>
+    /// Tests that <see cref="FencingToken.ToString"/> returns a string containing the token
+    /// and sequence number in the format "token:sequence".
+    /// </summary>
     [Fact]
     public void FencingToken_ToString_ContainsTokenAndSequence()
     {
