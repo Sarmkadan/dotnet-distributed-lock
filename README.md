@@ -1,5 +1,25 @@
 // existing content ...
 
+## LockEventSubscriber
+
+The `LockEventSubscriber` class is an abstract base class that provides a common interface for subscribing to lock events. It allows developers to create custom event subscribers that can handle various lock events, such as lock acquisition, release, expiration, and contention.
+
+### Usage Example
+
+```csharp
+var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<LoggingLockEventSubscriber>();
+var subscriber = new LoggingLockEventSubscriber(logger);
+
+await subscriber.RegisterAsync(publisher);
+
+// Get metrics from the subscriber
+var metrics = subscriber.GetMetrics();
+Console.WriteLine($"Acquisitions: {metrics.Acquisitions}, Releases: {metrics.Releases}, Failures: {metrics.Failures}, ContentionEvents: {metrics.ContentionEvents}");
+
+// Initialize all registered event subscribers
+await InitializeLockEventSubscribersAsync(serviceProvider);
+```
+
 ## BasicBenchmark
 
 The `BasicBenchmark` class provides a set of basic benchmarks for measuring the performance of lock acquisition and release operations across different backends. It tests various scenarios such as acquiring a lock, trying to acquire a lock with success, trying to acquire a lock with failure, releasing a lock, renewing a lock, checking if a lock is held, and retrieving lock information.
@@ -131,4 +151,3 @@ class Program
 }
 ```
 
-```
