@@ -93,4 +93,42 @@ class Program
 }
 ```
 
+## FencingTokenBenchmark
+
+The `FencingTokenBenchmark` class provides performance benchmarks for fencing token operations, which are used to prevent split-brain scenarios in distributed systems. It measures the performance of issuing tokens, validating tokens, and checking if resources are locked.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Benchmarks.Benchmarks;
+
+class Program
+{
+    static void Main()
+    {
+        var benchmark = new FencingTokenBenchmark
+        {
+            BackendType = BackendType.Redis,
+            ConnectionString = "redis://localhost:6379,allowAdmin=true"
+        };
+
+        benchmark.GlobalSetup();
+
+        try
+        {
+            benchmark.IssueToken();
+            benchmark.ValidateToken_Valid();
+            benchmark.ValidateToken_Invalid();
+            benchmark.IsResourceLocked();
+        }
+        finally
+        {
+            benchmark.GlobalCleanup();
+        }
+    }
+}
+```
+
 ```
