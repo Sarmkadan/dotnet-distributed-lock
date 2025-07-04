@@ -1,5 +1,68 @@
 // existing content ...
 
+## ILockEventBus
+
+The `ILockEventBus` interface provides a centralized event bus for distributed lock events, enabling decoupled communication between components in a distributed lock system. It supports both synchronous and asynchronous event handlers, with built-in event history and subscriber tracking capabilities. The interface is implemented by `InMemoryLockEventBus`, which provides an in-memory event bus with optional event history replay.
+
+### Usage Example
+
+```csharp
+// Register the event bus in DI
+services.AddLockEventBus(maxHistorySize: 5000);
+
+// Resolve the event bus
+var eventBus = serviceProvider.GetRequiredService<ILockEventBus>();
+
+// Define a custom event
+public class LockAcquiredEvent : LockEvent
+{
+    public string ResourceId { get; set; }
+    public string OwnerId { get; set; }
+    public TimeSpan LockDuration { get; set; }
+}
+
+// Subscribe to events synchronously
+var acquiredHandler = new Action<LockAcquiredEvent>(e => 
+{
+    Console.WriteLine($"Lock acquired: {e.ResourceId} by {e.OwnerId}");
+});
+eventBus.Subscribe(acquiredHandler);
+
+// Subscribe to events asynchronously
+var releasedHandler = new Func<LockReleasedEvent, Task>(async e => 
+{
+    await Task.Delay(100); // Simulate async work
+    Console.WriteLine($"Lock released: {e.ResourceId}");
+});
+eventBus.Subscribe(releasedHandler);
+
+// Publish an event
+var lockAcquired = new LockAcquiredEvent
+{
+    ResourceId = "order-processing-123",
+    OwnerId = "payment-service-01",
+    LockDuration = TimeSpan.FromMinutes(5),
+    CorrelationId = Guid.NewGuid().ToString()
+};
+
+// Synchronous publish
+eventBus.Publish(lockAcquired);
+
+// Asynchronous publish
+await eventBus.PublishAsync(lockAcquired);
+
+// Fire-and-forget publish
+eventBus.PublishFireAndForget(lockAcquired);
+
+// Get subscriber count
+var subscriberCount = eventBus.GetSubscriberCount<LockAcquiredEvent>();
+Console.WriteLine($"Subscribers for LockAcquiredEvent: {subscriberCount}");
+
+// Get event history
+var recentEvents = eventBus.GetEventHistory<LockAcquiredEvent>();
+Console.WriteLine($"Total LockAcquiredEvent events: {recentEvents.Count}");
+```
+
 ## LockEventSubscriber
 
 The `LockEventSubscriber` class is an abstract base class that provides a common interface for subscribing to lock events. It allows developers to create custom event subscribers that can handle various lock events, such as lock acquisition, release, expiration, and contention.
