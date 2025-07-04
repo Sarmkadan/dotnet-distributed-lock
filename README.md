@@ -1,5 +1,36 @@
 // existing content ...
 
+## BasicBenchmark
+
+The `BasicBenchmark` class provides a set of basic benchmarks for measuring the performance of lock acquisition and release operations across different backends. It tests various scenarios such as acquiring a lock, trying to acquire a lock with success, trying to acquire a lock with failure, releasing a lock, renewing a lock, checking if a lock is held, and retrieving lock information.
+
+### Usage Example
+
+```csharp
+var benchmark = new BasicBenchmark
+{
+    BackendType = BackendType.Redis,
+    ConnectionString = "redis://localhost:6379,allowAdmin=true"
+};
+
+benchmark.GlobalSetup();
+
+try
+{
+    await benchmark.AcquireAsync();
+    await benchmark.TryAcquireAsync_Success();
+    await benchmark.TryAcquireAsync_Failure();
+    await benchmark.ReleaseAsync();
+    await benchmark.RenewAsync();
+    await benchmark.IsLockedAsync();
+    await benchmark.GetLockAsync();
+}
+finally
+{
+    benchmark.GlobalCleanup();
+}
+```
+
 ## ContentionBenchmark
 
 The `ContentionBenchmark` class provides performance benchmarks for measuring lock acquisition under contention scenarios. It tests scenarios such as single lock acquisition under high contention, sequential acquisitions with the same key, checking if a lock is held, and retrieving lock information.
@@ -62,3 +93,4 @@ class Program
 }
 ```
 
+```
