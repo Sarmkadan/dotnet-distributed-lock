@@ -63,6 +63,84 @@ var recentEvents = eventBus.GetEventHistory<LockAcquiredEvent>();
 Console.WriteLine($"Total LockAcquiredEvent events: {recentEvents.Count}");
 ```
 
+## ILockEventPublisher
+
+The `ILockEventPublisher` interface provides a simple pub-sub mechanism for distributing lock events to registered subscribers. It enables decoupled communication between components in a distributed lock system by allowing asynchronous event publishing and subscription handling. The interface is implemented by `InMemoryLockEventPublisher`, which provides an in-memory event publishing implementation suitable for single-instance deployments.
+
+### Public Members
+
+- `Task PublishAsync<TEvent>(TEvent @event)` - Publishes an event asynchronously to all registered subscribers
+- `void Subscribe<TEvent>(Func<TEvent, Task> handler)` - Registers an asynchronous handler for a specific event type
+- `void Unsubscribe<TEvent>()` - Removes all handlers for a specific event type
+- `int GetSubscriberCount<TEvent>()` - Gets the number of registered handlers for a specific event type
+- `void Publish<TEvent>(TEvent @event)` - Extension method for synchronous event publishing
+- `void PublishFireAndForget<TEvent>(TEvent @event)` - Extension method for fire-and-forget event publishing
+- `IServiceCollection AddLockEventPublisher(IServiceCollection services)` - Extension method for DI registration
+
+### Usage Example
+
+```csharp
+// Register the event publisher in DI
+services.AddLockEventPublisher();
+
+// Resolve the event publisher
+var publisher = serviceProvider.GetRequiredService<ILockEventPublisher>();
+
+// Define a custom event
+public class LockAcquiredEvent : LockEvent
+{
+    public string ResourceId { get; set; }
+    public string OwnerId { get; set; }
+    public TimeSpan LockDuration { get; set; }
+}
+
+// Define a custom event handler
+public class LockAcquisitionLogger
+{
+    private readonly ILogger<LockAcquisitionLogger> _logger;
+    
+    public LockAcquisitionLogger(ILogger<LockAcquisitionLogger> logger)
+    {
+        _logger = logger;
+    }
+    
+    public async Task HandleLockAcquiredAsync(LockAcquiredEvent @event)
+    {
+        _logger.LogInformation("Lock acquired: {ResourceId} by {OwnerId} for {Duration}",
+            @event.ResourceId, @event.OwnerId, @event.LockDuration);
+    }
+}
+
+// Register the handler
+var logger = new LockAcquisitionLogger(loggerFactory.CreateLogger<LockAcquisitionLogger>());
+publisher.Subscribe<LockAcquiredEvent>(logger.HandleLockAcquiredAsync);
+
+// Publish an event asynchronously
+var lockAcquired = new LockAcquiredEvent
+{
+    ResourceId = "order-processing-123",
+    OwnerId = "payment-service-01",
+    LockDuration = TimeSpan.FromMinutes(5),
+    EventId = Guid.NewGuid().ToString(),
+    Timestamp = DateTime.UtcNow
+};
+
+await publisher.PublishAsync(lockAcquired);
+
+// Get subscriber count
+var subscriberCount = publisher.GetSubscriberCount<LockAcquiredEvent>();
+Console.WriteLine($"Subscribers for LockAcquiredEvent: {subscriberCount}");
+
+// Publish synchronously (extension method)
+publisher.Publish(lockAcquired);
+
+// Fire-and-forget publish (extension method)
+publisher.PublishFireAndForget(lockAcquired);
+
+// Unsubscribe all handlers for this event type
+publisher.Unsubscribe<LockAcquiredEvent>();
+```
+
 ## LockEventSubscriber
 
 The `LockEventSubscriber` class is an abstract base class that provides a common interface for subscribing to lock events. It allows developers to create custom event subscribers that can handle various lock events, such as lock acquisition, release, expiration, and contention.
