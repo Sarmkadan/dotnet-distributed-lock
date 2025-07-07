@@ -1,37 +1,60 @@
 // existing content ...
 
-## LockEvent
+## ILockApiClient
 
-The `LockEvent` class serves as a base class for all lock-related events in the distributed lock system. It provides common properties for tracking event source and timing, such as `EventId`, `OccurredAt`, `SourceSystem`, and `CorrelationId`. 
+The `ILockApiClient` interface defines a contract for interacting with a distributed lock service via HTTP API. It provides methods for acquiring, releasing, renewing, and checking the status of locks.
 
 ### Usage Example
 
 ```csharp
-var acquiredEvent = new LockAcquiredEvent
+using System;
+using System.Threading.Tasks;
+using SarmKadan.DistributedLock.Integration;
+
+var client = new HttpLockApiClient(new HttpClient(), null);
+
+var acquireRequest = new AcquireLockRequest
 {
-    LockId = "order-processing-123",
-    LockName = "order-processing",
-    OwnerId = "payment-service-01",
-    ExpiresAt = DateTime.UtcNow.AddMinutes(5),
-    FencingToken = 12345,
-    Duration = TimeSpan.FromMinutes(5),
-    Status = LockStatus.Held
+    LockName = "my-lock",
+    DurationSeconds = 30,
+    AutoRenew = true,
+    RenewalIntervalSeconds = 60
 };
 
-Console.WriteLine(acquiredEvent.ToString()); // Output: LockAcquiredEvent [ID: {EventId}, Time: {OccurredAt:O}]
+var lockResponse = await client.AcquireLockAsync(acquireRequest);
+if (lockResponse != null && lockResponse.Success)
+{
+    Console.WriteLine($"Lock acquired: {lockResponse.LockId}");
+}
+else
+{
+    Console.WriteLine("Failed to acquire lock");
+}
 
-// Accessing properties
-Console.WriteLine($"Event ID: {acquiredEvent.EventId}");
-Console.WriteLine($"Occurred At: {acquiredEvent.OccurredAt:O}");
-Console.WriteLine($"Source System: {acquiredEvent.SourceSystem ?? "Unknown"}");
-Console.WriteLine($"Correlation ID: {acquiredEvent.CorrelationId ?? "Not set"}");
-Console.WriteLine($"Lock ID: {acquiredEvent.LockId}");
-Console.WriteLine($"Lock Name: {acquiredEvent.LockName}");
-Console.WriteLine($"Owner ID: {acquiredEvent.OwnerId}");
-Console.WriteLine($"Expires At: {acquiredEvent.ExpiresAt:O}");
-Console.WriteLine($"Fencing Token: {acquiredEvent.FencingToken}");
-Console.WriteLine($"Duration: {acquiredEvent.Duration}");
-Console.WriteLine($"Status: {acquiredEvent.Status}");
+// Release the lock
+await client.ReleaseLockAsync(lockResponse.LockId, lockResponse.FencingToken);
+
+// Renew the lock
+var renewResponse = await client.RenewLockAsync(lockResponse.LockId, lockResponse.FencingToken);
+if (renewResponse != null && renewResponse.Success)
+{
+    Console.WriteLine($"Lock renewed: {renewResponse.ExpiresAt}");
+}
+else
+{
+    Console.WriteLine("Failed to renew lock");
+}
+
+// Check the lock status
+var statusResponse = await client.GetLockStatusAsync(lockResponse.LockId);
+if (statusResponse != null && statusResponse.IsActive)
+{
+    Console.WriteLine($"Lock active: {statusResponse.LockId}");
+}
+else
+{
+    Console.WriteLine("Lock not active");
+}
 ```
 
 ## IWebhookPublisher
@@ -44,7 +67,6 @@ The `IWebhookPublisher` interface defines a contract for publishing lock-related
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SarmKadan.DistributedLock.Core.Models;
 using SarmKadan.DistributedLock.Integration;
 
 var config = new WebhookConfig
