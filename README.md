@@ -57,6 +57,43 @@ else
 }
 ```
 
+## IHttpClientFactory
+
+The `IHttpClientFactory` interface provides a contract for creating and managing HTTP clients. It allows for the creation of typed clients with proper connection pooling and resilience, preventing socket exhaustion by reusing client instances across the application.
+
+### Usage Example
+
+```csharp
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using SarmKadan.DistributedLock.Integration;
+
+var factory = new DefaultHttpClientFactory(new HttpClient(), null);
+
+var client = factory.CreateClient("my-client");
+var response = await client.GetAsync("https://example.com");
+response.EnsureSuccessStatusCode();
+
+var timeout = factory.DefaultTimeout;
+var maxRetries = factory.MaxRetries;
+var automaticDecompression = factory.AutomaticDecompression;
+var baseUrl = factory.BaseUrl;
+var apiKey = factory.ApiKey;
+var defaultHeaders = factory.DefaultHeaders;
+
+var lockServiceClient = new LockServiceHttpClient(client, null, new HttpClientConfiguration());
+var lockResponse = await lockServiceClient.GetLockAsync("my-lock");
+if (lockResponse != null)
+{
+    Console.WriteLine($"Lock acquired: {lockResponse}");
+}
+else
+{
+    Console.WriteLine("Failed to acquire lock");
+}
+```
+
 ## IWebhookPublisher
 
 The `IWebhookPublisher` interface defines a contract for publishing lock-related events to external webhook endpoints. It supports events like lock acquired, released, expired, and renewed, with configurable endpoints, timeouts, and retry policies. The `HttpWebhookPublisher` implementation sends events via HTTP POST to configured endpoints.
@@ -91,8 +128,3 @@ var lockData = new Lock
 
 await publisher.PublishLockAcquiredAsync(lockData);
 ```
-
-In this example:
-- The `WebhookConfig` enables only `Acquired` and `Expired` events.
-- The `HttpWebhookPublisher` is configured with a timeout of 3 seconds and 2 retries.
-- The `PublishLockAcquiredAsync` method sends a webhook with the lock data to the configured endpoint.
