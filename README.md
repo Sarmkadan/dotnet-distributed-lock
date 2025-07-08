@@ -29,4 +29,3 @@ catch (LockNotOwnedException ex)
 ```
 
 // existing content ...
-```
