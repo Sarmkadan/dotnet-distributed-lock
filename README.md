@@ -1,31 +1,32 @@
 // existing content ...
 
-## LockAcquisitionException
+## LockNotOwnedException
 
-The `LockAcquisitionException` exception is thrown when a lock cannot be acquired within the specified timeout. It provides additional information about the lock key, timeout, and retry count.
+The `LockNotOwnedException` exception is thrown when attempting to release or renew a lock that is not owned by the caller. It provides information about the lock key, owner ID, and the provided owner ID.
 
 ### Usage Example
 
 ```csharp
 try
 {
-    // Attempt to acquire a lock
-    var lockResponse = await client.AcquireLockAsync(acquireRequest);
-    if (lockResponse != null && lockResponse.Success)
+    // Attempt to release a lock
+    var releaseResponse = await client.ReleaseLockAsync(releaseRequest);
+    if (releaseResponse != null && releaseResponse.Success)
     {
-        Console.WriteLine($"Lock acquired: {lockResponse.LockId}");
+        Console.WriteLine($"Lock released: {releaseResponse.LockId}");
     }
     else
     {
-        // Handle LockAcquisitionException
-        var exception = (LockAcquisitionException)lockResponse.Exception;
-        Console.WriteLine($"Failed to acquire lock '{exception.LockKey}' within {exception.Timeout.TotalSeconds}s after {exception.RetryCount} retries.");
+        // Handle LockNotOwnedException
+        var exception = (LockNotOwnedException)releaseResponse.Exception;
+        Console.WriteLine($"Failed to release lock '{exception.LockKey}' because it is owned by '{exception.OwnerId}', not '{exception.ProvidedOwnerId}'.");
     }
 }
-catch (LockAcquisitionException ex)
+catch (LockNotOwnedException ex)
 {
-    Console.WriteLine($"Failed to acquire lock '{ex.LockKey}' within {ex.Timeout.TotalSeconds}s after {ex.RetryCount} retries.");
+    Console.WriteLine($"Failed to release lock '{ex.LockKey}' because it is owned by '{ex.OwnerId}', not '{ex.ProvidedOwnerId}'.");
 }
 ```
 
 // existing content ...
+```
