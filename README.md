@@ -1,31 +1,31 @@
 // existing content ...
 
-## LockNotOwnedException
+## ContentionMetrics
 
-The `LockNotOwnedException` exception is thrown when attempting to release or renew a lock that is not owned by the caller. It provides information about the lock key, owner ID, and the provided owner ID.
+The `ContentionMetrics` class tracks contention statistics for a single lock key. It records how many waiters have attempted to acquire the lock, the peak number of simultaneous waiters, the number of deadlock cycles detected, and the average wait time for each waiter. These metrics are updated in a thread‑safe manner and can be inspected at any time to diagnose lock contention issues.
 
 ### Usage Example
 
 ```csharp
-try
-{
-    // Attempt to release a lock
-    var releaseResponse = await client.ReleaseLockAsync(releaseRequest);
-    if (releaseResponse != null && releaseResponse.Success)
-    {
-        Console.WriteLine($"Lock released: {releaseResponse.LockId}");
-    }
-    else
-    {
-        // Handle LockNotOwnedException
-        var exception = (LockNotOwnedException)releaseResponse.Exception;
-        Console.WriteLine($"Failed to release lock '{exception.LockKey}' because it is owned by '{exception.OwnerId}', not '{exception.ProvidedOwnerId}'.");
-    }
-}
-catch (LockNotOwnedException ex)
-{
-    Console.WriteLine($"Failed to release lock '{ex.LockKey}' because it is owned by '{ex.OwnerId}', not '{ex.ProvidedOwnerId}'.");
-}
+using SarmKadan.DistributedLock.Models;
+
+// Create metrics for a specific lock key
+var metrics = new ContentionMetrics("my-lock-key");
+
+// Record a waiter entering the queue
+metrics.RecordWaiterAdded();
+
+// Simulate a waiter leaving after waiting 120.5 ms
+metrics.RecordWaiterRemoved(120.5);
+
+// Record a deadlock detection
+metrics.RecordDeadlock();
+
+// Inspect the metrics
+Console.WriteLine($"Lock key: {metrics.LockKey}");
+Console.WriteLine($"Created at: {metrics.CreatedAt:O}");
+Console.WriteLine($"Last updated at: {metrics.LastUpdatedAt:O}");
+Console.WriteLine(metrics); // Uses overridden ToString()
 ```
 
-// existing content ...
+This example demonstrates how to instantiate the metrics, record waiter activity, detect a deadlock, and output the collected statistics.
