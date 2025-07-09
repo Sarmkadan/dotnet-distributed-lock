@@ -80,6 +80,53 @@ This example demonstrates how to create a lock request context, track custom pro
 
 
 
+## LockAcquisition
+
+The `LockAcquisition` class represents a lock acquisition attempt with timing and retry information. It tracks the lock key, requester, acquisition mode, timing metrics, retry behavior, and outcome status. This class is useful for audit trails, debugging lock acquisition attempts, and monitoring retry patterns in distributed systems.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Models;
+using SarmKadan.DistributedLock.Enums;
+
+// Create a lock acquisition for a specific resource
+var acquisition = new LockAcquisition("user-profile-lock", "user-12345", AcquisitionMode.Blocking, TimeSpan.FromSeconds(10), 3)
+{
+    Timeout = TimeSpan.FromSeconds(15)
+};
+
+// Record the first attempt (failed)
+acquisition.RecordAttempt(false, "lock-unavailable", TimeSpan.FromMilliseconds(150));
+
+// Record the second attempt (still failed)
+acquisition.RecordAttempt(false, "lock-unavailable", TimeSpan.FromMilliseconds(200));
+
+// Record the third attempt (successful)
+acquisition.RecordAttempt(true, null, TimeSpan.FromMilliseconds(250));
+
+// Log acquisition details
+Console.WriteLine($"Lock acquisition: {acquisition}");
+Console.WriteLine($"Total attempts: {acquisition.AttemptCount}");
+Console.WriteLine($"Successful: {acquisition.IsSuccessful}");
+Console.WriteLine($"Total elapsed time: {acquisition.TotalElapsedTime.TotalSeconds:F2}s");
+Console.WriteLine($"Average attempt time: {acquisition.AverageAttemptTime.TotalMilliseconds:F2}ms");
+
+// For a failed acquisition
+var failedAcquisition = new LockAcquisition("order-processing-lock", "service-worker", AcquisitionMode.NonBlocking, TimeSpan.FromSeconds(5), 2)
+{
+    Timeout = TimeSpan.FromSeconds(8)
+};
+
+failedAcquisition.RecordAttempt(false, "timeout-after-3-retries");
+failedAcquisition.RecordAttempt(false, "timeout-after-3-retries");
+Console.WriteLine($"Failed acquisition: {failedAcquisition}");
+```
+
+This example demonstrates how to create a lock acquisition, record multiple attempts with different outcomes, and inspect the acquisition statistics including timing metrics and retry information.
+
+
 ## FencingToken
 
 The `FencingToken` class represents a fencing token that prevents zombie processes from writing to shared resources. Fencing tokens are monotonically increasing and ensure that only the current lock holder can proceed by comparing sequence numbers. Each token contains a unique identifier, a sequence number, and an issuance timestamp.
