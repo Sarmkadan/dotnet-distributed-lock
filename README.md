@@ -31,6 +31,55 @@ Console.WriteLine(metrics); // Uses overridden ToString()
 This example demonstrates how to instantiate the metrics, record waiter activity, detect a deadlock, and output the collected statistics.
 
 
+## LockRequestContext
+
+The `LockRequestContext` class represents the context and metadata for a lock acquisition request. It tracks request details such as the lock key, requester information, acquisition mode, timing metrics, and outcome status. This context is useful for audit trails, debugging, and monitoring lock acquisition attempts in distributed systems.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Models;
+using SarmKadan.DistributedLock.Enums;
+
+// Create a lock request context for a specific resource
+var requestContext = new LockRequestContext("user-profile-lock", "user-12345")
+{
+    RequestorName = "Alice Johnson",
+    Mode = AcquisitionMode.Blocking,
+    RequestedDuration = TimeSpan.FromMinutes(2),
+    RequestedAt = DateTime.UtcNow
+};
+
+// Add custom properties for tracking
+requestContext.AddProperty("operation", "profile-update");
+requestContext.AddProperty("priority", 1);
+requestContext.SetCorrelationId(Guid.NewGuid().ToString());
+requestContext.SetUserContext("alice.johnson@company.com", "session-789");
+
+// Simulate successful lock acquisition
+requestContext.MarkCompleted(true);
+
+// Log the request outcome
+Console.WriteLine($"Lock request completed: {requestContext}");
+Console.WriteLine($"Duration: {requestContext.Duration.TotalSeconds:F2}s");
+Console.WriteLine($"Custom properties: {requestContext.CustomProperties.Count} items");
+
+// For a failed attempt
+var failedContext = new LockRequestContext("order-processing-lock", "service-worker")
+{
+    Mode = AcquisitionMode.NonBlocking,
+    RequestedDuration = TimeSpan.FromSeconds(5)
+};
+failedContext.MarkCompleted(false, "timeout-after-3-retries");
+failedContext.IncrementRetryCount();
+failedContext.IncrementRetryCount();
+```
+
+This example demonstrates how to create a lock request context, track custom properties, set user context, mark completion status, and log the request outcome for both successful and failed lock acquisition attempts.
+
+
+
 ## FencingToken
 
 The `FencingToken` class represents a fencing token that prevents zombie processes from writing to shared resources. Fencing tokens are monotonically increasing and ensure that only the current lock holder can proceed by comparing sequence numbers. Each token contains a unique identifier, a sequence number, and an issuance timestamp.
