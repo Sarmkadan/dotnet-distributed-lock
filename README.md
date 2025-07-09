@@ -29,3 +29,44 @@ Console.WriteLine(metrics); // Uses overridden ToString()
 ```
 
 This example demonstrates how to instantiate the metrics, record waiter activity, detect a deadlock, and output the collected statistics.
+
+
+## FencingToken
+
+The `FencingToken` class represents a fencing token that prevents zombie processes from writing to shared resources. Fencing tokens are monotonically increasing and ensure that only the current lock holder can proceed by comparing sequence numbers. Each token contains a unique identifier, a sequence number, and an issuance timestamp.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+
+// Create a new fencing token
+var token = new FencingToken("abc123", 1, DateTime.UtcNow);
+
+// Create a new token with an incremented sequence number
+var nextToken = token.IncrementSequence();
+
+// Compare tokens to determine which is newer
+if (nextToken.IsGreaterThan(token))
+{
+    Console.WriteLine($"Newer token: {nextToken}");
+}
+
+// Validate token freshness
+if (token.IsValid(TimeSpan.FromMinutes(5)))
+{
+    Console.WriteLine("Token is still valid");
+}
+
+// Compare tokens
+if (token.CompareTo(nextToken) < 0)
+{
+    Console.WriteLine("Token has lower sequence number");
+}
+
+// Token equality
+var sameToken = new FencingToken("abc123", 1, DateTime.UtcNow);
+Console.WriteLine($"Tokens are equal: {token.Equals(sameToken)}");
+```
+
+This example demonstrates how to create, increment, compare, and validate fencing tokens in a distributed lock scenario.
