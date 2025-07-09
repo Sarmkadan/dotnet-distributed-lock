@@ -1,5 +1,37 @@
 // existing content ...
 
+## LockMetrics
+
+The `LockMetrics` class tracks comprehensive statistics for distributed lock operations, providing insights into acquisition, renewal, and release performance. It records successful and failed attempts, average timing for acquisitions and holds, and the current number of active locks. These metrics are updated automatically and can be inspected to monitor system health and performance.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Models;
+
+// Instantiate lock metrics
+var metrics = new LockMetrics();
+
+// Simulate lock operations
+metrics.RecordSuccessfulAcquisition(50.5); // Acquisition took 50.5ms
+metrics.RecordSuccessfulRenewal();
+metrics.RecordSuccessfulRenewal();
+metrics.RecordFailedRenewal();
+metrics.RecordRelease(120.0); // Held for 120.0ms
+
+// Inspect current metrics
+Console.WriteLine($"Active locks: {metrics.CurrentActiveLocks}");
+Console.WriteLine($"Total attempts: {metrics.TotalAcquisitionAttempts}");
+Console.WriteLine($"Successful acquisitions: {metrics.SuccessfulAcquisitions}");
+Console.WriteLine($"Average acquisition time: {metrics.AverageAcquisitionTimeMs:F2} ms");
+Console.WriteLine($"Average hold time: {metrics.AverageHoldTimeMs:F2} ms");
+Console.WriteLine($"Last updated at: {metrics.LastUpdatedAt}");
+Console.WriteLine(metrics); // Uses overridden ToString()
+```
+
+This example demonstrates how to instantiate `LockMetrics`, record various lifecycle events (acquisitions, renewals, releases, and failures), and output the aggregated statistics.
+
 ## ContentionMetrics
 
 The `ContentionMetrics` class tracks contention statistics for a single lock key. It records how many waiters have attempted to acquire the lock, the peak number of simultaneous waiters, the number of deadlock cycles detected, and the average wait time for each waiter. These metrics are updated in a thread‑safe manner and can be inspected at any time to diagnose lock contention issues.
