@@ -70,3 +70,43 @@ Console.WriteLine($"Tokens are equal: {token.Equals(sameToken)}");
 ```
 
 This example demonstrates how to create, increment, compare, and validate fencing tokens in a distributed lock scenario.
+
+## LockConfiguration
+
+`LockConfiguration` encapsulates all settings required to acquire and manage a distributed lock. It defines the lock key, duration, acquisition strategy, retry behavior, renewal policy, and optional fencing token usage. The configuration can be validated before use to ensure that all values are within acceptable ranges.
+
+### Usage Example
+
+```csharp
+using System;
+using System.Linq;
+using SarmKadan.DistributedLock.Models;
+using SarmKadan.DistributedLock.Enums;
+
+var config = new LockConfiguration("my-lock")
+{
+    LockDuration = TimeSpan.FromSeconds(30),
+    AcquisitionTimeout = TimeSpan.FromSeconds(10),
+    AcquisitionMode = AcquisitionMode.Blocking,
+    MaxRetries = 5,
+    RetryInterval = TimeSpan.FromMilliseconds(200),
+    RenewalInterval = TimeSpan.FromSeconds(15),
+    AutoRenewal = true,
+    UseFencingToken = true,
+    Metadata = "example metadata"
+};
+
+var errors = config.Validate();
+if (errors.Any())
+{
+    Console.WriteLine("Configuration errors:");
+    foreach (var e in errors) Console.WriteLine($"- {e}");
+}
+else
+{
+    Console.WriteLine("Configuration is valid:");
+    Console.WriteLine(config);
+}
+```
+
+This example shows how to instantiate a `LockConfiguration`, set its properties, validate it, and output the resulting configuration string.
