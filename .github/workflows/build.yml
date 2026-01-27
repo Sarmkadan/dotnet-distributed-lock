@@ -1,0 +1,146 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '*.csproj'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '*.csproj'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dotnet-version: ['10.0.x']
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # For version calculation
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ matrix.dotnet-version }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
+    - name: Test
+      run: dotnet test -c Release --no-build --verbosity normal
+
+    - name: Pack NuGet package
+      if: matrix.os == 'ubuntu-latest'
+      run: dotnet pack -c Release --no-build -o packages
+
+    - name: Upload NuGet package artifacts
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: nuget-packages
+        path: packages/
+
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Install code analyzer
+      run: dotnet tool install -g dotnet-format
+
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity quiet
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Scan for vulnerabilities
+      run: dotnet list package --vulnerable --include-transitive
+
+    - name: Analyze with Roslyn analyzers
+      run: dotnet build -c Release /p:TreatWarningsAsErrors=true
+
+  publish-package:
+    runs-on: ubuntu-latest
+    name: Publish to NuGet
+    needs: [build, code-quality, security-scan]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
+    - name: Pack NuGet package
+      run: dotnet pack -c Release --no-build -o packages
+
+    - name: Publish to NuGet
+      run: dotnet nuget push packages/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      if: secrets.NUGET_API_KEY != ''
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: packages/*
+      if: always()
+
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: sarmkadan/dotnet-distributed-lock:latest
