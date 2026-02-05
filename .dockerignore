@@ -1,0 +1,76 @@
+# Build artifacts
+bin/
+obj/
+*.csproj.user
+*.vspscc
+*.vssscc
+*.pidb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Version control
+.git
+.gitignore
+.gitmodules
+.gitattributes
+
+# Documentation
+docs/
+*.md
+LICENSE
+README.md
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+
+# Tests
+tests/
+**/test*/
+**/*test*/
+TestResults/
+*.test.csproj
+
+# IDE and editor files
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.unittest
+*.settings
+*.loadorder
+*.pfx
+*.snk
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+*.bak
+*.backup
+*.old
+*.swp
+*~
+.DS_Store
+Thumbs.bin
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+**/bin/
+**/obj/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs/
+*.log
