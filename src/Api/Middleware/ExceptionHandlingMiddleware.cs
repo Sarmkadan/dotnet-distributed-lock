@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ using SarmKadan.DistributedLock.Core.Exceptions;
 /// and converts them to appropriate HTTP responses with meaningful error messages.
 /// This prevents sensitive stack traces from being exposed to clients.
 /// </summary>
-public class ExceptionHandlingMiddleware
+public sealed class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
@@ -97,7 +98,7 @@ public class ExceptionHandlingMiddleware
     }
 }
 
-public class ErrorResponseBody
+public sealed class ErrorResponseBody
 {
     public string Message { get; set; } = string.Empty;
     public string ErrorCode { get; set; } = string.Empty;

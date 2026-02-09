@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -20,7 +21,7 @@ public static class ObjectExtensions
     /// </summary>
     public static T? DeepClone<T>(this T? obj) where T : class
     {
-        if (obj == null)
+        if (obj is null)
             return null;
 
         try
@@ -70,7 +71,7 @@ public static class ObjectExtensions
     /// </summary>
     public static bool IsNullOrDefault<T>(this T? obj) where T : class
     {
-        return obj == null || obj.Equals(default(T));
+        return obj is null || obj.Equals(default(T));
     }
 
     /// <summary>
@@ -120,7 +121,7 @@ public static class ObjectExtensions
     /// </summary>
     public static TResult? MapTo<T, TResult>(this T obj, Func<T, TResult?> mapper) where T : class where TResult : class
     {
-        if (obj == null)
+        if (obj is null)
             return null;
 
         try
@@ -149,6 +150,6 @@ public static class ObjectExtensions
     /// </summary>
     public static bool Validate<T>(this T obj, Func<T, bool> predicate) where T : class
     {
-        return obj != null && predicate(obj);
+        return obj is not null && predicate(obj);
     }
 }

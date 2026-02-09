@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -15,7 +16,7 @@ using SarmKadan.DistributedLock.Core.Repository;
 [ApiController]
 [Route("api/health")]
 [Produces("application/json")]
-public class HealthCheckController : ControllerBase
+public sealed class HealthCheckController : ControllerBase
 {
     private readonly ILockRepository _repository;
     private readonly ILogger<HealthCheckController> _logger;

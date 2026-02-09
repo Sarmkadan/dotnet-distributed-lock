@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace SarmKadan.DistributedLock.Backends.SQLite;
 /// <summary>
 /// SQLite-based implementation of the lock repository for lightweight, file-based locking.
 /// </summary>
-public class SqliteLockRepository : ILockRepository, IAsyncDisposable
+public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
 {
     private readonly string _connectionString;
     private readonly ILogger<SqliteLockRepository> _logger;
@@ -158,7 +159,7 @@ public class SqliteLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAsync(key, cancellationToken);
-            if (@lock != null && @lock.OwnerId == ownerId && !@lock.IsExpired)
+            if (@lock is not null && @lock.OwnerId == ownerId && !@lock.IsExpired)
                 return @lock;
 
             return null;
@@ -212,7 +213,7 @@ public class SqliteLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken);
-            if (@lock == null)
+            if (@lock is null)
                 return false;
 
             @lock.Renew(newDuration);
@@ -255,7 +256,7 @@ public class SqliteLockRepository : ILockRepository, IAsyncDisposable
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var @lock = await GetByKeyAsync(key, cancellationToken);
-        return @lock != null && !@lock.IsExpired;
+        return @lock is not null && !@lock.IsExpired;
     }
 
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)

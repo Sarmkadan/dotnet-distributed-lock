@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -12,7 +13,7 @@ namespace SarmKadan.DistributedLock.Services;
 /// <summary>
 /// Manages fencing tokens to prevent zombie processes from writing to shared resources.
 /// </summary>
-public class FencingTokenService
+public sealed class FencingTokenService
 {
     private readonly Dictionary<string, FencingToken> _tokens = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();
