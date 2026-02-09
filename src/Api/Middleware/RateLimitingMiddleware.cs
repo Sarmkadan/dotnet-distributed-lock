@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -10,7 +11,7 @@ namespace SarmKadan.DistributedLock.Api.Middleware;
 /// Uses a sliding window counter to track request frequency and enforce limits.
 /// Particularly important for protecting the lock acquisition endpoints from DOS attacks.
 /// </summary>
-public class RateLimitingMiddleware
+public sealed class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
@@ -115,7 +116,7 @@ public class RateLimitingMiddleware
 /// Configuration options for rate limiting behavior.
 /// Allows customization of request limits and time windows.
 /// </summary>
-public class RateLimitingOptions
+public sealed class RateLimitingOptions
 {
     /// <summary>
     /// Maximum number of requests allowed per client within the window.

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -16,7 +17,7 @@ using SarmKadan.DistributedLock.Core.Services;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class DistributedLockController : ControllerBase
+public sealed class DistributedLockController : ControllerBase
 {
     private readonly ILockService _lockService;
     private readonly ILogger<DistributedLockController> _logger;
@@ -41,7 +42,7 @@ public class DistributedLockController : ControllerBase
         [FromBody] LockAcquisitionRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request == null)
+        if (request is null)
             return BadRequest("Lock request cannot be null");
 
         _logger.LogInformation("Acquiring lock: {LockName}", request.LockName);

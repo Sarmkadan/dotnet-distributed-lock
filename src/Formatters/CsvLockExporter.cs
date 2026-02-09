@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -20,7 +21,7 @@ public class CsvLockExporter
     /// </summary>
     public static string ExportLock(Lock @lock)
     {
-        if (@lock == null)
+        if (@lock is null)
             return string.Empty;
 
         var sb = new StringBuilder();

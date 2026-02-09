@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -24,7 +25,7 @@ public interface ILockEventBus
 /// <summary>
 /// In-memory event bus with event history and replay capabilities.
 /// </summary>
-public class InMemoryLockEventBus : ILockEventBus
+public sealed class InMemoryLockEventBus : ILockEventBus
 {
     private readonly ConcurrentDictionary<Type, ConcurrentBag<object>> _subscribers = new();
     private readonly ConcurrentBag<LockEvent> _eventHistory;
@@ -97,7 +98,7 @@ public class InMemoryLockEventBus : ILockEventBus
 
     public void Subscribe<TEvent>(Action<TEvent> handler) where TEvent : LockEvent
     {
-        if (handler == null)
+        if (handler is null)
             throw new ArgumentNullException(nameof(handler));
 
         var eventType = typeof(TEvent);
@@ -109,7 +110,7 @@ public class InMemoryLockEventBus : ILockEventBus
 
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : LockEvent
     {
-        if (handler == null)
+        if (handler is null)
             throw new ArgumentNullException(nameof(handler));
 
         var eventType = typeof(TEvent);
