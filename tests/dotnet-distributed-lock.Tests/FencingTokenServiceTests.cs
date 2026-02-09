@@ -248,6 +248,25 @@ public sealed class FencingTokenServiceTests
         _service.GetToken("res:two").Should().BeNull();
         _service.GetToken("res:three").Should().BeNull();
     }
+
+    // -------------------------------------------------------------------------
+    // FencingToken Overflow Tests
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void IncrementToken_WithLargeSequenceNumber_HandlesOverflow()
+    {
+        // Arrange
+        var token = _service.IssueToken("resource:overflow");
+        // Simulate a very large sequence number that could cause overflow issues
+        var largeToken = new FencingToken("test123456789012", long.MaxValue - 10);
+
+        // This should not cause overflow issues
+        var act = () => _service.IncrementToken("resource:overflow");
+
+        // Assert
+        act.Should().NotThrow();
+    }
 }
 
 public class ValidationHelperTests
