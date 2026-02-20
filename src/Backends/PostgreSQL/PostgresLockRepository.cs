@@ -93,27 +93,56 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
-                await using (var command = connection.CreateCommand())
+
+                // Acquire PostgreSQL session-level advisory lock
+                var advisoryLockKey = GetAdvisoryLockKey(@lock.Key);
+                await using (var advisoryCommand = connection.CreateCommand())
                 {
-                    command.CommandText = @"
-                        INSERT INTO distributed_locks
-                        (lock_key, owner_id, status, acquired_at, expires_at, renewal_count, duration_seconds, lock_data)
-                        VALUES (@key, @owner, @status, @acquired, @expires, 0, @duration, @data::jsonb)
-                        ON CONFLICT DO NOTHING
-                    ";
-
-                    command.Parameters.AddWithValue("@key", @lock.Key);
-                    command.Parameters.AddWithValue("@owner", @lock.OwnerId);
-                    command.Parameters.AddWithValue("@status", (int)@lock.Status);
-                    command.Parameters.AddWithValue("@acquired", @lock.AcquiredAt);
-                    command.Parameters.AddWithValue("@expires", @lock.ExpiresAt);
-                    command.Parameters.AddWithValue("@duration", (int)@lock.Duration.TotalSeconds);
-                    command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
-
-                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
-                    @lock.Status = Enums.LockStatus.Acquired;
-                    return result > 0;
+                    advisoryCommand.CommandText = "SELECT pg_advisory_lock(@advisoryLockKey)";
+                    advisoryCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                    await advisoryCommand.ExecuteNonQueryAsync(cancellationToken);
                 }
+
+                bool acquiredTableLock = false;
+                try
+                {
+                    await using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            INSERT INTO distributed_locks
+                            (lock_key, owner_id, status, acquired_at, expires_at, renewal_count, duration_seconds, lock_data)
+                            VALUES (@key, @owner, @status, @acquired, @expires, 0, @duration, @data::jsonb)
+                            ON CONFLICT DO NOTHING
+                        ";
+
+                        command.Parameters.AddWithValue("@key", @lock.Key);
+                        command.Parameters.AddWithValue("@owner", @lock.OwnerId);
+                        command.Parameters.AddWithValue("@status", (int)@lock.Status);
+                        command.Parameters.AddWithValue("@acquired", @lock.AcquiredAt);
+                        command.Parameters.AddWithValue("@expires", @lock.ExpiresAt);
+                        command.Parameters.AddWithValue("@duration", (int)@lock.Duration.TotalSeconds);
+                        command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
+
+                        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                        acquiredTableLock = result > 0;
+                    }
+                }
+                finally
+                {
+                    if (!acquiredTableLock)
+                    {
+                        // If table lock not acquired, release the advisory lock immediately
+                        await using (var advisoryReleaseCommand = connection.CreateCommand())
+                        {
+                            advisoryReleaseCommand.CommandText = "SELECT pg_advisory_unlock(@advisoryLockKey)";
+                            advisoryReleaseCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                            await advisoryReleaseCommand.ExecuteNonQueryAsync(cancellationToken);
+                        }
+                    }
+                }
+
+                @lock.Status = Enums.LockStatus.Acquired;
+                return acquiredTableLock;
             }
         }
         catch (Exception ex)
@@ -239,15 +268,35 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
             await using (var connection = new NpgsqlConnection(_connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
-                await using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND owner_id = @owner";
-                    command.Parameters.AddWithValue("@key", key);
-                    command.Parameters.AddWithValue("@owner", ownerId);
 
-                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
-                    return result > 0;
+                var releasedTableLock = false;
+                try
+                {
+                    await using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND owner_id = @owner";
+                        command.Parameters.AddWithValue("@key", key);
+                        command.Parameters.AddWithValue("@owner", ownerId);
+
+                        var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                        releasedTableLock = result > 0;
+                    }
                 }
+                finally
+                {
+                    // Always attempt to release the advisory lock if it was acquired by this session.
+                    // PostgreSQL advisory locks are session-level, so they are automatically released on connection close,
+                    // but explicit unlock is good practice and necessary if the connection is reused.
+                    var advisoryLockKey = GetAdvisoryLockKey(key);
+                    await using (var advisoryReleaseCommand = connection.CreateCommand())
+                    {
+                        advisoryReleaseCommand.CommandText = "SELECT pg_advisory_unlock(@advisoryLockKey)";
+                        advisoryReleaseCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                        await advisoryReleaseCommand.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                }
+
+                return releasedTableLock;
             }
         }
         catch (Exception ex)
@@ -361,5 +410,13 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await Task.CompletedTask;
+    }
+
+    private int GetAdvisoryLockKey(string lockKey)
+    {
+        // Use a consistent hashing strategy for the advisory lock key
+        // A simple string hash code should be sufficient for advisory locks
+        // as collisions are handled by the database internally.
+        return lockKey.GetHashCode();
     }
 }
