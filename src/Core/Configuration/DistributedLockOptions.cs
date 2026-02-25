@@ -28,6 +28,12 @@ public class DistributedLockOptions
     public bool EnableMetrics { get; set; } = true;
     public bool EnableLogging { get; set; } = true;
 
+    // Retry policy tuning — used by DefaultLockRetryPolicy
+    public int RetryPolicyMaxRetries { get; set; } = Constants.LockConstants.DefaultMaxRetries;
+    public int RetryPolicyInitialDelayMs { get; set; } = Constants.LockConstants.DefaultRetryDelayMilliseconds;
+    public int RetryPolicyMaxDelayMs { get; set; } = Constants.LockConstants.MaximumRetryDelayMilliseconds;
+    public double RetryPolicyJitterFactor { get; set; } = 0.1;
+
     /// <summary>
     /// Validates the configuration options.
     /// </summary>
