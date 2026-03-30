@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SarmKadan.DistributedLock</RootNamespace>
+    <AssemblyName>SarmKadan.DistributedLock</AssemblyName>
+    <PackageId>Zaiets.dotnet.distributed.lock</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Vladyslav Zaiets</Authors>
+    <Description>Distributed locking library for .NET - Redis, SQLite, PostgreSQL backends with fencing tokens and auto-renewal</Description>
+    <PackageTags>distributed-lock redis postgresql sqlite dotnet csharp</PackageTags>
+    <PackageProjectUrl>https://github.com/sarmkadan/dotnet-distributed-lock</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/sarmkadan/dotnet-distributed-lock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!--
+    Resolve 'Lock' ambiguity introduced in .NET 9 between SarmKadan.DistributedLock.Models.Lock
+    and the new System.Threading.Lock type that ships with net9+.
+  -->
+  <ItemGroup>
+    <Using Include="SarmKadan.DistributedLock.Models.Lock" Alias="Lock" />
+  </ItemGroup>
+
+  <!--
+    Exclude source directories that require external dependencies not bundled with
+    this library project (ASP.NET Core, Hosting abstractions, etc.) and the test tree.
+  -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Compile Remove="examples/**" />
+    <Compile Remove="src/Api/**" />
+    <Compile Remove="src/Backends/**" />
+    <Compile Remove="src/Workers/**" />
+    <Compile Remove="src/Caching/**" />
+    <Compile Remove="src/Integration/**" />
+    <Compile Remove="src/Formatters/**" />
+    <Compile Remove="src/Events/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.8.13" />
+    <PackageReference Include="Npgsql" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
