@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PostgreSQL backend not releasing advisory locks on connection pool timeout
 - SQLite WAL checkpoint not triggered during lock cleanup worker cycle
 
-## [1.0.0] - 2025-09-20
+## [2.0.0] - 2026-03-12
 
 ### Added
 
