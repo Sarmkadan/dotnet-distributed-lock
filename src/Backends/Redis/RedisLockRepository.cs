@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace SarmKadan.DistributedLock.Backends.Redis;
 /// <summary>
 /// Redis-based implementation of the lock repository with high-performance distributed locking.
 /// </summary>
-public class RedisLockRepository : ILockRepository, IAsyncDisposable
+public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 {
     private readonly IConnectionMultiplexer _redis;
     private readonly IDatabase _database;
@@ -69,7 +70,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
             if (!value.IsNull)
             {
                 var @lock = DeserializeLock(value.ToString());
-                if (@lock != null && !@lock.IsExpired)
+                if (@lock is not null && !@lock.IsExpired)
                     return @lock;
 
                 // Delete expired lock
@@ -90,7 +91,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAsync(key, cancellationToken);
-            if (@lock != null && @lock.OwnerId == ownerId && !@lock.IsExpired)
+            if (@lock is not null && @lock.OwnerId == ownerId && !@lock.IsExpired)
                 return @lock;
 
             return null;
@@ -126,7 +127,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken);
-            if (@lock == null)
+            if (@lock is null)
                 return false;
 
             @lock.Renew(newDuration);
@@ -144,7 +145,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAsync(key, cancellationToken);
-            if (@lock == null || @lock.OwnerId != ownerId)
+            if (@lock is null || @lock.OwnerId != ownerId)
                 return false;
 
             var redisKey = GetRedisKey(key);
@@ -164,7 +165,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAsync(key, cancellationToken);
-            return @lock != null && !@lock.IsExpired;
+            return @lock is not null && !@lock.IsExpired;
         }
         catch (Exception ex)
         {
@@ -187,7 +188,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
                 if (!value.IsNull)
                 {
                     var @lock = DeserializeLock(value.ToString());
-                    if (@lock != null && !@lock.IsExpired)
+                    if (@lock is not null && !@lock.IsExpired)
                         locks.Add(@lock);
                 }
             }
@@ -229,7 +230,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
                 if (!value.IsNull)
                 {
                     var @lock = DeserializeLock(value.ToString());
-                    if (@lock != null && @lock.IsExpired)
+                    if (@lock is not null && @lock.IsExpired)
                     {
                         await _database.KeyDeleteAsync(key);
                         deletedCount++;
@@ -293,7 +294,7 @@ public class RedisLockRepository : ILockRepository, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_redis != null)
+        if (_redis is not null)
         {
             await _redis.CloseAsync();
             _redis.Dispose();

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -9,7 +10,7 @@ namespace SarmKadan.DistributedLock.Api.Middleware;
 /// Middleware that logs all incoming HTTP requests and outgoing responses.
 /// Tracks request duration, status codes, and provides detailed diagnostics for troubleshooting.
 /// </summary>
-public class RequestLoggingMiddleware
+public sealed class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RequestLoggingMiddleware> _logger;

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -35,7 +36,7 @@ public static class DistributedCacheExtensions
         {
             var bytes = await cache.GetAsync(key, cancellationToken);
 
-            if (bytes == null || bytes.Length == 0)
+            if (bytes is null || bytes.Length == 0)
                 return null;
 
             var json = System.Text.Encoding.UTF8.GetString(bytes);
@@ -57,7 +58,7 @@ public static class DistributedCacheExtensions
         TimeSpan? expiration = null,
         CancellationToken cancellationToken = default) where T : class
     {
-        if (string.IsNullOrEmpty(key) || value == null)
+        if (string.IsNullOrEmpty(key) || value is null)
             return;
 
         try
@@ -92,13 +93,13 @@ public static class DistributedCacheExtensions
     {
         // Try to get from cache
         var cached = await cache.GetAsJsonAsync<T>(key, cancellationToken);
-        if (cached != null)
+        if (cached is not null)
             return cached;
 
         // Not in cache, create via factory
         var value = await factory();
 
-        if (value != null)
+        if (value is not null)
         {
             await cache.SetAsJsonAsync(key, value, expiration, cancellationToken);
         }
@@ -144,7 +145,7 @@ public static class DistributedCacheExtensions
         try
         {
             var bytes = await cache.GetAsync(key, cancellationToken);
-            return bytes != null && bytes.Length > 0;
+            return bytes is not null && bytes.Length > 0;
         }
         catch
         {
@@ -167,7 +168,7 @@ public static class DistributedCacheExtensions
         {
             var bytes = await cache.GetAsync(key, cancellationToken);
 
-            if (bytes != null)
+            if (bytes is not null)
             {
                 var options = new DistributedCacheEntryOptions
                 {
@@ -204,7 +205,7 @@ public static class DistributedCacheExtensions
         TimeSpan slidingExpiration,
         CancellationToken cancellationToken = default) where T : class
     {
-        if (string.IsNullOrEmpty(key) || value == null)
+        if (string.IsNullOrEmpty(key) || value is null)
             return;
 
         try

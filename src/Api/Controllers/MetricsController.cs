@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -16,7 +17,7 @@ using SarmKadan.DistributedLock.Core.Services;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class MetricsController : ControllerBase
+public sealed class MetricsController : ControllerBase
 {
     private readonly ILockService _lockService;
     private readonly ILogger<MetricsController> _logger;

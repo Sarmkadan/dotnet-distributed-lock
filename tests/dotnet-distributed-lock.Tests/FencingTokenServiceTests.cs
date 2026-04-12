@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -13,7 +14,7 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
-public class FencingTokenServiceTests
+public sealed class FencingTokenServiceTests
 {
     private readonly FencingTokenService _service =
         new(NullLogger<FencingTokenService>.Instance);

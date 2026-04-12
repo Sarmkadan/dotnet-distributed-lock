@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -28,7 +29,7 @@ public interface ILockCacheManager
 /// In-memory implementation using ConcurrentDictionary.
 /// Thread-safe and suitable for single-instance deployments.
 /// </summary>
-public class InMemoryLockCacheManager : ILockCacheManager
+public sealed class InMemoryLockCacheManager : ILockCacheManager
 {
     private readonly ConcurrentDictionary<string, CachedLock> _cache;
     private readonly CacheConfiguration _config;
@@ -68,7 +69,7 @@ public class InMemoryLockCacheManager : ILockCacheManager
 
     public async Task SetAsync(Lock @lock)
     {
-        if (@lock == null)
+        if (@lock is null)
             return;
 
         // Enforce size limit by removing least recently used entries
@@ -101,7 +102,7 @@ public class InMemoryLockCacheManager : ILockCacheManager
 
         return _cache.Values
             .Select(cl => cl.Lock)
-            .Where(l => l != null)
+            .Where(l => l is not null)
             .ToList();
     }
 
@@ -143,7 +144,7 @@ public class InMemoryLockCacheManager : ILockCacheManager
             .OrderBy(x => x.LastAccessTime)
             .FirstOrDefault();
 
-        if (oldest != null && oldest.Lock != null)
+        if (oldest is not null && oldest.Lock is not null)
         {
             _cache.TryRemove(oldest.Lock.Id, out _);
         }
@@ -207,7 +208,7 @@ public class InMemoryLockCacheManager : ILockCacheManager
 /// <summary>
 /// Configuration for cache behavior.
 /// </summary>
-public class CacheConfiguration
+public sealed class CacheConfiguration
 {
     /// <summary>
     /// Time-to-live for cached entries in seconds (default: 5 minutes).

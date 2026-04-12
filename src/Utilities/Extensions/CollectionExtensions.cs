@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -16,7 +17,7 @@ public static class CollectionExtensions
     /// </summary>
     public static bool IsNullOrEmpty<T>(this IEnumerable<T>? collection)
     {
-        return collection == null || !collection.Any();
+        return collection is null || !collection.Any();
     }
 
     /// <summary>
@@ -24,7 +25,7 @@ public static class CollectionExtensions
     /// </summary>
     public static bool HasElements<T>(this IEnumerable<T>? collection)
     {
-        return collection != null && collection.Any();
+        return collection is not null && collection.Any();
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ public static class CollectionExtensions
         TKey? key,
         TValue? defaultValue = default) where TKey : notnull
     {
-        if (dictionary == null || key == null)
+        if (dictionary is null || key is null)
             return defaultValue;
 
         return dictionary.TryGetValue(key, out var value) ? value : defaultValue;
@@ -91,7 +92,7 @@ public static class CollectionExtensions
 
         foreach (var dict in dictionaries)
         {
-            if (dict == null)
+            if (dict is null)
                 continue;
 
             foreach (var kvp in dict)
@@ -119,10 +120,10 @@ public static class CollectionExtensions
     /// </summary>
     public static HashSet<T> ToHashSet<T>(this IEnumerable<T>? items, IEqualityComparer<T>? comparer = null)
     {
-        if (items == null)
+        if (items is null)
             return new HashSet<T>(comparer);
 
-        return comparer != null
+        return comparer is not null
             ? new HashSet<T>(items, comparer)
             : new HashSet<T>(items);
     }
@@ -168,7 +169,7 @@ public static class CollectionExtensions
     /// </summary>
     public static T? SafeGetAt<T>(this IList<T>? list, int index) where T : class
     {
-        if (list == null || index < 0 || index >= list.Count)
+        if (list is null || index < 0 || index >= list.Count)
             return null;
 
         return list[index];

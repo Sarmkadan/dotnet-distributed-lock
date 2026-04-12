@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -71,7 +72,7 @@ public class AutoRenewalExample
                 var elapsed = (DateTime.UtcNow - operationStart).TotalSeconds;
                 var lockInfo = await lockService.GetLockAsync(lockKey);
 
-                if (lockInfo != null)
+                if (lockInfo is not null)
                 {
                     var timeRemaining = (lockInfo.ExpiresAt - DateTime.UtcNow).TotalSeconds;
                     Console.WriteLine($"[{elapsed:F0}s] Lock status: Held, {timeRemaining:F0}s remaining, Renewals: {lockInfo.RenewalCount}");
