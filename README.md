@@ -103,7 +103,7 @@ dotnet add package SarmKadan.DistributedLock
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="SarmKadan.DistributedLock" Version="1.0.0" />
+    <PackageReference Include="SarmKadan.DistributedLock" Version="2.0.0" />
 </ItemGroup>
 ```
 
