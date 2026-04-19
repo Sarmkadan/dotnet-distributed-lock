@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -91,7 +92,7 @@ public class BasicExample
         Console.WriteLine("Attempting non-blocking lock acquisition...");
         var @lock = await lockService.TryAcquireAsync(lockKey, ownerId);
 
-        if (@lock != null)
+        if (@lock is not null)
         {
             Console.WriteLine("✓ Lock acquired");
 

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -154,7 +155,7 @@ public sealed class DeadlockDetector : IDeadlockDetector
         var visitedHolders = new HashSet<string>(StringComparer.Ordinal);
         string? current = lockKey;
 
-        while (current != null)
+        while (current is not null)
         {
             if (!_ownership.TryGetValue(current, out var holder))
                 break; // no one holds this lock — chain ends, no deadlock

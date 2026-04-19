@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -63,7 +64,7 @@ public class FencingTokenExample
             var isLocked = await lockService.IsLockedAsync(resourceId);
             var lockInfo = await lockService.GetLockAsync(resourceId);
 
-            if (lockInfo != null)
+            if (lockInfo is not null)
             {
                 var timeRemaining = (lockInfo.ExpiresAt - DateTime.UtcNow).TotalSeconds;
                 Console.WriteLine($"   [{i}s] Lock still held, {timeRemaining:F1}s remaining");

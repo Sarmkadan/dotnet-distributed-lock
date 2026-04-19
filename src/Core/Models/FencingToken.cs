@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -41,7 +42,7 @@ public class FencingToken : IEquatable<FencingToken>, IComparable<FencingToken>
     // Validates that this token is greater than another token
     public bool IsGreaterThan(FencingToken other)
     {
-        return other == null || SequenceNumber > other.SequenceNumber;
+        return other is null || SequenceNumber > other.SequenceNumber;
     }
 
     // Validates that this token is valid and not expired

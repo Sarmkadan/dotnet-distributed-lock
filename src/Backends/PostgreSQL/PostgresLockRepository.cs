@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -14,7 +15,7 @@ namespace SarmKadan.DistributedLock.Backends.PostgreSQL;
 /// <summary>
 /// PostgreSQL-based implementation of the lock repository for SQL-based distributed locking.
 /// </summary>
-public class PostgresLockRepository : ILockRepository, IAsyncDisposable
+public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
 {
     private readonly string _connectionString;
     private readonly ILogger<PostgresLockRepository> _logger;
@@ -162,7 +163,7 @@ public class PostgresLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAsync(key, cancellationToken);
-            if (@lock != null && @lock.OwnerId == ownerId && !@lock.IsExpired)
+            if (@lock is not null && @lock.OwnerId == ownerId && !@lock.IsExpired)
                 return @lock;
 
             return null;
@@ -216,7 +217,7 @@ public class PostgresLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken);
-            if (@lock == null)
+            if (@lock is null)
                 return false;
 
             @lock.Renew(newDuration);
@@ -259,7 +260,7 @@ public class PostgresLockRepository : ILockRepository, IAsyncDisposable
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var @lock = await GetByKeyAsync(key, cancellationToken);
-        return @lock != null && !@lock.IsExpired;
+        return @lock is not null && !@lock.IsExpired;
     }
 
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
