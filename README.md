@@ -159,6 +159,53 @@ Console.WriteLine($"Failed acquisition: {failedAcquisition}");
 This example demonstrates how to create a lock acquisition, record multiple attempts with different outcomes, and inspect the acquisition statistics including timing metrics and retry information.
 
 
+## Lock
+
+The `Lock` class represents a distributed lock that can be acquired, renewed, and released by a specific owner. It tracks the lock state including key, owner, fencing token, status, timestamps, renewal count, and metadata. The lock supports automatic renewal and provides methods for managing the lock lifecycle.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Models;
+using SarmKadan.DistributedLock.Enums;
+
+// Acquire a new lock
+var newLock = new Lock("user-profile-lock-123", "user-service-456")
+{
+    FencingToken = new FencingToken("token-abc", 1, DateTime.UtcNow),
+    Status = LockStatus.Acquired,
+    Duration = TimeSpan.FromMinutes(5),
+    Metadata = "{"purpose":"user-profile-update","priority":1}"
+};
+
+Console.WriteLine($"New lock acquired: {newLock.Key} by {newLock.OwnerId}");
+Console.WriteLine(newLock);
+
+// Renew the lock (automatically updates RenewedAt and RenewalCount)
+newLock.Renew();
+Console.WriteLine($"Lock renewed {newLock.RenewalCount} times");
+
+// Validate ownership before releasing
+if (newLock.ValidateOwnership("user-service-456"))
+{
+    newLock.Release();
+    Console.WriteLine($"Lock released at {newLock.ExpiresAt}");
+}
+
+// Create a lock with expiration in the future
+var futureLock = new Lock("order-processing-lock", "payment-service")
+{
+    Status = LockStatus.Acquired,
+    Duration = TimeSpan.FromSeconds(30),
+    AcquiredAt = DateTime.UtcNow.AddSeconds(-10) // Already acquired 10 seconds ago
+};
+
+Console.WriteLine($"Lock acquired at: {futureLock.AcquiredAt:O}");
+Console.WriteLine($"Lock expires at: {futureLock.ExpiresAt:O}");
+Console.WriteLine($"Lock duration: {futureLock.Duration.TotalSeconds}s");
+```
+
 ## FencingToken
 
 The `FencingToken` class represents a fencing token that prevents zombie processes from writing to shared resources. Fencing tokens are monotonically increasing and ensure that only the current lock holder can proceed by comparing sequence numbers. Each token contains a unique identifier, a sequence number, and an issuance timestamp.
