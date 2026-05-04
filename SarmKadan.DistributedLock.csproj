@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SarmKadan.DistributedLock</RootNamespace>
+    <AssemblyName>SarmKadan.DistributedLock</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>Vladyslav Zaiets</Authors>
+    <Description>Distributed locking library for .NET with Redis, SQLite, and PostgreSQL backends featuring fencing tokens and auto-renewal</Description>
+    <PackageProjectUrl>https://github.com/sarmkadan/dotnet-distributed-lock</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/sarmkadan/dotnet-distributed-lock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" Version="2.8.13" />
+    <PackageReference Include="Npgsql" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
