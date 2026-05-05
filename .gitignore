@@ -20,10 +20,13 @@ bld/
 *.user
 *.userosscache
 *.sln.docstates
+*.suo
+appsettings.Development.json
 
 # Rider
 .idea/
 *.sln.iml
+*.DotSettings.user
 *.swp
 *.swo
 *~
@@ -36,6 +39,7 @@ TestResults/
 *.nupkg
 *.snupkg
 .nuget/
+packages/
 
 # Local environment
 .env
