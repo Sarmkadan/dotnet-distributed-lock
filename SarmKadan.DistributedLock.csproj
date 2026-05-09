@@ -16,6 +16,30 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!--
+    Resolve 'Lock' ambiguity introduced in .NET 9 between SarmKadan.DistributedLock.Models.Lock
+    and the new System.Threading.Lock type that ships with net9+.
+  -->
+  <ItemGroup>
+    <Using Include="SarmKadan.DistributedLock.Models.Lock" Alias="Lock" />
+  </ItemGroup>
+
+  <!--
+    Exclude source directories that require external dependencies not bundled with
+    this library project (ASP.NET Core, Hosting abstractions, etc.) and the test tree.
+  -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Compile Remove="examples/**" />
+    <Compile Remove="src/Api/**" />
+    <Compile Remove="src/Backends/**" />
+    <Compile Remove="src/Workers/**" />
+    <Compile Remove="src/Caching/**" />
+    <Compile Remove="src/Integration/**" />
+    <Compile Remove="src/Formatters/**" />
+    <Compile Remove="src/Events/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.8.13" />
     <PackageReference Include="Npgsql" Version="8.0.4" />
