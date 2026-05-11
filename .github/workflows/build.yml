@@ -121,7 +121,7 @@ jobs:
       if: secrets.NUGET_API_KEY != ''
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         files: packages/*
       if: always()
