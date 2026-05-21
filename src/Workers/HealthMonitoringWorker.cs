@@ -38,8 +38,8 @@ public class HealthMonitoringWorker : BackgroundService
         {
             try
             {
-                await CheckHealthAsync(stoppingToken);
-                await Task.Delay(_options.CheckIntervalMs, stoppingToken);
+                await CheckHealthAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(_options.CheckIntervalMs, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -64,7 +64,7 @@ public class HealthMonitoringWorker : BackgroundService
         try
         {
             // Test backend connectivity
-            await TestBackendConnectivityAsync(cancellationToken);
+            await TestBackendConnectivityAsync(cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
             _healthStatus.LastCheckTime = DateTime.UtcNow;
@@ -86,7 +86,7 @@ public class HealthMonitoringWorker : BackgroundService
             // Alert if configured
             if (_options.AlertOnUnhealthy)
             {
-                await AlertUnhealthyStatusAsync(ex);
+                await AlertUnhealthyStatusAsync(ex).ConfigureAwait(false);
             }
         }
     }
@@ -100,7 +100,7 @@ public class HealthMonitoringWorker : BackgroundService
         {
             // Attempt to get a non-existent lock (should return null, not throw)
             var testLockId = $"__health_check_{DateTime.UtcNow.Ticks}";
-            var result = await _repository.GetLockAsync(testLockId);
+            var result = await _repository.GetLockAsync(testLockId).ConfigureAwait(false);
 
             // If we get here without exception, backend is responding
             _healthStatus.BackendConnected = true;
@@ -160,7 +160,7 @@ public class HealthMonitoringWorker : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping health monitoring worker");
-        await base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 

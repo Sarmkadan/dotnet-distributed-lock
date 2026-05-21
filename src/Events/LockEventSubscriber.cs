@@ -31,7 +31,7 @@ public abstract class LockEventSubscriber
         try
         {
             _logger.LogDebug("Handling event: {EventType}", typeof(TEvent).Name);
-            await handler(@event);
+            await handler(@event).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -236,13 +236,13 @@ public static class LockEventSubscriberExtensions
         var loggingSubscriber = serviceProvider.GetService<LoggingLockEventSubscriber>();
         if (loggingSubscriber is not null)
         {
-            await loggingSubscriber.RegisterAsync(publisher);
+            await loggingSubscriber.RegisterAsync(publisher).ConfigureAwait(false);
         }
 
         var metricsSubscriber = serviceProvider.GetService<MetricsTrackingEventSubscriber>();
         if (metricsSubscriber is not null)
         {
-            await metricsSubscriber.RegisterAsync(publisher);
+            await metricsSubscriber.RegisterAsync(publisher).ConfigureAwait(false);
         }
     }
 }

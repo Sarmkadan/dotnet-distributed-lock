@@ -36,14 +36,14 @@ public class MetricsCollectionWorker : BackgroundService
         _logger.LogInformation("Metrics collection worker started");
 
         // Initial delay before starting collection
-        await Task.Delay(_options.InitialDelayMs, stoppingToken);
+        await Task.Delay(_options.InitialDelayMs, stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await CollectMetricsAsync(stoppingToken);
-                await Task.Delay(_options.CollectionIntervalMs, stoppingToken);
+                await CollectMetricsAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(_options.CollectionIntervalMs, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -141,7 +141,7 @@ public class MetricsCollectionWorker : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping metrics collection worker");
-        await base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 

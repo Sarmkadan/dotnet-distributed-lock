@@ -124,7 +124,7 @@ public sealed class LockMonitor : IDisposable
         {
             try
             {
-                await Task.Delay(interval, cancellationToken);
+                await Task.Delay(interval, cancellationToken).ConfigureAwait(false);
 
                 _lockSlim.EnterReadLock();
                 List<MonitoredLock> locksToRenew;

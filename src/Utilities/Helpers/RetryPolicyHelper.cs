@@ -32,7 +32,7 @@ public static class RetryPolicyHelper
         {
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -41,7 +41,7 @@ public static class RetryPolicyHelper
 
                 // Add jitter to prevent thundering herd
                 var jitterMs = (int)(currentDelayMs * 0.1 * _random.NextDouble());
-                await Task.Delay(currentDelayMs + jitterMs);
+                await Task.Delay(currentDelayMs + jitterMs).ConfigureAwait(false);
 
                 currentDelayMs = (int)(currentDelayMs * backoffMultiplier);
             }
@@ -98,7 +98,7 @@ public static class RetryPolicyHelper
         {
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -106,7 +106,7 @@ public static class RetryPolicyHelper
                     throw;
 
                 var jitterMs = (int)(currentDelayMs * 0.1 * _random.NextDouble());
-                await Task.Delay(currentDelayMs + jitterMs);
+                await Task.Delay(currentDelayMs + jitterMs).ConfigureAwait(false);
                 currentDelayMs += delayIncrementMs;
             }
         }

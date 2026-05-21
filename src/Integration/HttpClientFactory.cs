@@ -109,10 +109,10 @@ public class LockServiceHttpClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/locks/{lockId}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/locks/{lockId}", cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync(cancellationToken);
+            return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -137,10 +137,10 @@ public class LockServiceHttpClient
                 System.Text.Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.PostAsync("/locks/acquire", content, cancellationToken);
+            var response = await _httpClient.PostAsync("/locks/acquire", content, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            return await response.Content.ReadAsStringAsync(cancellationToken);
+            return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {

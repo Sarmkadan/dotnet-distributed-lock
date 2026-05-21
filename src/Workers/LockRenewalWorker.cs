@@ -69,8 +69,8 @@ public class LockRenewalWorker : BackgroundService
         {
             try
             {
-                await ProcessRenewalsAsync(stoppingToken);
-                await Task.Delay(_options.CheckIntervalMs, stoppingToken);
+                await ProcessRenewalsAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(_options.CheckIntervalMs, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -103,7 +103,7 @@ public class LockRenewalWorker : BackgroundService
         var renewalTasks = dueLocks.Select(schedule =>
             RenewLockAsync(schedule, cancellationToken));
 
-        await Task.WhenAll(renewalTasks);
+        await Task.WhenAll(renewalTasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public class LockRenewalWorker : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping lock renewal worker");
-        await base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private class RenewalSchedule

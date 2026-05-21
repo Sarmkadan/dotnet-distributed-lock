@@ -40,7 +40,7 @@ public sealed class LockService : ILockService
             var @lock = new Lock(lockKey, ownerId, lockDuration);
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var acquired = await _repository.AcquireAsync(@lock, cancellationToken);
+            var acquired = await _repository.AcquireAsync(@lock, cancellationToken).ConfigureAwait(false);
             stopwatch.Stop();
 
             if (acquired)
@@ -83,7 +83,7 @@ public sealed class LockService : ILockService
                 throw new LockAcquisitionException(lockKey, acquisitionTimeout, attempt);
             }
 
-            var (success, @lock, errorMessage) = await TryAcquireAsync(lockKey, ownerId, duration, cancellationToken);
+            var (success, @lock, errorMessage) = await TryAcquireAsync(lockKey, ownerId, duration, cancellationToken).ConfigureAwait(false);
             acquisition.RecordAttempt(success, errorMessage);
 
             if (success && @lock is not null)
@@ -94,7 +94,7 @@ public sealed class LockService : ILockService
 
             if (attempt < maxRetries - 1)
             {
-                await Task.Delay(retryDelay, cancellationToken);
+                await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
                 retryDelay = Math.Min(retryDelay * 2, Constants.LockConstants.MaximumRetryDelayMilliseconds);
             }
         }
@@ -111,7 +111,7 @@ public sealed class LockService : ILockService
         try
         {
             var duration = newDuration ?? Constants.LockConstants.DefaultLockTimeout;
-            var renewed = await _repository.RenewAsync(lockKey, ownerId, duration, cancellationToken);
+            var renewed = await _repository.RenewAsync(lockKey, ownerId, duration, cancellationToken).ConfigureAwait(false);
 
             if (renewed)
             {
@@ -141,7 +141,7 @@ public sealed class LockService : ILockService
     {
         try
         {
-            var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken);
+            var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken).ConfigureAwait(false);
             if (@lock is null)
             {
                 _logger.LogWarning("Lock not found for release: {LockKey}", lockKey);
@@ -149,7 +149,7 @@ public sealed class LockService : ILockService
             }
 
             var holdTime = DateTime.UtcNow - @lock.AcquiredAt;
-            var released = await _repository.ReleaseAsync(lockKey, ownerId, cancellationToken);
+            var released = await _repository.ReleaseAsync(lockKey, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (released)
             {
@@ -171,7 +171,7 @@ public sealed class LockService : ILockService
     {
         try
         {
-            return await _repository.GetByKeyAsync(lockKey, cancellationToken);
+            return await _repository.GetByKeyAsync(lockKey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -184,7 +184,7 @@ public sealed class LockService : ILockService
     {
         try
         {
-            return await _repository.ExistsAsync(lockKey, cancellationToken);
+            return await _repository.ExistsAsync(lockKey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -197,7 +197,7 @@ public sealed class LockService : ILockService
     {
         try
         {
-            return await _repository.GetAllActiveLockAsync(cancellationToken);
+            return await _repository.GetAllActiveLockAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

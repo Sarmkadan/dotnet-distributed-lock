@@ -44,14 +44,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 
             // Serialize with pending status first - only update to Acquired after SET NX succeeds
             var value = SerializeLock(@lock);
-            var success = await _database.StringSetAsync(key, value, expiry, When.NotExists);
+            var success = await _database.StringSetAsync(key, value, expiry, When.NotExists).ConfigureAwait(false);
 
             if (success)
             {
                 @lock.Status = Enums.LockStatus.Acquired;
                 // Re-serialize with correct status and update the Redis entry
                 var updatedValue = SerializeLock(@lock);
-                await _database.StringSetAsync(key, updatedValue, expiry, When.Exists);
+                await _database.StringSetAsync(key, updatedValue, expiry, When.Exists).ConfigureAwait(false);
                 _logger.LogDebug("Lock acquired in Redis: {LockKey}", @lock.Key);
             }
             else
@@ -73,7 +73,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var redisKey = GetRedisKey(key);
-            var value = await _database.StringGetAsync(redisKey);
+            var value = await _database.StringGetAsync(redisKey).ConfigureAwait(false);
 
             if (!value.IsNull)
             {
@@ -82,7 +82,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
                     return @lock;
 
                 // Delete expired lock
-                await _database.KeyDeleteAsync(redisKey);
+                await _database.KeyDeleteAsync(redisKey).ConfigureAwait(false);
             }
 
             return null;
@@ -98,7 +98,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAsync(key, cancellationToken);
+            var @lock = await GetByKeyAsync(key, cancellationToken).ConfigureAwait(false);
             if (@lock is not null && @lock.OwnerId == ownerId && !@lock.IsExpired)
                 return @lock;
 
@@ -119,7 +119,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
             var value = SerializeLock(@lock);
             var expiry = @lock.ExpiresAt - DateTime.UtcNow;
 
-            await _database.StringSetAsync(key, value, expiry);
+            await _database.StringSetAsync(key, value, expiry).ConfigureAwait(false);
             _logger.LogDebug("Lock updated in Redis: {LockKey}", @lock.Key);
             return true;
         }
@@ -134,12 +134,12 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken);
+            var @lock = await GetByKeyAndOwnerAsync(key, ownerId, cancellationToken).ConfigureAwait(false);
             if (@lock is null)
                 return false;
 
             @lock.Renew(newDuration);
-            return await UpdateAsync(@lock, cancellationToken);
+            return await UpdateAsync(@lock, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -152,12 +152,12 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAsync(key, cancellationToken);
+            var @lock = await GetByKeyAsync(key, cancellationToken).ConfigureAwait(false);
             if (@lock is null || @lock.OwnerId != ownerId)
                 return false;
 
             var redisKey = GetRedisKey(key);
-            var deleted = await _database.KeyDeleteAsync(redisKey);
+            var deleted = await _database.KeyDeleteAsync(redisKey).ConfigureAwait(false);
             _logger.LogDebug("Lock released in Redis: {LockKey}", key);
             return deleted;
         }
@@ -172,7 +172,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var @lock = await GetByKeyAsync(key, cancellationToken);
+            var @lock = await GetByKeyAsync(key, cancellationToken).ConfigureAwait(false);
             return @lock is not null && !@lock.IsExpired;
         }
         catch (Exception ex)
@@ -192,7 +192,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 
             foreach (var key in keys)
             {
-                var value = await _database.StringGetAsync(key);
+                var value = await _database.StringGetAsync(key).ConfigureAwait(false);
                 if (!value.IsNull)
                 {
                     var @lock = DeserializeLock(value.ToString());
@@ -214,7 +214,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         try
         {
-            var allLocks = await GetAllActiveLockAsync(cancellationToken);
+            var allLocks = await GetAllActiveLockAsync(cancellationToken).ConfigureAwait(false);
             return allLocks.Where(l => l.OwnerId == ownerId);
         }
         catch (Exception ex)
@@ -234,13 +234,13 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 
             foreach (var key in keys)
             {
-                var value = await _database.StringGetAsync(key);
+                var value = await _database.StringGetAsync(key).ConfigureAwait(false);
                 if (!value.IsNull)
                 {
                     var @lock = DeserializeLock(value.ToString());
                     if (@lock is not null && @lock.IsExpired)
                     {
-                        await _database.KeyDeleteAsync(key);
+                        await _database.KeyDeleteAsync(key).ConfigureAwait(false);
                         deletedCount++;
                     }
                 }
@@ -266,7 +266,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 
             foreach (var key in keys)
             {
-                await _database.KeyDeleteAsync(key);
+                await _database.KeyDeleteAsync(key).ConfigureAwait(false);
                 count++;
             }
 
@@ -304,7 +304,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         if (_redis is not null)
         {
-            await _redis.CloseAsync();
+            await _redis.CloseAsync().ConfigureAwait(false);
             _redis.Dispose();
         }
     }

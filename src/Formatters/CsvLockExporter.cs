@@ -58,14 +58,14 @@ public class CsvLockExporter
     {
         using (var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true))
         {
-            await writer.WriteLineAsync(GetCsvHeader());
+            await writer.WriteLineAsync(GetCsvHeader()).ConfigureAwait(false);
 
             foreach (var @lock in locks)
             {
-                await writer.WriteLineAsync(LockToCsvRow(@lock));
+                await writer.WriteLineAsync(LockToCsvRow(@lock)).ConfigureAwait(false);
             }
 
-            await writer.FlushAsync();
+            await writer.FlushAsync().ConfigureAwait(false);
         }
     }
 

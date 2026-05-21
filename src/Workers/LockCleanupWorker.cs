@@ -35,14 +35,14 @@ public class LockCleanupWorker : BackgroundService
         _logger.LogInformation("Lock cleanup worker started");
 
         // Initial delay before first cleanup
-        await Task.Delay(_options.InitialDelayMs, stoppingToken);
+        await Task.Delay(_options.InitialDelayMs, stoppingToken).ConfigureAwait(false);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await PerformCleanupAsync(stoppingToken);
-                await Task.Delay(_options.CleanupIntervalMs, stoppingToken);
+                await PerformCleanupAsync(stoppingToken).ConfigureAwait(false);
+                await Task.Delay(_options.CleanupIntervalMs, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -91,7 +91,7 @@ public class LockCleanupWorker : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping lock cleanup worker");
-        await base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 }
 

@@ -35,17 +35,17 @@ public class BasicExample
         Console.WriteLine("=== Basic Lock Acquisition Example ===\n");
 
         // Example 1: Simple acquire and release
-        await SimpleAcquireAndReleaseAsync(lockService, lockKey, ownerId);
+        await SimpleAcquireAndReleaseAsync(lockService, lockKey, ownerId).ConfigureAwait(false);
 
         Console.WriteLine();
 
         // Example 2: Try-acquire (non-blocking)
-        await TryAcquireExampleAsync(lockService, lockKey, ownerId);
+        await TryAcquireExampleAsync(lockService, lockKey, ownerId).ConfigureAwait(false);
 
         Console.WriteLine();
 
         // Example 3: Acquire with finally block
-        await AcquireWithFinallyAsync(lockService, lockKey, ownerId);
+        await AcquireWithFinallyAsync(lockService, lockKey, ownerId).ConfigureAwait(false);
     }
 
     private static async Task SimpleAcquireAndReleaseAsync(
@@ -60,7 +60,7 @@ public class BasicExample
         {
             // Acquire the lock - blocks until successful or times out
             Console.WriteLine("Attempting to acquire lock...");
-            var @lock = await lockService.AcquireAsync(lockKey, ownerId);
+            var @lock = await lockService.AcquireAsync(lockKey, ownerId).ConfigureAwait(false);
 
             Console.WriteLine($"✓ Lock acquired: {@lock.Key}");
             Console.WriteLine($"  Owner: {@lock.OwnerId}");
@@ -68,10 +68,10 @@ public class BasicExample
 
             // Simulate some work while holding the lock
             Console.WriteLine("  Performing critical work...");
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
 
             // Release the lock
-            await lockService.ReleaseAsync(lockKey, ownerId);
+            await lockService.ReleaseAsync(lockKey, ownerId).ConfigureAwait(false);
             Console.WriteLine("✓ Lock released");
         }
         catch (LockAcquisitionException ex)
@@ -90,7 +90,7 @@ public class BasicExample
 
         // Try to acquire without blocking
         Console.WriteLine("Attempting non-blocking lock acquisition...");
-        var @lock = await lockService.TryAcquireAsync(lockKey, ownerId);
+        var @lock = await lockService.TryAcquireAsync(lockKey, ownerId).ConfigureAwait(false);
 
         if (@lock is not null)
         {
@@ -99,11 +99,11 @@ public class BasicExample
             try
             {
                 Console.WriteLine("  Performing work...");
-                await Task.Delay(500);
+                await Task.Delay(500).ConfigureAwait(false);
             }
             finally
             {
-                await lockService.ReleaseAsync(lockKey, ownerId);
+                await lockService.ReleaseAsync(lockKey, ownerId).ConfigureAwait(false);
                 Console.WriteLine("✓ Lock released");
             }
         }
@@ -124,12 +124,12 @@ public class BasicExample
         try
         {
             Console.WriteLine("Acquiring lock...");
-            var @lock = await lockService.AcquireAsync(lockKey, ownerId);
+            var @lock = await lockService.AcquireAsync(lockKey, ownerId).ConfigureAwait(false);
             Console.WriteLine("✓ Lock acquired");
 
             // If an exception occurs here, the finally block still executes
             Console.WriteLine("  Performing work that might fail...");
-            await Task.Delay(500);
+            await Task.Delay(500).ConfigureAwait(false);
 
             Console.WriteLine("✓ Work completed successfully");
         }
@@ -140,7 +140,7 @@ public class BasicExample
         finally
         {
             // Always released, even if work threw an exception
-            await lockService.ReleaseAsync(lockKey, ownerId);
+            await lockService.ReleaseAsync(lockKey, ownerId).ConfigureAwait(false);
             Console.WriteLine("✓ Lock released (in finally block)");
         }
     }

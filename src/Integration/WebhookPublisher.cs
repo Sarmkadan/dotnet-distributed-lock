@@ -120,7 +120,7 @@ public class HttpWebhookPublisher : IWebhookPublisher
                 {
                     cts.CancelAfter(_config.TimeoutMs);
 
-                    var response = await _httpClient.PostAsync(endpoint, content, cts.Token);
+                    var response = await _httpClient.PostAsync(endpoint, content, cts.Token).ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {
