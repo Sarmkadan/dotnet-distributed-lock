@@ -40,16 +40,24 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var key = GetRedisKey(@lock.Key);
-            var value = SerializeLock(@lock);
             var expiry = @lock.ExpiresAt - DateTime.UtcNow;
 
-            @lock.Status = Enums.LockStatus.Acquired;
+            // Serialize with pending status first - only update to Acquired after SET NX succeeds
+            var value = SerializeLock(@lock);
             var success = await _database.StringSetAsync(key, value, expiry, When.NotExists);
 
             if (success)
+            {
+                @lock.Status = Enums.LockStatus.Acquired;
+                // Re-serialize with correct status and update the Redis entry
+                var updatedValue = SerializeLock(@lock);
+                await _database.StringSetAsync(key, updatedValue, expiry, When.Exists);
                 _logger.LogDebug("Lock acquired in Redis: {LockKey}", @lock.Key);
+            }
             else
+            {
                 _logger.LogDebug("Failed to acquire lock in Redis (already exists): {LockKey}", @lock.Key);
+            }
 
             return success;
         }
