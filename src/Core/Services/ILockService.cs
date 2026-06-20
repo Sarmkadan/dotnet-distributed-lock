@@ -13,7 +13,14 @@ namespace SarmKadan.DistributedLock.Services;
 /// </summary>
 public interface ILockService
 {
-    // Attempts to acquire a lock
+    /// <summary>
+    /// Attempts to acquire a lock in a non-blocking manner.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="duration">The optional duration to hold the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple indicating success, the lock instance (if successful), and an error message (if failed).</returns>
     Task<(bool Success, Lock? Lock, string? ErrorMessage)> TryAcquireAsync(
         string lockKey,
         string ownerId,
@@ -21,7 +28,15 @@ public interface ILockService
         CancellationToken cancellationToken = default
     );
 
-    // Acquires a lock with retry logic
+    /// <summary>
+    /// Acquires a lock with retry logic, blocking until successful or timeout reached.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="duration">The optional duration to hold the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The acquired lock.</returns>
+    /// <exception cref="LockAcquisitionException">Thrown if the lock cannot be acquired.</exception>
     Task<Lock> AcquireAsync(
         string lockKey,
         string ownerId,
@@ -29,7 +44,14 @@ public interface ILockService
         CancellationToken cancellationToken = default
     );
 
-    // Renews an existing lock
+    /// <summary>
+    /// Renews an existing lock.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="newDuration">The optional new duration to hold the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the renewal was successful; otherwise, false.</returns>
     Task<bool> RenewAsync(
         string lockKey,
         string ownerId,
@@ -37,19 +59,39 @@ public interface ILockService
         CancellationToken cancellationToken = default
     );
 
-    // Releases a lock
+    /// <summary>
+    /// Releases a lock.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was successfully released; otherwise, false.</returns>
     Task<bool> ReleaseAsync(
         string lockKey,
         string ownerId,
         CancellationToken cancellationToken = default
     );
 
-    // Retrieves lock information
+    /// <summary>
+    /// Retrieves lock information.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock information, or null if the lock does not exist.</returns>
     Task<Lock?> GetLockAsync(string lockKey, CancellationToken cancellationToken = default);
 
-    // Checks if a lock is currently held
+    /// <summary>
+    /// Checks if a lock is currently held.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock is currently held; otherwise, false.</returns>
     Task<bool> IsLockedAsync(string lockKey, CancellationToken cancellationToken = default);
 
-    // Gets all active locks
+    /// <summary>
+    /// Gets all active locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A list of all currently active locks.</returns>
     Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default);
 }
