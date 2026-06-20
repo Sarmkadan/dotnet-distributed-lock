@@ -13,39 +13,101 @@ namespace SarmKadan.DistributedLock.Repository;
 /// </summary>
 public interface ILockRepository
 {
-    // Acquires a new lock
+    /// <summary>
+    /// Acquires a new lock.
+    /// </summary>
+    /// <param name="lock">The lock to acquire.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was acquired successfully; otherwise, false.</returns>
     Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default);
 
-    // Retrieves a lock by key
+    /// <summary>
+    /// Retrieves a lock by key.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if found; otherwise, null.</returns>
     Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default);
 
-    // Retrieves a lock by key and owner
+    /// <summary>
+    /// Retrieves a lock by key and owner.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if found; otherwise, null.</returns>
     Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default);
 
-    // Updates an existing lock
+    /// <summary>
+    /// Updates an existing lock.
+    /// </summary>
+    /// <param name="lock">The lock to update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the update was successful; otherwise, false.</returns>
     Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default);
 
-    // Renews a lock (extends expiration)
+    /// <summary>
+    /// Renews a lock (extends expiration).
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="newDuration">The new duration for the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the renewal was successful; otherwise, false.</returns>
     Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default);
 
-    // Releases a lock
+    /// <summary>
+    /// Releases a lock.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the release was successful; otherwise, false.</returns>
     Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default);
 
-    // Checks if a lock exists and is still valid
+    /// <summary>
+    /// Checks if a lock exists and is still valid.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock exists; otherwise, false.</returns>
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
-    // Retrieves all active locks
+    /// <summary>
+    /// Retrieves all active locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of all active locks.</returns>
     Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default);
 
-    // Retrieves locks by owner
+    /// <summary>
+    /// Retrieves locks by owner.
+    /// </summary>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of locks owned by the specified owner.</returns>
     Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default);
 
-    // Deletes expired locks
+    /// <summary>
+    /// Deletes expired locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of deleted locks.</returns>
     Task<int> DeleteExpiredLockAsync(CancellationToken cancellationToken = default);
 
-    // Clears all locks (typically used for testing or reset scenarios)
+    /// <summary>
+    /// Clears all locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of cleared locks.</returns>
     Task<int> ClearAllAsync(CancellationToken cancellationToken = default);
 
-    // Validates if a given fencing token is still the latest for a lock.
+    /// <summary>
+    /// Validates if a given fencing token is still the latest for a lock.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="fencingToken">The fencing token to validate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the token is valid; otherwise, false.</returns>
     Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default);
 }

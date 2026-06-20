@@ -17,10 +17,42 @@ using Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public interface ILockEventBus
 {
+    /// <summary>
+    /// Publishes an event asynchronously.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <param name="event">The event to publish.</param>
+    /// <param name="correlationId">An optional correlation ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task PublishAsync<TEvent>(TEvent @event, string? correlationId = null) where TEvent : LockEvent;
+
+    /// <summary>
+    /// Subscribes to an event with a synchronous handler.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <param name="handler">The synchronous event handler.</param>
     void Subscribe<TEvent>(Action<TEvent> handler) where TEvent : LockEvent;
+
+    /// <summary>
+    /// Subscribes to an event with an asynchronous handler.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <param name="handler">The asynchronous event handler.</param>
     void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : LockEvent;
+
+    /// <summary>
+    /// Subscribes to an event with an asynchronous handler, returning an IDisposable for cancellation.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <param name="handler">The asynchronous event handler.</param>
+    /// <returns>A task returning an IDisposable object for managing the subscription.</returns>
     Task<IDisposable> SubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : LockEvent;
+
+    /// <summary>
+    /// Gets the number of subscribers for a specific event type.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <returns>The number of subscribers.</returns>
     int GetSubscriberCount<TEvent>() where TEvent : LockEvent;
 }
 
