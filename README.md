@@ -168,6 +168,8 @@ using (var @lock = await lockService.AcquireAsync("my-resource", "worker-1"))
 
 ## Usage Examples
 
+For more comprehensive, ready-to-run examples, please explore the [/examples](examples/) directory in this repository.
+
 ### Example 1: Database Migration Lock
 
 Prevent multiple instances from running migrations simultaneously:
