@@ -10,6 +10,7 @@ A high-performance, production-ready distributed locking library for .NET with s
 
 - [Features](#features)
 - [Architecture](#architecture)
+- [Docker Usage](#docker-usage)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage Examples](#usage-examples)
@@ -91,7 +92,23 @@ A high-performance, production-ready distributed locking library for .NET with s
 - **LockCacheManager**: In-memory cache for frequently accessed locks
 - **MetricsCollectionWorker**: Tracks performance and usage statistics
 
+## Docker Usage
+
+You can run the application and its dependencies (Redis and PostgreSQL) using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+This will start the following services:
+- `distlock-app`: The distributed lock application.
+- `distlock-postgres`: PostgreSQL database.
+- `distlock-redis`: Redis cache.
+
+The application will be accessible at `http://localhost:8080`.
+
 ## Installation
+
 
 ### Via NuGet Package Manager
 
