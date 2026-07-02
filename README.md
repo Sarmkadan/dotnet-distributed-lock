@@ -1029,6 +1029,86 @@ services.AddDistributedLocking(options =>
 5. **Use connection pooling** for database backends
 6. **Implement backoff strategies** to reduce lock contention
 
+## Running Benchmarks
+
+Performance benchmarks are included in the `dotnet-distributed-lock.Benchmarks` project using [BenchmarkDotNet](https://benchmarkdotnet.org/).
+
+
+### Prerequisites
+
+- .NET 10.0 SDK
+- For database backends (PostgreSQL, SQLite): Running database instances
+- For Redis backend: Redis server running
+
+### Running Benchmarks
+
+#### Run all benchmarks:
+
+```bash
+cd benchmarks/dotnet-distributed-lock.Benchmarks
+# Build in Release mode
+dotnet build -c Release
+
+# Run all benchmarks
+dotnet run -c Release -- --filter *
+```
+
+#### Run specific benchmark class:
+
+```bash
+# Run BasicBenchmark
+dotnet run -c Release -- --filter BasicBenchmark
+
+# Run ThroughputBenchmark
+dotnet run -c Release -- --filter ThroughputBenchmark
+
+# Run ContentionBenchmark
+dotnet run -c Release -- --filter ContentionBenchmark
+
+# Run FencingTokenBenchmark
+dotnet run -c Release -- --filter FencingTokenBenchmark
+```
+
+#### Run with memory allocation analysis:
+
+```bash
+# Enable MemoryDiagnoser to analyze allocations
+dotnet run -c Release -- --filter * --memory
+```
+
+#### Export benchmark results:
+
+```bash
+# Export to CSV
+dotnet run -c Release -- --filter * --exporters csv
+
+# Export to JSON
+dotnet run -c Release -- --filter * --exporters json
+
+# Export to HTML report
+dotnet run -c Release -- --filter * --exporters html
+```
+
+### Available Benchmarks
+
+The benchmark suite includes the following test categories:
+
+- **BasicBenchmark**: Core lock operations (acquire, release, renew, check status)
+- **ThroughputBenchmark**: High-throughput scenarios with sequential and concurrent operations
+- **ContentionBenchmark**: Performance under lock contention scenarios
+- **FencingTokenBenchmark**: Fencing token generation and validation operations
+
+
+### Benchmark Configuration
+
+Benchmarks automatically test all supported backends:
+- In-Memory (always available)
+- Redis (when server is running)
+- SQLite (when database is accessible)
+- PostgreSQL (when server is running)
+
+Each backend is benchmarked with appropriate connection strings and configurations.
+
 ## Benchmarks
 
 Measured on a single machine (4-core, 16 GB RAM) with default configuration and no caching layer, using .NET 10.
