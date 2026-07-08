@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock;
 using SarmKadan.DistributedLock.Backends;
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Services;
 
 namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 
@@ -67,7 +70,7 @@ public class FencingTokenBenchmark
     {
         if (_lockService is LockService concreteService)
         {
-            var tokenService = concreteService.GetRequiredService<FencingTokenService>();
+            var tokenService = _serviceProvider!.GetRequiredService<FencingTokenService>();
             var token = tokenService.IssueToken("fencing-resource");
         }
     }
@@ -77,7 +80,7 @@ public class FencingTokenBenchmark
     {
         if (_lockService is LockService concreteService)
         {
-            var tokenService = concreteService.GetRequiredService<FencingTokenService>();
+            var tokenService = _serviceProvider!.GetRequiredService<FencingTokenService>();
             var token = tokenService.IssueToken("fencing-resource");
             bool isValid = tokenService.ValidateToken("fencing-resource", token);
         }
@@ -88,7 +91,7 @@ public class FencingTokenBenchmark
     {
         if (_lockService is LockService concreteService)
         {
-            var tokenService = concreteService.GetRequiredService<FencingTokenService>();
+            var tokenService = _serviceProvider!.GetRequiredService<FencingTokenService>();
             var token = tokenService.IssueToken("fencing-resource");
             bool isValid = tokenService.ValidateToken("different-resource", token);
         }
@@ -99,7 +102,7 @@ public class FencingTokenBenchmark
     {
         if (_lockService is LockService concreteService)
         {
-            var tokenService = concreteService.GetRequiredService<FencingTokenService>();
+            var tokenService = _serviceProvider!.GetRequiredService<FencingTokenService>();
             bool isLocked = tokenService.IsResourceLocked("fencing-resource");
         }
     }

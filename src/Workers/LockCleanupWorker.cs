@@ -6,7 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
-using SarmKadan.DistributedLock.Core.Repository;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Repository;
 
 /// <summary>
 /// Background worker that cleans up expired locks from the backend storage.
@@ -29,6 +31,13 @@ public class LockCleanupWorker : BackgroundService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _options = options ?? new LockCleanupWorkerOptions();
     }
+
+    /// <summary>
+    /// Performs a single cleanup sweep on demand, outside of the periodic background schedule.
+    /// Useful for manual triggering, testing, and benchmarking.
+    /// </summary>
+    public Task RunCleanupOnceAsync(CancellationToken cancellationToken = default)
+        => PerformCleanupAsync(cancellationToken);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

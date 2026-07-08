@@ -7,7 +7,7 @@
 namespace SarmKadan.DistributedLock.Caching;
 
 using System.Collections.Concurrent;
-using SarmKadan.DistributedLock.Core.Models;
+using SarmKadan.DistributedLock.Models;
 using SarmKadan.DistributedLock.Utilities.Extensions;
 
 /// <summary>
@@ -85,7 +85,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
             LastAccessTime = DateTime.UtcNow
         };
 
-        _cache.AddOrUpdate(@lock.Id, cachedLock, (_, __) => cachedLock);
+        _cache.AddOrUpdate(@lock.Key, cachedLock, (_, __) => cachedLock);
     }
 
     public async Task RemoveAsync(string lockId)
@@ -146,7 +146,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
 
         if (oldest is not null && oldest.Lock is not null)
         {
-            _cache.TryRemove(oldest.Lock.Id, out _);
+            _cache.TryRemove(oldest.Lock.Key, out _);
         }
     }
 

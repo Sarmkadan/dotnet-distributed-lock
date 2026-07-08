@@ -38,6 +38,9 @@ public class ContentionMetrics
     /// <summary>Gets the cumulative number of individual waiter registrations.</summary>
     public long TotalWaiterRegistrations => Interlocked.Read(ref _totalWaiterRegistrations);
 
+    /// <summary>Alias for <see cref="TotalWaiterRegistrations"/>, the cumulative number of waiters observed.</summary>
+    public long TotalWaiters => TotalWaiterRegistrations;
+
     /// <summary>Gets the number of deadlock cycles detected involving this lock.</summary>
     public long DeadlocksDetected => Interlocked.Read(ref _deadlocksDetected);
 

@@ -6,9 +6,11 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Core.Exceptions;
 using System.Collections.Concurrent;
-using SarmKadan.DistributedLock.Core.Services;
+using SarmKadan.DistributedLock.Services;
 using SarmKadan.DistributedLock.Utilities.Extensions;
 
 /// <summary>
@@ -125,8 +127,7 @@ public class LockRenewalWorker : BackgroundService
 
             // Reschedule next renewal
             schedule.NextRenewalTime = updatedLock.ExpiresAt
-                .Subtract(schedule.RenewalInterval)
-                .AddRandomJitter(_options.JitterPercentage);
+                .Subtract(schedule.RenewalInterval.AddRandomJitter(_options.JitterPercentage));
 
             _logger.LogDebug("Successfully renewed lock: {LockId}", schedule.LockId);
         }

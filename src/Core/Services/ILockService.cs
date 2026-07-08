@@ -60,6 +60,23 @@ public interface ILockService
     );
 
     /// <summary>
+    /// Renews an existing lock using its fencing token, guaranteeing the caller still holds
+    /// the most recently issued token before extending the lock's duration.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="fencingToken">The fencing token previously issued for this lock.</param>
+    /// <param name="newDuration">The new duration to hold the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The renewed lock.</returns>
+    /// <exception cref="SarmKadan.DistributedLock.Exceptions.InvalidFencingTokenException">Thrown if the fencing token is no longer valid.</exception>
+    Task<Lock> RenewLockAsync(
+        string lockKey,
+        ulong fencingToken,
+        TimeSpan newDuration,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Releases a lock.
     /// </summary>
     /// <param name="lockKey">The unique identifier for the resource.</param>

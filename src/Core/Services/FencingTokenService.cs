@@ -139,6 +139,20 @@ public sealed class FencingTokenService
         }
     }
 
+    // Checks whether a fencing token has been issued (and not yet revoked) for a resource
+    public bool IsResourceLocked(string lockKey)
+    {
+        _lockSlim.EnterReadLock();
+        try
+        {
+            return _tokens.ContainsKey(lockKey);
+        }
+        finally
+        {
+            _lockSlim.ExitReadLock();
+        }
+    }
+
     // Clears all tokens (typically for testing)
     public void ClearAllTokens()
     {

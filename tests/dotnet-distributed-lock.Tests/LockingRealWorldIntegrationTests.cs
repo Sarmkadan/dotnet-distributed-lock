@@ -178,7 +178,7 @@ public class LockingRealWorldIntegrationTests
 
         // Act 2: Perform coordinated operation (all locks held)
         var allLocked = await Task.WhenAll(resources.Select(r => _lockService.IsLockedAsync(r)));
-        allLocked.Should().AllBe(true);
+        allLocked.Should().OnlyContain(isLocked => isLocked);
 
         // Act 3: Release all locks
         foreach (var resource in resources)
@@ -189,7 +189,7 @@ public class LockingRealWorldIntegrationTests
 
         // Act 4: Verify all locks are released
         var anyLocked = await Task.WhenAll(resources.Select(r => _lockService.IsLockedAsync(r)));
-        anyLocked.Should().AllBe(false);
+        anyLocked.Should().OnlyContain(isLocked => !isLocked);
     }
 
     // -------------------------------------------------------------------------

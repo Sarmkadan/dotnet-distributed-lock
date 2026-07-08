@@ -363,7 +363,7 @@ public class InMemoryLockCacheManagerTests
         }
 
         var all = await cacheManager.GetAllAsync();
-        all.Should().HaveLessOrEqualCount(10);
+        all.Should().HaveCountLessThanOrEqualTo(10);
     }
 
     // -------------------------------------------------------------------------
