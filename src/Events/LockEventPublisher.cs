@@ -6,6 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Events;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 /// <summary>
 /// Publisher for distributing lock events to registered subscribers.
 /// Implements a simple pub-sub pattern for decoupled event handling.

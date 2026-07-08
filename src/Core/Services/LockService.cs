@@ -134,6 +134,36 @@ public sealed class LockService : ILockService
         }
     }
 
+    public async Task<Lock> RenewLockAsync(
+        string lockKey,
+        ulong fencingToken,
+        TimeSpan newDuration,
+        CancellationToken cancellationToken = default)
+    {
+        var isValid = await _repository.ValidateFencingTokenAsync(lockKey, fencingToken, cancellationToken);
+        if (!isValid)
+        {
+            _logger.LogWarning("Invalid fencing token for lock: {LockKey}", lockKey);
+            throw new InvalidFencingTokenException(fencingToken.ToString(), lockKey);
+        }
+
+        var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken)
+            ?? throw new Core.Exceptions.LockRenewalFailedException(lockKey, $"Lock '{lockKey}' not found.");
+
+        var renewed = await _repository.RenewAsync(lockKey, @lock.OwnerId, newDuration, cancellationToken);
+        if (!renewed)
+        {
+            _metrics.RecordFailedRenewal();
+            throw new Core.Exceptions.LockRenewalFailedException(lockKey, $"Failed to renew lock '{lockKey}'.");
+        }
+
+        _metrics.RecordSuccessfulRenewal();
+        _logger.LogInformation("Lock renewed via fencing token: {LockKey}", lockKey);
+
+        return await _repository.GetByKeyAsync(lockKey, cancellationToken)
+            ?? throw new Core.Exceptions.LockRenewalFailedException(lockKey, $"Lock '{lockKey}' not found after renewal.");
+    }
+
     public async Task<bool> ReleaseAsync(
         string lockKey,
         string ownerId,

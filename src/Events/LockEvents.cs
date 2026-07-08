@@ -6,7 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Events;
 
-using SarmKadan.DistributedLock.Core.Models;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Models;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Base event class for all lock-related events.
@@ -36,6 +38,22 @@ public sealed class LockAcquiredEvent : LockEvent
     public required DateTime ExpiresAt { get; init; }
     public required ulong FencingToken { get; init; }
     public TimeSpan Duration { get; init; }
+    public LockStatus Status { get; init; } = LockStatus.Held;
+
+    public LockAcquiredEvent()
+    {
+    }
+
+    [SetsRequiredMembers]
+    public LockAcquiredEvent(string lockKey, string ownerId, LockStatus status)
+    {
+        LockId = lockKey;
+        LockName = lockKey;
+        OwnerId = ownerId;
+        ExpiresAt = DateTime.UtcNow;
+        FencingToken = 0;
+        Status = status;
+    }
 }
 
 /// <summary>
@@ -49,6 +67,19 @@ public sealed class LockReleasedEvent : LockEvent
     public DateTime AcquiredAt { get; init; }
     public DateTime ReleasedAt { get; init; }
     public TimeSpan HeldDuration { get; init; }
+
+    public LockReleasedEvent()
+    {
+    }
+
+    [SetsRequiredMembers]
+    public LockReleasedEvent(string lockKey, string ownerId)
+    {
+        LockId = lockKey;
+        LockName = lockKey;
+        OwnerId = ownerId;
+        ReleasedAt = DateTime.UtcNow;
+    }
 }
 
 /// <summary>
@@ -74,6 +105,41 @@ public sealed class LockRenewedEvent : LockEvent
     public DateTime PreviousExpiresAt { get; init; }
     public required DateTime NewExpiresAt { get; init; }
     public TimeSpan RenewedDuration { get; init; }
+
+    public LockRenewedEvent()
+    {
+    }
+
+    [SetsRequiredMembers]
+    public LockRenewedEvent(string lockKey, string ownerId)
+    {
+        LockId = lockKey;
+        LockName = lockKey;
+        OwnerId = ownerId;
+        NewExpiresAt = DateTime.UtcNow;
+    }
+}
+
+/// <summary>
+/// Event raised when a lock operation fails.
+/// </summary>
+public sealed class LockFailedEvent : LockEvent
+{
+    public required string LockId { get; init; }
+    public required string OwnerId { get; init; }
+    public required string Reason { get; init; }
+
+    public LockFailedEvent()
+    {
+    }
+
+    [SetsRequiredMembers]
+    public LockFailedEvent(string lockKey, string ownerId, string reason)
+    {
+        LockId = lockKey;
+        OwnerId = ownerId;
+        Reason = reason;
+    }
 }
 
 /// <summary>

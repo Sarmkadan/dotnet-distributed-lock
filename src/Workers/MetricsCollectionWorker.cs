@@ -6,6 +6,8 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Caching;
 
 /// <summary>

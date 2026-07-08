@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock;
 using SarmKadan.DistributedLock.Backends;
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Services;
 
 namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 
@@ -80,8 +83,8 @@ public class BasicBenchmark
         const string lockKey = "basic-try-acquire-lock";
         const string ownerId = "benchmark-runner";
 
-        var @lock = await _lockService!.TryAcquireAsync(lockKey, ownerId, TimeSpan.FromSeconds(30));
-        if (@lock != null)
+        var result = await _lockService!.TryAcquireAsync(lockKey, ownerId, TimeSpan.FromSeconds(30));
+        if (result.Success)
         {
             await CleanupLockAsync(lockKey, ownerId);
         }

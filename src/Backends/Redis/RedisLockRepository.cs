@@ -280,6 +280,20 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    public async Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var @lock = await GetByKeyAsync(key, cancellationToken);
+            return @lock is not null && !@lock.IsExpired && @lock.FencingToken?.SequenceNumber == (long)fencingToken;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating fencing token for lock: {LockKey}", key);
+            throw;
+        }
+    }
+
     private string GetRedisKey(string lockKey) => $"{_keyPrefix}{lockKey}";
 
     private string SerializeLock(Lock @lock)

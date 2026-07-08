@@ -41,12 +41,8 @@
     <Compile Remove="tests/**" />
     <Compile Remove="examples/**" />
     <Compile Remove="src/Api/**" />
-    <Compile Remove="src/Backends/**" />
-    <Compile Remove="src/Workers/**" />
-    <Compile Remove="src/Caching/**" />
     <Compile Remove="src/Integration/**" />
     <Compile Remove="src/Formatters/**" />
-    <Compile Remove="src/Events/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,6 +52,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
   </ItemGroup>
 
 </Project>

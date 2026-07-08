@@ -17,4 +17,4 @@ Console.WriteLine(" dotnet run -c Release -- --filter * --memory");
 Console.WriteLine();
 
 // Run all benchmarks
-await switcher.RunAllAsync(args);
+switcher.RunAll(args: args);
