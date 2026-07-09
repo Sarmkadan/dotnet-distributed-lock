@@ -17,5 +17,4 @@ Console.WriteLine(" dotnet run -c Release -- --filter * --memory");
 Console.WriteLine();
 
 // Run all benchmarks with MemoryDiagnoser
-switcher.RunAll(args: args, warmupCount: 5);
-```
+switcher.RunAll(args: args);
