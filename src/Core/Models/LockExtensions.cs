@@ -1,0 +1,65 @@
+#nullable enable
+// =============================================================================
+// Author: Vladyslav Zaiets | https://sarmkadan.com
+// CTO & Software Architect
+// =====================================================================
+
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Models;
+
+namespace SarmKadan.DistributedLock.Models;
+
+/// <summary>
+/// Provides extension methods for the <see cref="Lock"/> class to enhance lock management functionality.
+/// </summary>
+public static class LockExtensions
+{
+    /// <summary>
+    /// Checks if the lock is currently being acquired or renewed.
+    /// </summary>
+    /// <param name="lock">The lock instance to check.</param>
+    /// <returns>True if the lock is in an active state; otherwise, false.</returns>
+    public static bool IsActive(this Lock @lock)
+    {
+        return @lock.Status is LockStatus.Acquiring or LockStatus.Renewing;
+    }
+
+    /// <summary>
+    /// Checks if the lock is available for acquisition (not held and not expired).
+    /// </summary>
+    /// <param name="lock">The lock instance to check.</param>
+    /// <returns>True if the lock is available; otherwise, false.</returns>
+    public static bool IsAvailable(this Lock @lock)
+    {
+        return @lock.Status != LockStatus.Held && !@lock.IsExpired;
+    }
+
+    /// <summary>
+    /// Gets the remaining time until the lock expires.
+    /// </summary>
+    /// <param name="lock">The lock instance to check.</param>
+    /// <returns>The remaining time until expiration, or TimeSpan.Zero if already expired.</returns>
+    public static TimeSpan GetRemainingTime(this Lock @lock)
+    {
+        var remaining = @lock.ExpiresAt - DateTime.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    /// <summary>
+    /// Safely renews the lock if it's still valid, otherwise releases it.
+    /// </summary>
+    /// <param name="lock">The lock instance to renew.</param>
+    /// <param name="newDuration">Optional new duration for the lock.</param>
+    /// <returns>True if the lock was successfully renewed; false if it was expired and released.</returns>
+    public static bool SafeRenew(this Lock @lock, TimeSpan? newDuration = null)
+    {
+        if (@lock.IsExpired)
+        {
+            @lock.Release();
+            return false;
+        }
+
+        @lock.Renew(newDuration);
+        return true;
+    }
+}
