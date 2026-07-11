@@ -14,18 +14,22 @@ public static class LockCleanupWorkerExtensions
     /// <summary>
     /// Runs cleanup with a timeout to prevent indefinite blocking.
     /// </summary>
-    /// <param name="worker">The lock cleanup worker instance</param>
-    /// <param name="timeout">Maximum time to wait for cleanup to complete</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Task representing the cleanup operation</returns>
+    /// <param name="worker">The lock cleanup worker instance.</param>
+    /// <param name="timeout">Maximum time to wait for cleanup to complete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Task representing the cleanup operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <exception cref="TimeoutException">Thrown when cleanup does not complete within the specified timeout.</exception>
     public static async Task RunCleanupOnceAsyncWithTimeout(this LockCleanupWorker worker, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(worker);
+
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
         try
         {
-            await worker.RunCleanupOnceAsync(linkedCts.Token);
+            await worker.RunCleanupOnceAsync(linkedCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
@@ -36,15 +40,18 @@ public static class LockCleanupWorkerExtensions
     /// <summary>
     /// Runs cleanup and returns detailed statistics about the operation.
     /// </summary>
-    /// <param name="worker">The lock cleanup worker instance</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Tuple containing cleanup duration and count of cleaned locks</returns>
+    /// <param name="worker">The lock cleanup worker instance.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Tuple containing cleanup duration and count of cleaned locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
     public static async Task<(TimeSpan Duration, int CleanedCount)> RunCleanupOnceAsyncWithStats(this LockCleanupWorker worker, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(worker);
+
         var stopwatch = Stopwatch.StartNew();
         var startCount = worker.GetCleanedCount();
 
-        await worker.RunCleanupOnceAsync(cancellationToken);
+        await worker.RunCleanupOnceAsync(cancellationToken).ConfigureAwait(false);
 
         stopwatch.Stop();
         var endCount = worker.GetCleanedCount();
@@ -56,10 +63,13 @@ public static class LockCleanupWorkerExtensions
     /// <summary>
     /// Gets the total count of locks cleaned by this worker instance.
     /// </summary>
-    /// <param name="worker">The lock cleanup worker instance</param>
-    /// <returns>Total count of cleaned locks</returns>
+    /// <param name="worker">The lock cleanup worker instance.</param>
+    /// <returns>Total count of cleaned locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
     public static int GetCleanedCount(this LockCleanupWorker worker)
     {
+        ArgumentNullException.ThrowIfNull(worker);
+
         // Use reflection to access the private _cleanedCount field
         var field = typeof(LockCleanupWorker).GetField("_cleanedCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return field?.GetValue(worker) as int? ?? 0;
@@ -68,11 +78,14 @@ public static class LockCleanupWorkerExtensions
     /// <summary>
     /// Configures the worker to run cleanup more frequently for testing purposes.
     /// </summary>
-    /// <param name="worker">The lock cleanup worker instance</param>
-    /// <param name="interval">Cleanup interval to set</param>
-    /// <returns>The same worker instance for method chaining</returns>
+    /// <param name="worker">The lock cleanup worker instance.</param>
+    /// <param name="interval">Cleanup interval to set.</param>
+    /// <returns>The same worker instance for method chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
     public static LockCleanupWorker WithTestInterval(this LockCleanupWorker worker, TimeSpan interval)
     {
+        ArgumentNullException.ThrowIfNull(worker);
+
         var optionsField = typeof(LockCleanupWorker).GetField("_options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (optionsField?.GetValue(worker) is LockCleanupWorkerOptions options)
         {
@@ -85,10 +98,15 @@ public static class LockCleanupWorkerExtensions
     /// <summary>
     /// Logs the current configuration of the worker.
     /// </summary>
-    /// <param name="worker">The lock cleanup worker instance</param>
-    /// <param name="logger">Logger instance</param>
+    /// <param name="worker">The lock cleanup worker instance.</param>
+    /// <param name="logger">Logger instance.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="worker"/> is <see langword="null"/>.\n    /// <paramref name="logger"/> is <see langword="null"/>.\n    /// </exception>
     public static void LogConfiguration(this LockCleanupWorker worker, ILogger logger)
     {
+        ArgumentNullException.ThrowIfNull(worker);
+        ArgumentNullException.ThrowIfNull(logger);
+
         var optionsField = typeof(LockCleanupWorker).GetField("_options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (optionsField?.GetValue(worker) is LockCleanupWorkerOptions options)
         {
