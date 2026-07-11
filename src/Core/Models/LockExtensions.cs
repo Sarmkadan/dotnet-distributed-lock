@@ -19,8 +19,10 @@ public static class LockExtensions
     /// </summary>
     /// <param name="lock">The lock instance to check.</param>
     /// <returns>True if the lock is in an active state; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="lock"/> is null.</exception>
     public static bool IsActive(this Lock @lock)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
         return @lock.Status is LockStatus.Acquiring or LockStatus.Renewing;
     }
 
@@ -29,8 +31,10 @@ public static class LockExtensions
     /// </summary>
     /// <param name="lock">The lock instance to check.</param>
     /// <returns>True if the lock is available; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="lock"/> is null.</exception>
     public static bool IsAvailable(this Lock @lock)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
         return @lock.Status != LockStatus.Held && !@lock.IsExpired;
     }
 
@@ -39,8 +43,11 @@ public static class LockExtensions
     /// </summary>
     /// <param name="lock">The lock instance to check.</param>
     /// <returns>The remaining time until expiration, or TimeSpan.Zero if already expired.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="lock"/> is null.</exception>
+    /// <exception cref="OverflowException">Thrown when the time calculation results in an overflow.</exception>
     public static TimeSpan GetRemainingTime(this Lock @lock)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
         var remaining = @lock.ExpiresAt - DateTime.UtcNow;
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
@@ -51,8 +58,11 @@ public static class LockExtensions
     /// <param name="lock">The lock instance to renew.</param>
     /// <param name="newDuration">Optional new duration for the lock.</param>
     /// <returns>True if the lock was successfully renewed; false if it was expired and released.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="lock"/> is null.</exception>
     public static bool SafeRenew(this Lock @lock, TimeSpan? newDuration = null)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
+
         if (@lock.IsExpired)
         {
             @lock.Release();
