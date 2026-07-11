@@ -22,12 +22,10 @@ public static class BasicBenchmarkJsonExtensions
     /// <param name="value">The BasicBenchmark instance to serialize</param>
     /// <param name="indented">Whether to format the JSON with indentation</param>
     /// <returns>A JSON string representation of the BasicBenchmark</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/></exception>
     public static string ToJson(this BasicBenchmark value, bool indented = false)
     {
-        if (value is null)
-        {
-            return "{}";
-        }
+        ArgumentNullException.ThrowIfNull(value);
 
         var options = indented
             ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
@@ -40,9 +38,12 @@ public static class BasicBenchmarkJsonExtensions
     /// Deserializes a BasicBenchmark instance from a JSON string
     /// </summary>
     /// <param name="json">The JSON string to deserialize</param>
-    /// <returns>The deserialized BasicBenchmark instance, or null if JSON is invalid</returns>
+    /// <returns>The deserialized BasicBenchmark instance, or null if JSON is invalid or whitespace</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/></exception>
     public static BasicBenchmark? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
         {
             return null;
@@ -64,9 +65,12 @@ public static class BasicBenchmarkJsonExtensions
     /// <param name="json">The JSON string to deserialize</param>
     /// <param name="value">Receives the deserialized BasicBenchmark instance if successful</param>
     /// <returns>True if deserialization succeeded; false otherwise</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/></exception>
     public static bool TryFromJson(string json, out BasicBenchmark? value)
     {
         value = null;
+
+        ArgumentNullException.ThrowIfNull(json);
 
         if (string.IsNullOrWhiteSpace(json))
         {
