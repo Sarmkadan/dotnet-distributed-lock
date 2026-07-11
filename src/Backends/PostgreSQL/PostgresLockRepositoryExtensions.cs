@@ -23,12 +23,14 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Attempts to acquire a lock with automatic retry logic for transient failures.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
-    /// <param name="lock">The lock to acquire.</param>
-    /// <param name="maxRetries">Maximum number of retry attempts.</param>
-    /// <param name="retryDelay">Delay between retry attempts.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
+    /// <param name="lock">The lock to acquire. Cannot be null.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts. Must be greater than 0.</param>
+    /// <param name="retryDelay">Delay between retry attempts. If null, defaults to 100ms.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if lock was acquired, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> or <paramref name="lock"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxRetries"/> is less than or equal to 0.</exception>
     public static async Task<bool> AcquireWithRetryAsync(
         this PostgresLockRepository repository,
         Lock @lock,
@@ -36,6 +38,10 @@ public static class PostgresLockRepositoryExtensions
         TimeSpan? retryDelay = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(@lock);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxRetries, 0);
+
         retryDelay ??= TimeSpan.FromMilliseconds(100);
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -58,13 +64,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Attempts to release a lock with automatic retry logic for transient failures.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
-    /// <param name="key">The lock key.</param>
-    /// <param name="ownerId">The owner identifier.</param>
-    /// <param name="maxRetries">Maximum number of retry attempts.</param>
-    /// <param name="retryDelay">Delay between retry attempts.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
+    /// <param name="key">The lock key. Cannot be null or empty.</param>
+    /// <param name="ownerId">The owner identifier. Cannot be null or empty.</param>
+    /// <param name="maxRetries">Maximum number of retry attempts. Must be greater than 0.</param>
+    /// <param name="retryDelay">Delay between retry attempts. If null, defaults to 100ms.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if lock was released, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/>, <paramref name="key"/>, or <paramref name="ownerId"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> or <paramref name="ownerId"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxRetries"/> is less than or equal to 0.</exception>
     public static async Task<bool> ReleaseWithRetryAsync(
         this PostgresLockRepository repository,
         string key,
@@ -73,6 +82,13 @@ public static class PostgresLockRepositoryExtensions
         TimeSpan? retryDelay = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(ownerId);
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxRetries, 0);
+
         retryDelay ??= TimeSpan.FromMilliseconds(100);
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -95,15 +111,18 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the count of active locks matching the specified criteria.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="ownerId">Optional owner identifier to filter by.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Count of active locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<int> GetActiveLockCountAsync(
         this PostgresLockRepository repository,
         string? ownerId = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         var activeLocks = ownerId is null
             ? await repository.GetAllActiveLockAsync(cancellationToken)
             : await repository.GetByOwnerAsync(ownerId, cancellationToken);
@@ -114,15 +133,20 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Checks if any locks with the specified owner are currently active.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
-    /// <param name="ownerId">The owner identifier to check.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
+    /// <param name="ownerId">The owner identifier to check. Cannot be null or empty.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if owner has active locks, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="ownerId"/> is empty.</exception>
     public static async Task<bool> HasActiveLocksAsync(
         this PostgresLockRepository repository,
         string ownerId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
+
         var count = await repository.GetActiveLockCountAsync(ownerId, cancellationToken);
         return count > 0;
     }
@@ -130,17 +154,22 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets all locks (including expired) for the specified owner.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
-    /// <param name="ownerId">The owner identifier.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
+    /// <param name="ownerId">The owner identifier. Cannot be null or empty.</param>
     /// <param name="includeExpired">Whether to include expired locks.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="ownerId"/> is empty.</exception>
     public static async Task<IEnumerable<Lock>> GetAllLocksByOwnerAsync(
         this PostgresLockRepository repository,
         string ownerId,
         bool includeExpired = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
+
         if (includeExpired)
         {
             // For expired locks, we need to query the database directly
@@ -159,8 +188,7 @@ public static class PostgresLockRepositoryExtensions
                         while (await reader.ReadAsync(cancellationToken))
                         {
                             var json = reader.GetString(0);
-                            var @lock = JsonSerializer.Deserialize<Lock>(json);
-                            if (@lock is not null)
+                            if (JsonSerializer.Deserialize<Lock>(json) is { } @lock)
                             {
                                 locks.Add(@lock);
                             }
@@ -181,13 +209,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the total count of locks in the repository.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Total count of locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<int> GetTotalLockCountAsync(
         this PostgresLockRepository repository,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
         {
             await connection.OpenAsync(cancellationToken);
@@ -202,13 +233,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the count of expired locks that need cleanup.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Count of expired locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<int> GetExpiredLockCountAsync(
         this PostgresLockRepository repository,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
         {
             await connection.OpenAsync(cancellationToken);
@@ -223,17 +257,21 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets all locks that are about to expire within the specified time window.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="timeWindow">Time window for upcoming expiration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of locks that will expire soon.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timeWindow"/> is less than or equal to zero.</exception>
     public static async Task<IEnumerable<Lock>> GetLocksExpiringSoonAsync(
         this PostgresLockRepository repository,
         TimeSpan timeWindow,
         CancellationToken cancellationToken = default)
     {
-        var threshold = DateTimeOffset.UtcNow.Add(timeWindow);
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeWindow, TimeSpan.Zero);
 
+        var threshold = DateTimeOffset.UtcNow.Add(timeWindow);
         var locks = new List<Lock>();
 
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
@@ -245,7 +283,7 @@ public static class PostgresLockRepositoryExtensions
                     SELECT lock_data
                     FROM distributed_locks
                     WHERE expires_at > now()
-                      AND expires_at <= @threshold";
+                    AND expires_at <= @threshold";
                 command.Parameters.AddWithValue("@threshold", threshold.UtcDateTime);
 
                 await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -268,13 +306,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the oldest active lock by acquisition time.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The oldest active lock, or null if none exist.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<Lock?> GetOldestActiveLockAsync(
         this PostgresLockRepository repository,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
         {
             await connection.OpenAsync(cancellationToken);
@@ -304,13 +345,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the newest active lock by acquisition time.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The newest active lock, or null if none exist.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<Lock?> GetNewestActiveLockAsync(
         this PostgresLockRepository repository,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
         {
             await connection.OpenAsync(cancellationToken);
@@ -340,13 +384,16 @@ public static class PostgresLockRepositoryExtensions
     /// <summary>
     /// Gets the average lock duration across all active locks.
     /// </summary>
-    /// <param name="repository">The lock repository instance.</param>
+    /// <param name="repository">The lock repository instance. Cannot be null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Average lock duration in seconds, or 0 if no active locks.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> is null.</exception>
     public static async Task<double> GetAverageLockDurationAsync(
         this PostgresLockRepository repository,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(repository);
+
         await using (var connection = new NpgsqlConnection(repository.GetConnectionString()))
         {
             await connection.OpenAsync(cancellationToken);
