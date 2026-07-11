@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Core.Exceptions;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using SarmKadan.DistributedLock.Services;
 using SarmKadan.DistributedLock.Utilities.Extensions;
 
@@ -51,6 +52,46 @@ public class LockRenewalWorker : BackgroundService
 
         _renewalSchedules.AddOrUpdate(lockId, schedule, (_, __) => schedule);
         _logger.LogInformation("Registered lock for renewal: {LockId}", lockId);
+    }
+
+    /// <summary>
+    /// Checks if a lock is currently registered for renewal.
+    /// </summary>
+    /// <param name="lockId">The unique identifier of the lock.</param>
+    /// <returns>True if the lock is registered for renewal; otherwise, false.</returns>
+    public bool IsRegisteredForRenewal(string lockId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockId);
+        return _renewalSchedules.ContainsKey(lockId);
+    }
+
+    /// <summary>
+    /// Gets the renewal schedule for a lock if it exists.
+    /// </summary>
+    /// <param name="lockId">The unique identifier of the lock.</param>
+    /// <param name="schedule">When this method returns, contains the renewal schedule if found; otherwise, null.</param>
+    /// <returns>True if the schedule was found; otherwise, false.</returns>
+    public bool TryGetRenewalSchedule(string lockId, [NotNullWhen(true)] out RenewalSchedule? schedule)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockId);
+        return _renewalSchedules.TryGetValue(lockId, out schedule);
+    }
+
+    /// <summary>
+    /// Gets the time remaining until the next scheduled renewal for the specified lock.
+    /// </summary>
+    /// <param name="lockId">The unique identifier of the lock.</param>
+    /// <returns>The time remaining until next renewal, or null if lock is not registered or renewal is not due.</returns>
+    public TimeSpan? GetTimeUntilNextRenewal(string lockId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockId);
+
+        if (_renewalSchedules.TryGetValue(lockId, out var schedule) && schedule.NextRenewalTime > DateTime.UtcNow)
+        {
+            return schedule.NextRenewalTime - DateTime.UtcNow;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -149,7 +190,7 @@ public class LockRenewalWorker : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 
-    private class RenewalSchedule
+    public sealed class RenewalSchedule
     {
         public required string LockId { get; init; }
         public required ulong FencingToken { get; init; }
