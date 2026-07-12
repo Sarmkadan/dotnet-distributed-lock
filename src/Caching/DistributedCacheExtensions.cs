@@ -234,7 +234,10 @@ await cache.SetAsync(key, bytes, options, cancellationToken);
 
 /// <summary>
 /// Invalidates multiple cache keys matching a pattern (where supported).
-/// This is a no-op placeholder that should be overridden by cache provider-specific implementations.
+/// <see cref="IDistributedCache"/> does not expose key enumeration, so this method
+/// validates its arguments and completes without removing entries. Use a
+/// provider-specific API (for example Redis SCAN plus DEL) when pattern
+/// invalidation is required.
 /// </summary>
 /// <param name="cache">The distributed cache instance.</param>
 /// <param name="pattern">The pattern to match keys against.</param>

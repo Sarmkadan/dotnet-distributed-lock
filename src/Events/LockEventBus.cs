@@ -71,6 +71,8 @@ public sealed class InMemoryLockEventBus : ILockEventBus
         ILogger<InMemoryLockEventBus> logger,
         int maxHistorySize = 10000)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+
         _logger = logger;
         _maxHistorySize = maxHistorySize;
         _eventHistory = new ConcurrentBag<LockEvent>();

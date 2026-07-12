@@ -16,7 +16,10 @@ namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 [RankColumn]
 public class LockCleanupBenchmark
 {
+    private const int ExpiredLockCount = 1000;
+
     private IServiceProvider? _serviceProvider;
+    private ILockRepository? _repository;
     private LockCleanupWorker? _cleanupWorker;
 
     /// <summary>
@@ -39,11 +42,35 @@ public class LockCleanupBenchmark
         });
 
         _serviceProvider = services.BuildServiceProvider();
+        _repository = _serviceProvider.GetRequiredService<ILockRepository>();
         _cleanupWorker = new LockCleanupWorker(
-            _serviceProvider.GetRequiredService<ILockRepository>(),
+            _repository,
             _serviceProvider.GetRequiredService<ILogger<LockCleanupWorker>>(),
             new LockCleanupWorkerOptions { CleanupIntervalMs = 1000 }
         );
+    }
+
+    /// <summary>
+    /// Seeds the repository with expired locks before each iteration so the sweep has real work to do.
+    /// </summary>
+    [IterationSetup]
+    public void IterationSetup()
+    {
+        var now = DateTime.UtcNow;
+
+        for (var i = 0; i < ExpiredLockCount; i++)
+        {
+            var expiredLock = new Models.Lock
+            {
+                Key = $"cleanup-benchmark-{i}",
+                OwnerId = "benchmark-owner",
+                AcquiredAt = now.AddMinutes(-10),
+                ExpiresAt = now.AddMinutes(-5),
+                Duration = TimeSpan.FromMinutes(5)
+            };
+
+            _repository!.AcquireAsync(expiredLock, CancellationToken.None).GetAwaiter().GetResult();
+        }
     }
 
     /// <summary>
@@ -62,12 +89,12 @@ public class LockCleanupBenchmark
     /// Benchmark for cleaning up 1000 expired locks.
     /// </summary>
     /// <remarks>
-    /// This is a simplified cleanup benchmark.
+    /// Each iteration is seeded with <see cref="ExpiredLockCount"/> expired locks
+    /// so the sweep measures a real repository delete pass.
     /// </remarks>
     [Benchmark(Description = "Clean up 1000 expired locks")]
     public async Task Cleanup_1000_Expired_Locks()
     {
-        // This is a simplified cleanup benchmark
         await _cleanupWorker!.RunCleanupOnceAsync(CancellationToken.None);
     }
 }

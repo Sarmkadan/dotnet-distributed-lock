@@ -118,7 +118,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
         try
         {
             var total = _hits + _misses;
-            var hitRate = total > 0 ? (double)_hits / total * 100 : 0;
+            var hitRate = total > 0 ? (double)_hits / total : 0;
 
             return new CacheStatistics
             {
@@ -235,6 +235,7 @@ public record CacheStatistics
     public int CachedItems { get; init; }
     public long Hits { get; init; }
     public long Misses { get; init; }
+    /// <summary>Hit ratio as a fraction between 0 and 1.</summary>
     public double HitRate { get; init; }
     public DateTime Timestamp { get; init; }
 }
