@@ -752,6 +752,77 @@ Console.WriteLine($"Cleared {allCleared} locks");
 await redisLockRepository.DisposeAsync();
 ```
 
+## ExceptionHandlingMiddleware
+
+The `ExceptionHandlingMiddleware` class is a global exception handling middleware that catches all unhandled exceptions during HTTP request processing and converts them to appropriate HTTP responses with meaningful error messages. It prevents sensitive stack traces from being exposed to clients while providing structured error responses that include the error message, error code, and timestamp. The middleware maps domain-specific exceptions to their corresponding HTTP status codes for improved client clarity.
+
+### Public Members
+
+```csharp
+public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public async Task InvokeAsync(HttpContext context)
+
+// Properties from ErrorResponseBody (returned to clients)
+public string Message { get; set; }
+public string ErrorCode { get; set; }
+public DateTime Timestamp { get; set; }
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Api.Middleware;
+using SarmKadan.DistributedLock.Core.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<ExceptionHandlingMiddleware>();
+
+// Create middleware instance
+var middleware = new ExceptionHandlingMiddleware(
+    next: async (innerContext) => 
+    {
+        // Your request handling logic here
+        if (shouldFail)
+        {
+            throw new LockAcquisitionException("Could not acquire lock after 5 attempts");
+        }
+    },
+    logger: logger
+);
+
+// Create a test HTTP context
+var context = new DefaultHttpContext();
+context.Response.Body = new MemoryStream();
+
+// Invoke the middleware
+try
+{
+    await middleware.InvokeAsync(context);
+}
+catch (Exception ex)
+{
+    // Exception is caught and handled by the middleware itself
+}
+
+// Read the response
+context.Response.Body.Seek(0, SeekOrigin.Begin);
+var responseBody = await new StreamReader(context.Response.Body).ReadToEndAsync();
+Console.WriteLine($"Response status: {context.Response.StatusCode}");
+Console.WriteLine($"Response body: {responseBody}");
+
+// Example with ASP.NET Core pipeline
+var services = new ServiceCollection();
+services.AddLogging(builder => builder.AddConsole());
+services.AddSingleton<ILogger<ExceptionHandlingMiddleware>>(logger);
+
+var app = new WebApplication(services.BuildServiceProvider());
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// The middleware will automatically handle exceptions thrown by subsequent middleware
+```
+
 ## LockService
 
 The `LockService` class is the core service for managing distributed locks in the system. It provides methods to acquire, renew, release, and query locks with comprehensive retry logic, metrics tracking, and logging. The service supports both blocking and non-blocking acquisition patterns, automatic renewal for long-running operations, and fencing token validation to prevent split-brain scenarios.
