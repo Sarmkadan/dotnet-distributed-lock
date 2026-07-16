@@ -702,6 +702,113 @@ else
 }
 ```
 
+## CollectionExtensions
+
+The `CollectionExtensions` class provides extension methods for collections and enumerables that simplify common operations like batching, safe access, and dictionary manipulation. These utilities are particularly useful for processing lock collections, managing configuration dictionaries, and implementing batch operations in distributed scenarios.
+
+### Public Members
+
+```csharp
+public static bool IsNullOrEmpty<T>
+public static bool HasElements<T>
+public static IEnumerable<IEnumerable<T>> Batch<T>
+public static TValue? GetValueOrDefault<TKey, TValue>
+public static void AddIfNotExists<TKey, TValue>
+public static Dictionary<TKey, TValue> Merge<TKey, TValue>
+public static IEnumerable<T> ForEach<T>
+public static HashSet<T> ToHashSet<T>
+public static (List<T> matching, List<T> nonMatching) Partition<T>
+public static T? MostFrequent<T>
+public static T? SafeGetAt<T>
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Extensions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// Example 1: Check if collection is null or empty
+var lockNames = new List<string> { "lock-1", "lock-2", "lock-3" };
+bool isEmpty = lockNames.IsNullOrEmpty(); // false
+bool isNull = ((List<string>)null).IsNullOrEmpty(); // true
+
+// Example 2: Check if collection has elements
+bool hasElements = lockNames.HasElements(); // true
+bool hasNoElements = new List<string>().HasElements(); // false
+
+// Example 3: Batch processing for lock operations
+var allLocks = new List<string>();
+for (int i = 0; i < 100; i++) allLocks.Add($"lock-{i}");
+
+// Process locks in batches of 10 for better performance
+foreach (var batch in allLocks.Batch(10))
+{
+    Console.WriteLine($"Processing batch of {batch.Count()} locks");
+    // Batch operations like bulk acquisition, renewal, or release
+    foreach (var lockName in batch)
+    {
+        // Process each lock in the batch
+        Console.WriteLine($"  - {lockName}");
+    }
+}
+
+// Example 4: Safe dictionary access with default values
+var lockTimeouts = new Dictionary<string, TimeSpan>
+{
+    ["default-timeout"] = TimeSpan.FromMinutes(5),
+    ["short-timeout"] = TimeSpan.FromSeconds(30)
+};
+
+// Get timeout with fallback to default
+TimeSpan timeout = lockTimeouts.GetValueOrDefault("user-session-lock", TimeSpan.FromMinutes(2));
+Console.WriteLine($"Timeout for user-session-lock: {timeout.TotalSeconds}s");
+
+// Example 5: Add to dictionary only if key doesn't exist
+var lockMetadata = new Dictionary<string, string>();
+lockMetadata.AddIfNotExists("lock-1", "metadata-1");
+lockMetadata.AddIfNotExists("lock-1", "metadata-overridden"); // Not added
+Console.WriteLine($"Lock metadata count: {lockMetadata.Count}"); // 1
+
+// Example 6: Merge multiple configuration dictionaries
+var config1 = new Dictionary<string, string> { ["timeout"] = "30" };
+var config2 = new Dictionary<string, string> { ["retries"] = "5", ["timeout"] = "60" };
+var config3 = new Dictionary<string, string> { ["jitter"] = "0.2" };
+
+var mergedConfig = new[] { config1, config2, config3 }.Merge();
+Console.WriteLine($"Merged config count: {mergedConfig.Count}"); // 3
+Console.WriteLine($"Timeout value: {mergedConfig.GetValueOrDefault("timeout")}"); // 60
+
+// Example 7: ForEach extension for chainable operations
+var lockIds = new List<string> { "lock-a", "lock-b", "lock-c" };
+var processedLocks = lockIds
+    .ForEach(id => Console.WriteLine($"Processing {id}"))
+    .ToList();
+
+// Example 8: Convert to HashSet for efficient lookups
+var activeLocks = new List<string> { "lock-1", "lock-2", "lock-3", "lock-1" };
+var uniqueActiveLocks = activeLocks.ToHashSet();
+Console.WriteLine($"Unique active locks: {uniqueActiveLocks.Count}"); // 3
+
+// Example 9: Partition locks by criteria
+var locks = new List<string> { "user-lock", "system-lock", "user-lock", "admin-lock" };
+var (userLocks, systemLocks) = locks.Partition(l => l.StartsWith("user"));
+Console.WriteLine($"User locks: {userLocks.Count}, System locks: {systemLocks.Count}"); // 2, 2
+
+// Example 10: Find most frequent lock owner
+var lockOwners = new List<string> { "worker-1", "worker-2", "worker-1", "worker-3", "worker-1" };
+var mostFrequentOwner = lockOwners.MostFrequent();
+Console.WriteLine($"Most frequent owner: {mostFrequentOwner}"); // worker-1
+
+// Example 11: Safe array/list access
+var lockArray = new string[] { "lock-1", "lock-2", "lock-3" };
+var firstLock = lockArray.SafeGetAt(0); // lock-1
+var outOfBoundsLock = lockArray.SafeGetAt(10); // null
+var negativeIndexLock = lockArray.SafeGetAt(-1); // null
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
