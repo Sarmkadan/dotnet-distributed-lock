@@ -660,6 +660,105 @@ if (metrics != null && metrics.TotalWaiters > 10)
 }
 ```
 
+## LockingIntegrationTests
+
+The `LockingIntegrationTests` class provides comprehensive integration tests that validate end-to-end distributed lock workflows including acquisition, renewal, release, fencing tokens, concurrency scenarios, edge cases, and metrics tracking. These tests ensure the distributed lock system works correctly in realistic scenarios with multiple workers, lock expiration, and error conditions.
+
+### What it does
+
+This test suite validates that the distributed lock system correctly:
+- Acquires locks successfully and prevents double acquisition by different owners
+- Renews locks multiple times to extend expiration
+- Prevents renewal of expired locks
+- Enforces ownership validation for renewal operations
+- Issues and validates fencing tokens to prevent stale writes
+- Handles concurrent operations safely with proper lock acquisition under race conditions
+- Manages rapid acquire/release cycles without leaving stale locks
+- Handles edge cases like releasing unheld locks or releasing with wrong ownership
+- Filters expired locks when listing active locks
+- Tracks metrics for acquisition and release operations
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Repository;
+using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
+
+// Initialize services for integration testing
+var repository = new InMemoryLockRepository();
+var lockService = new LockService(repository, NullLogger<LockService>.Instance);
+var fencingService = new FencingTokenService(NullLogger<FencingTokenService>.Instance);
+
+// Example 1: Basic workflow - acquire, renew, release
+var (acquired, @lock, _) = await lockService.TryAcquireAsync(
+    lockKey: "critical-section-lock",
+    ownerId: "worker-1",
+    duration: TimeSpan.FromMinutes(5)
+);
+
+if (acquired && @lock != null)
+{
+    // Issue fencing token for safe writes
+    var token = fencingService.IssueToken("critical-section-lock");
+    
+    // Do work with the lock...
+    
+    // Renew lock before expiration if needed
+    await lockService.RenewAsync("critical-section-lock", "worker-1", TimeSpan.FromMinutes(5));
+    
+    // Release when done
+    await lockService.ReleaseAsync("critical-section-lock", "worker-1");
+}
+
+// Example 2: Multiple workers racing for the same lock
+var winners = new System.Collections.Concurrent.ConcurrentBag<string>();
+var tasks = Enumerable.Range(0, 10)
+    .Select(i => Task.Run(async () =>
+    {
+        var (acquired, _, _) = await lockService.TryAcquireAsync(
+            "shared-resource", 
+            $"worker-{i}", 
+            TimeSpan.FromSeconds(10)
+        );
+        if (acquired) winners.Add($"worker-{i}");
+    }));
+
+await Task.WhenAll(tasks);
+// Exactly one worker should win the race
+Assert.Single(winners);
+
+// Example 3: Concurrency with rapid operations
+var rapidTasks = new List<Task>();
+for (int i = 0; i < 20; i++)
+{
+    var (acquired, currentLock, _) = await lockService.TryAcquireAsync(
+        "rapid-lock", 
+        $"worker-{i % 3}", 
+        TimeSpan.FromSeconds(5)
+    );
+    
+    if (acquired && currentLock != null)
+    {
+        rapidTasks.Add(lockService.ReleaseAsync("rapid-lock", currentLock.OwnerId));
+    }
+}
+
+await Task.WhenAll(rapidTasks);
+// No locks should remain held
+var isLocked = await lockService.IsLockedAsync("rapid-lock");
+Assert.False(isLocked);
+
+// Example 4: Metrics tracking
+var (acquired, _, _) = await lockService.TryAcquireAsync("metrics-lock", "worker-1", TimeSpan.FromSeconds(10));
+await lockService.ReleaseAsync("metrics-lock", "worker-1");
+
+var metrics = lockService.GetMetrics();
+Console.WriteLine($"Acquisitions: {metrics.SuccessfulAcquisitions}");
+Console.WriteLine($"Releases: {metrics.TotalReleases}");
+```
+
 ## LockMonitorTests
 
 The `LockMonitorTests` class provides comprehensive unit tests for the `LockMonitor` class, which is responsible for monitoring locks and automatically renewing them based on configuration. It verifies constructor validation, lock registration and unregistration, monitoring start/stop behavior, auto-renewal functionality, error handling during renewal operations, and thread safety under concurrent operations.
