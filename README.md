@@ -494,6 +494,59 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## InMemoryLockEventBusTests
+
+The `InMemoryLockEventBusTests` class contains comprehensive unit tests for the `InMemoryLockEventBus` implementation. It verifies subscription management, event publishing, subscriber counting, correlation ID propagation, exception handling, and concurrency scenarios for the in-memory event bus that handles lock-related events in the distributed lock system.
+
+### What it does
+
+This test suite validates that the in-memory event bus correctly:
+- Manages subscriptions for different event types
+- Publishes events to all registered subscribers
+- Tracks subscriber counts accurately
+- Propagates correlation IDs for tracing
+- Handles exceptions gracefully without stopping other subscribers
+- Maintains consistency under concurrent publishing and subscription scenarios
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Events;
+using SarmKadan.DistributedLock.Tests;
+using Xunit;
+
+// Create the event bus with a logger
+var bus = new InMemoryLockEventBus(NullLogger<InMemoryLockEventBus>.Instance);
+
+// Subscribe to lock acquired events (synchronous handler)
+bus.Subscribe<LockAcquiredEvent>(acquiredEvent => 
+{
+    Console.WriteLine($"Lock acquired: {acquiredEvent.LockName}");
+    Console.WriteLine($"Owner: {acquiredEvent.OwnerId}");
+    Console.WriteLine($"Status: {acquiredEvent.Status}");
+});
+
+// Subscribe to lock released events (asynchronous handler)
+bus.Subscribe<LockReleasedEvent>(async releasedEvent => 
+{
+    await Task.Delay(10);
+    Console.WriteLine($"Lock released: {releasedEvent.LockName}");
+    Console.WriteLine($"Released by: {releasedEvent.OwnerId}");
+});
+
+// Publish an event with correlation ID for tracing
+var correlationId = Guid.NewGuid().ToString();
+var lockAcquiredEvent = new LockAcquiredEvent("user-session-123", "auth-service-42", LockStatus.Held);
+
+await bus.PublishAsync(lockAcquiredEvent, correlationId);
+
+// Check subscriber count
+int subscriberCount = bus.GetSubscriberCount<LockAcquiredEvent>();
+Console.WriteLine($"Subscribers for LockAcquiredEvent: {subscriberCount}");
+
+// Verify all subscribers were invoked
+```
+
 ## DefaultLockRetryPolicyTests
 
 The `DefaultLockRetryPolicyTests` class contains comprehensive unit tests for the `DefaultLockRetryPolicy` class, verifying constructor behavior, parameter validation, and delay calculation logic. It tests default values, custom configuration, boundary conditions, and the exponential backoff algorithm with jitter to ensure the retry policy behaves correctly under various scenarios.
