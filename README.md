@@ -1,3 +1,11 @@
+## Architecture
+
+For the full picture - module layout, backend trade-offs, data flow of a blocking
+acquire, DI wiring, extension points and known limitations - see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Short version: `ILockService` orchestrates
+lock semantics (retry with backoff, fencing tokens, metrics) on top of a single
+`ILockRepository` seam with Redis, PostgreSQL, SQLite and in-memory implementations.
+
 ## IDeadlockDetector
 
 The `IDeadlockDetector` interface provides mechanisms to track lock contention and detect potential circular wait chains (deadlocks) in distributed locking scenarios. By recording when owners start and stop waiting, or successfully acquire/release locks, it can identify potential circular dependencies and provide actionable metrics on contention.
