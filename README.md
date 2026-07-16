@@ -577,6 +577,95 @@ monitor.UnregisterLock("critical-section-1");
 await monitor.StopMonitoringAsync();
 ```
 
+## LockModelTests
+
+The `LockModelTests` class provides comprehensive unit tests for the `Lock` and `FencingToken` model classes in the distributed lock system. It verifies constructor validation, property initialization, expiration checks, renewal operations, ownership validation, and fencing token functionality to ensure the core lock models work correctly under various scenarios.
+
+### What it does
+
+This test suite validates that the lock models correctly:
+- Initialize all properties correctly when valid arguments are provided
+- Throw `ArgumentException` for invalid constructor parameters (null keys, empty owner IDs, durations below minimum)
+- Determine lock expiration status (`IsExpired`) based on `ExpiresAt` timestamp
+- Validate lock validity (`IsValid`) based on status and expiration
+- Check if a lock is close to expiration (`IsCloseToExpiration`) when remaining time is less than 25% of duration
+- Renew locks (`Renew`) by incrementing renewal count and extending expiration time
+- Release locks (`Release`) by setting status to Released and expiring immediately
+- Validate ownership (`ValidateOwnership`) with correct and incorrect owner IDs
+- Create and validate fencing tokens with proper sequence numbers and token strings
+- Increment fencing token sequence numbers correctly
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+using SarmKadan.DistributedLock.Enums;
+using SarmKadan.DistributedLock.Exceptions;
+using Xunit;
+
+// Create a lock with valid arguments
+var @lock = new Lock("resource:payments", "worker-42", TimeSpan.FromMinutes(5));
+
+// Verify initial state
+Assert.Equal("resource:payments", @lock.Key);
+Assert.Equal("worker-42", @lock.OwnerId);
+Assert.Equal(LockStatus.Acquiring, @lock.Status);
+Assert.Equal(0, @lock.RenewalCount);
+Assert.False(@lock.IsValid); // Status is Acquiring, not Held
+
+// Create a lock with Held status
+var heldLock = new Lock("resource:critical-section", "worker-1", TimeSpan.FromMinutes(2))
+{
+    Status = LockStatus.Held
+};
+Assert.True(heldLock.IsValid); // Status is Held and not expired
+
+// Check expiration status
+var expiredLock = new Lock("resource:temp", "worker-2", TimeSpan.FromSeconds(5))
+{
+    ExpiresAt = DateTime.UtcNow.AddSeconds(-1)
+};
+Assert.True(expiredLock.IsExpired);
+
+// Check if lock is close to expiration (less than 25% remaining)
+var soonExpiringLock = new Lock("resource:batch", "worker-3", TimeSpan.FromSeconds(10))
+{
+    ExpiresAt = DateTime.UtcNow.AddSeconds(2) // 20% remaining
+};
+Assert.True(soonExpiringLock.IsCloseToExpiration);
+
+// Renew a lock
+heldLock.Renew();
+Assert.Equal(1, heldLock.RenewalCount);
+Assert.NotNull(heldLock.RenewedAt);
+
+// Renew with extended duration
+heldLock.Renew(TimeSpan.FromMinutes(10));
+Assert.True(heldLock.ExpiresAt > DateTime.UtcNow.AddMinutes(9));
+
+// Release a lock
+heldLock.Release();
+Assert.Equal(LockStatus.Released, heldLock.Status);
+
+// Validate ownership
+heldLock.ValidateOwnership("worker-1"); // Does not throw
+
+// Create and validate fencing tokens
+var token = new FencingToken("abc123token456", 1);
+Assert.Equal("abc123token456", token.Token);
+Assert.Equal(1, token.SequenceNumber);
+
+// Increment sequence
+var newToken = token.IncrementSequence();
+Assert.Equal(2, newToken.SequenceNumber);
+Assert.NotEqual(token.Token, newToken.Token);
+
+// Validate fencing token comparison
+var olderToken = new FencingToken("token-old", 3);
+var newerToken = new FencingToken("token-new", 5);
+Assert.True(newerToken.IsGreaterThan(olderToken));
+```
+
 ## LockServiceTests
 
 The `LockServiceTests` class provides comprehensive unit tests for the `LockService` class, which implements the core distributed lock functionality. It verifies constructor validation, lock acquisition and release operations, renewal behavior, status checks, metrics tracking, and error handling scenarios. The test suite covers both successful operations and edge cases like repository errors, expired locks, and concurrent operations.
