@@ -410,6 +410,63 @@ var customMetricsWorker = new MetricsCollectionWorker(
 await metricsWorker.StopAsync(CancellationToken.None);
 ```
 
+## LockServiceAdditionalTests
+
+The `LockServiceAdditionalTests` class provides additional unit tests for the `LockService` class, focusing on edge cases and error handling scenarios. It verifies that the lock service gracefully handles repository errors and missing locks by returning appropriate default values (false, null, or empty enumerable) instead of throwing exceptions.
+
+### What it does
+
+This test suite validates that the lock service correctly:
+- Returns `false` when attempting to release a non-existent lock
+- Returns `false` when the repository throws exceptions during release operations
+- Returns `false` when attempting to renew a non-existent lock
+- Returns `null` when attempting to get a non-existent lock
+- Returns `false` when the repository throws exceptions during lock status checks
+- Returns an empty enumerable when the repository throws exceptions during lock listing operations
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+// Create a mock repository that throws exceptions
+var repositoryMock = new Mock<ILockRepository>();
+repositoryMock
+    .Setup(r => r.GetByKeyAsync("non-existent-lock", It.IsAny<CancellationToken>()))
+    .ReturnsAsync((Lock?)null);
+
+// Create the lock service with the mocked repository
+var lockService = new LockService(repositoryMock.Object, NullLogger<LockService>.Instance);
+
+// Test release of non-existent lock - should return false
+var released = await lockService.ReleaseAsync("non-existent-lock", "owner-1");
+Console.WriteLine($"Release non-existent lock: {released}"); // Output: false
+
+// Test getting non-existent lock - should return null
+var @lock = await lockService.GetLockAsync("non-existent-lock");
+Console.WriteLine($"Get non-existent lock: {@lock}"); // Output: null
+
+// Test renew of non-existent lock - should return false
+var renewed = await lockService.RenewAsync("non-existent-lock", "owner-1");
+Console.WriteLine($"Renew non-existent lock: {renewed}"); // Output: false
+
+// Test is locked with repository error - should return false
+repositoryMock
+    .Setup(r => r.ExistsAsync("resource:1", It.IsAny<CancellationToken>()))
+    .ThrowsAsync(new Exception("Database error"));
+var isLocked = await lockService.IsLockedAsync("resource:1");
+Console.WriteLine($"Is locked with error: {isLocked}"); // Output: false
+
+// Test getting all active locks with repository error - should return empty
+repositoryMock
+    .Setup(r => r.GetAllActiveLockAsync(It.IsAny<CancellationToken>()))
+    .ThrowsAsync(new Exception("Database error"));
+var locks = await lockService.GetAllActiveLockAsync();
+Console.WriteLine($"All active locks with error: {locks.Count()} locks"); // Output: 0 locks
+```
+
 ## LockRenewalWorker
 
 The `LockRenewalWorker` class is a background service that automatically renews distributed locks before they expire. It monitors locks registered for renewal and extends their duration by the specified renewal interval, preventing accidental lock expiration during long-running operations. The worker runs on a configurable schedule and handles renewal failures gracefully with retry logic.
