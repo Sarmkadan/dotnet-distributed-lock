@@ -218,6 +218,71 @@ if (validationErrors.Any())
 }
 ```
 
+## MetricsCollectionWorker
+
+The `MetricsCollectionWorker` class is a background service that periodically collects and stores metrics about lock operations, cache performance, and custom application metrics. It tracks acquisition/renewal/release operations, maintains historical snapshots of metrics, and provides methods to retrieve current and historical metrics for monitoring and observability purposes.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Workers;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<MetricsCollectionWorker>();
+
+// Create metrics collection worker with default options
+var metricsWorker = new MetricsCollectionWorker(logger);
+
+// Start the background metrics collection
+var cts = new CancellationTokenSource();
+_ = metricsWorker.RunAsync(cts.Token);
+
+// Get current snapshot of metrics
+var currentSnapshot = metricsWorker.GetCurrentSnapshot();
+if (currentSnapshot != null)
+{
+    Console.WriteLine($"Current lock operations: {currentSnapshot.TotalLockOperations}");
+    Console.WriteLine($"Cache hits: {currentSnapshot.CacheStatistics?.Hits}");
+    Console.WriteLine($"Cache misses: {currentSnapshot.CacheStatistics?.Misses}");
+}
+
+// Get all historical snapshots
+var allSnapshots = metricsWorker.GetSnapshots();
+Console.WriteLine($"Total snapshots collected: {allSnapshots.Count}");
+
+// Get average metrics over time
+var averageMetrics = metricsWorker.GetAverageMetrics();
+if (averageMetrics != null)
+{
+    Console.WriteLine($"Average lock operations per minute: {averageMetrics.LockOperationsPerMinute}");
+}
+
+// Configure custom metrics collection options
+var customOptions = new MetricsCollectionWorkerOptions
+{
+    InitialDelayMs = 30000, // 30 seconds initial delay
+    CollectionIntervalMs = 60000, // 1 minute between collections
+    SnapshotRetentionSeconds = 3600, // Keep snapshots for 1 hour
+    VerboseLogging = true,
+    CustomMetrics = new Dictionary<string, object>
+    {
+        ["custom.metric1"] = "value1",
+        ["custom.metric2"] = 42
+    }
+};
+
+var customMetricsWorker = new MetricsCollectionWorker(
+    logger,
+    customOptions
+);
+
+// Stop the worker when done
+await metricsWorker.StopAsync(CancellationToken.None);
+```
+
 ## LockCleanupWorker
 
 The `LockCleanupWorker` class is a background service that periodically cleans up expired locks from the backend storage (Redis, PostgreSQL, SQLite, etc.). It prevents database/Redis bloat by removing locks that are no longer needed, runs on a configurable schedule, and logs cleanup statistics. The worker can also be triggered manually for testing or benchmarking purposes.
