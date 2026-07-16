@@ -756,6 +756,64 @@ await redisLockRepository.DisposeAsync();
 
 The `ExceptionHandlingMiddleware` class is a global exception handling middleware that catches all unhandled exceptions during HTTP request processing and converts them to appropriate HTTP responses with meaningful error messages. It prevents sensitive stack traces from being exposed to clients while providing structured error responses that include the error message, error code, and timestamp. The middleware maps domain-specific exceptions to their corresponding HTTP status codes for improved client clarity.
 
+## RateLimitingMiddleware
+
+The `RateLimitingMiddleware` class is an HTTP middleware that protects API endpoints from abuse by limiting the number of requests a client can make within a sliding time window. It uses an in-memory sliding window counter to track request timestamps per client IP address, preventing denial-of-service attacks on lock acquisition endpoints. When a client exceeds the configured limit, the middleware returns a 429 Too Many Requests response with a Retry-After header indicating when the client can try again.
+
+### Public Members
+
+```csharp
+public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitingOptions? options = null)
+public async Task InvokeAsync(HttpContext context)
+
+// Properties from RequestWindow (inner class)
+public List<DateTime> Timestamps { get; }
+
+// Properties from RateLimitingOptions (configuration)
+public int MaxRequestsPerWindow { get; set; } = 100;
+public int WindowSizeSeconds { get; set; } = 60;
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Api.Middleware;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+// Configure services
+var services = new ServiceCollection();
+services.AddLogging(builder => builder.AddConsole());
+services.AddSingleton<ILogger<RateLimitingMiddleware>>(provider =>
+    provider.GetRequiredService<ILoggerFactory>().CreateLogger<RateLimitingMiddleware>());
+
+// Build service provider
+var serviceProvider = services.BuildServiceProvider();
+
+// Create WebApplication builder
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<ILogger<RateLimitingMiddleware>>(serviceProvider.GetRequiredService<ILogger<RateLimitingMiddleware>>());
+
+// Create the application
+var app = builder.Build();
+
+// Configure custom rate limiting options (optional)
+var rateLimitingOptions = new RateLimitingOptions
+{
+    MaxRequestsPerWindow = 200,  // Allow 200 requests per minute
+    WindowSizeSeconds = 60       // 1 minute window
+};
+
+// Register the middleware with custom options
+app.UseMiddleware<RateLimitingMiddleware>(rateLimitingOptions);
+
+// The middleware will now protect all subsequent middleware in the pipeline
+app.MapGet("/api/locks", () => "Lock endpoints protected by rate limiting");
+
+app.Run();
+```
+
 ### Public Members
 
 ```csharp
