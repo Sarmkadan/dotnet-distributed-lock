@@ -345,6 +345,90 @@ var customMetricsWorker = new MetricsCollectionWorker(
 await metricsWorker.StopAsync(CancellationToken.None);
 ```
 
+## LockRenewalWorker
+
+The `LockRenewalWorker` class is a background service that automatically renews distributed locks before they expire. It monitors locks registered for renewal and extends their duration by the specified renewal interval, preventing accidental lock expiration during long-running operations. The worker runs on a configurable schedule and handles renewal failures gracefully with retry logic.
+
+### Public Members
+
+```csharp
+public LockRenewalWorker(ILockService lockService, ILogger<LockRenewalWorker> logger, LockRenewalWorkerOptions? options = null)
+public void RegisterForRenewal(string lockId, ulong fencingToken, TimeSpan renewalInterval)
+public bool IsRegisteredForRenewal(string lockId)
+public bool TryGetRenewalSchedule(string lockId, [NotNullWhen(true)] out RenewalSchedule? schedule)
+public TimeSpan? GetTimeUntilNextRenewal(string lockId)
+public void UnregisterFromRenewal(string lockId)
+public override async Task StopAsync(CancellationToken cancellationToken)
+
+// Properties from RenewalSchedule (inner class)
+public required string LockId { get; init; }
+public required ulong FencingToken { get; init; }
+public required TimeSpan RenewalInterval { get; init; }
+public DateTime NextRenewalTime { get; set; }
+
+// Properties from LockRenewalWorkerOptions (configuration)
+public int CheckIntervalMs { get; set; } = 5000;
+public int RetryDelaySeconds { get; set; } = 10;
+public double JitterPercentage { get; set; } = 10;
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Workers;
+using SarmKadan.DistributedLock.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<LockRenewalWorker>();
+
+// Initialize lock service with your repository
+var lockService = new LockService(lockRepository, logger);
+
+// Create renewal worker with default options
+var renewalWorker = new LockRenewalWorker(lockService, logger);
+
+// Start the background renewal worker
+var cts = new CancellationTokenSource();
+_ = renewalWorker.RunAsync(cts.Token);
+
+// Register a lock for automatic renewal
+// This would typically be done after successfully acquiring the lock
+renewalWorker.RegisterForRenewal(
+    lockId: "critical-section-lock",
+    fencingToken: 12345,
+    renewalInterval: TimeSpan.FromMinutes(2)
+);
+
+// Check if a lock is registered for renewal
+bool isRegistered = renewalWorker.IsRegisteredForRenewal("critical-section-lock");
+Console.WriteLine($"Lock registered for renewal: {isRegistered}");
+
+// Get time until next renewal
+var timeUntilRenewal = renewalWorker.GetTimeUntilNextRenewal("critical-section-lock");
+if (timeUntilRenewal.HasValue)
+{
+    Console.WriteLine($"Next renewal in: {timeUntilRenewal.Value.TotalSeconds:F0} seconds");
+}
+
+// Configure custom renewal options
+var customOptions = new LockRenewalWorkerOptions
+{
+    CheckIntervalMs = 3000,      // Check every 3 seconds
+    RetryDelaySeconds = 5,        // Retry failed renewals after 5 seconds
+    JitterPercentage = 15         // Add 15% random jitter to renewal timing
+};
+
+var customRenewalWorker = new LockRenewalWorker(lockService, logger, customOptions);
+
+// Unregister a lock when done (e.g., after releasing it)
+renewalWorker.UnregisterFromRenewal("critical-section-lock");
+
+// Stop the worker when shutting down
+await renewalWorker.StopAsync(CancellationToken.None);
+```
+
 ## LockCleanupWorker
 
 The `LockCleanupWorker` class is a background service that periodically cleans up expired locks from the backend storage (Redis, PostgreSQL, SQLite, etc.). It prevents database/Redis bloat by removing locks that are no longer needed, runs on a configurable schedule, and logs cleanup statistics. The worker can also be triggered manually for testing or benchmarking purposes.
