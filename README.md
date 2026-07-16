@@ -280,6 +280,71 @@ healthWorker.ResetFailureCounter();
 await healthWorker.StopAsync(CancellationToken.None);
 ```
 
+## DistributedLockController
+The `DistributedLockController` class provides HTTP endpoints for managing distributed locks. It allows clients to acquire, release, renew, and check the status of locks through RESTful API endpoints.
+
+Example usage:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using SarmKadan.DistributedLock.Api.Controllers;
+using SarmKadan.DistributedLock.Models;
+
+// Initialize with your lock service and logger
+var lockService = new LockService(lockRepository, logger);
+var distributedLockController = new DistributedLockController(lockService, logger);
+
+// Acquire a lock
+var acquireResult = await distributedLockController.AcquireLock(new LockAcquisitionRequest
+{
+    LockName = "critical-section-lock",
+    DurationSeconds = 300, // 5 minutes
+    AutoRenew = true,
+    RenewalIntervalSeconds = 60 // Renew every minute
+});
+
+if (acquireResult.Value?.Success == true)
+{
+    Console.WriteLine($"Lock acquired: {acquireResult.Value.LockId}");
+    Console.WriteLine($"Fencing token: {acquireResult.Value.FencingToken}");
+    Console.WriteLine($"Expires at: {acquireResult.Value.ExpiresAt}");
+
+    // Do work with the lock...
+
+    // Release the lock when done
+    var releaseResult = await distributedLockController.ReleaseLock(
+        acquireResult.Value.LockId,
+        acquireResult.Value.FencingToken
+    );
+    
+    if (releaseResult.Value?.Success == true)
+    {
+        Console.WriteLine("Lock released successfully");
+    }
+}
+
+// Get lock status
+var statusResult = await distributedLockController.GetLockStatus("critical-section-lock");
+if (statusResult.Value != null)
+{
+    Console.WriteLine($"Lock name: {statusResult.Value.Name}");
+    Console.WriteLine($"Is active: {statusResult.Value.IsActive}");
+    Console.WriteLine($"Remaining seconds: {statusResult.Value.RemainingSeconds}");
+}
+
+// Renew a lock
+var renewResult = await distributedLockController.RenewLock(
+    acquireResult.Value.LockId,
+    acquireResult.Value.FencingToken,
+    300 // Extend by 5 minutes
+);
+
+if (renewResult.Value?.Success == true)
+{
+    Console.WriteLine("Lock renewed successfully");
+}
+```
+
 ## MetricsCollectionWorker
 
 The `MetricsCollectionWorker` class is a background service that periodically collects and stores metrics about lock operations, cache performance, and custom application metrics. It tracks acquisition/renewal/release operations, maintains historical snapshots of metrics, and provides methods to retrieve current and historical metrics for monitoring and observability purposes.
