@@ -1,475 +1,183 @@
-# Architecture Overview
+# Architecture
 
-## System Design
+This document describes the actual structure of the codebase as it exists today - what the
+pieces are, why they are shaped this way, and where the sharp edges are.
 
-SarmKadan.DistributedLock is built on a layered architecture that separates concerns and enables pluggable backends.
+## High-level view
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         API Layer                               │
-│  ILockService, FencingTokenService, LockMonitor, EventSystem  │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-       ┌─────────────────┼─────────────────┐
-       │                 │                 │
-┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐
-│   Cache     │  │   Metrics   │  │   Events   │
-│   Manager   │  │ Collection  │  │    & Bus   │
-└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-       │                 │                 │
-       └─────────────────┼─────────────────┘
-                         │
-              ┌──────────▼──────────┐
-              │   Lock Service      │
-              │   (Core Logic)      │
-              └──────────┬──────────┘
-                         │
-              ┌──────────▼──────────┐
-              │ ILockRepository     │
-              │ (Abstraction)       │
-              └──────────┬──────────┘
-                         │
-        ┌────────┬───────┼───────┬────────┐
-        │        │       │       │        │
-    ┌───▼─┐ ┌───▼─┐ ┌───▼─┐ ┌──▼────┐ ┌─▼──┐
-    │Redis│ │Pg  │ │Sqli │ │Memory  │ │API │
-    └─────┘ └─────┘ └─────┘ └────────┘ └────┘
-        │        │       │       │
-    ┌───▼─────────▼───────▼───────▼────┐
-    │    Backend Storage Systems        │
-    │  (Redis, PostgreSQL, SQLite)     │
-    └──────────────────────────────────┘
-```
-
-## Core Components
-
-### 1. ILockService
-
-The primary public API providing:
-
-- **Lock Acquisition**: `AcquireAsync()` and `TryAcquireAsync()`
-- **Lock Release**: `ReleaseAsync()`
-- **Lock Renewal**: `RenewAsync()`
-- **Lock Querying**: `GetLockAsync()`, `IsLockedAsync()`, `GetAllActiveLockAsync()`
-
-Implementation: `LockService` class in `src/Core/Services/`
-
-**Key Responsibilities:**
-- Orchestrate lock operations across repositories
-- Handle retry logic and backoff strategies
-- Manage fencing tokens
-- Trigger events for lock lifecycle
-- Enforce access control (owner validation)
-
-### 2. ILockRepository
-
-Abstract interface for backend storage with implementations:
-
-- **RedisLockRepository**: Uses Redis atomic operations
-- **PostgresLockRepository**: Uses database transactions and row locking
-- **SqliteLockRepository**: Uses WAL mode and PRAGMA busy_timeout
-- **InMemoryLockRepository**: Uses ReaderWriterLockSlim
-
-**Required Methods:**
-```csharp
-Task<Lock> CreateLockAsync(Lock @lock);
-Task<bool> UpdateLockAsync(Lock @lock);
-Task<bool> DeleteLockAsync(string lockKey);
-Task<Lock?> GetLockAsync(string lockKey);
-Task<List<Lock>> GetAllActiveLockAsync();
-Task<bool> ExistsAsync(string lockKey);
-```
-
-### 3. FencingTokenService
-
-Implements the fencing token algorithm to prevent zombie writes:
-
-```csharp
-// Issue a monotonically increasing token for a resource
-FencingToken token = tokenService.IssueToken("resource-id");
-
-// Validate token before critical operations
-if (tokenService.ValidateToken("resource-id", token))
-{
-    // Safe to proceed - lock is valid
-}
-```
-
-**Algorithm:**
-1. Each resource has an associated monotonic counter
-2. Lock acquisition increments counter and issues token
-3. Before write operations, verify token matches current counter
-4. Expired locks get new counter, invalidating old tokens
-
-### 4. LockMonitor
-
-Background service for automatic lock renewal:
-
-**Features:**
-- Register locks for monitoring
-- Periodic renewal checks
-- Event publishing on renewal
-- Graceful shutdown with cleanup
-
-**Usage Pattern:**
-```csharp
-monitor.RegisterLock(lockKey, ownerId, renewalInterval, duration);
-monitor.StartMonitoring(checkInterval);
-// ... do work ...
-await monitor.StopMonitoringAsync();
-```
-
-### 5. LockCacheManager
-
-In-memory cache layer to reduce backend load:
-
-- Caches lock existence queries
-- Configurable TTL (default 30 seconds)
-- LRU eviction policy
-- Automatic invalidation on updates
-
-**Configuration:**
-```csharp
-options.EnableCaching = true;
-options.CacheDurationSeconds = 30;
-options.MaxCacheSize = 10000;
-```
-
-### 6. LockEventSystem
-
-Event publisher and subscriber system for lock lifecycle:
-
-**Events:**
-- `LockAcquiredEvent`: Emitted when lock is successfully acquired
-- `LockReleasedEvent`: Emitted when lock is released
-- `LockRenewedEvent`: Emitted when lock is renewed
-- `LockFailedEvent`: Emitted when acquisition fails
-
-**Subscribers:**
-- `LockEventSubscriber`: In-process event handling
-- `WebhookPublisher`: HTTP webhook delivery for external systems
-
-### 7. MetricsCollectionWorker
-
-Collects and aggregates performance metrics:
-
-**Metrics Tracked:**
-- Total acquisition attempts
-- Successful vs. failed acquisitions
-- Average acquisition time
-- Current active locks
-- Success rate percentage
-- Contention indicators
-
-**Access Pattern:**
-```csharp
-if (lockService is LockService concrete)
-{
-    var metrics = concrete.GetMetrics();
-    Console.WriteLine(metrics.AcquisitionSuccessRate);
-}
-```
-
-## Data Flow
-
-### Lock Acquisition Flow
+The solution is a distributed lock library for .NET with pluggable storage backends,
+plus optional infrastructure around the core (HTTP API surface, background workers,
+an event bus, caching helpers and serializers).
 
 ```
-AcquireAsync() called
-    │
-    ├─► Validate parameters
-    │
-    ├─► Check cache (if enabled)
-    │   └─► Hit? Return cached result
-    │
-    ├─► Check fencing token (if enabled)
-    │   └─► Invalid? Throw InvalidFencingTokenException
-    │
-    ├─► Call Repository.CreateLockAsync()
-    │   │
-    │   ├─► Redis: SETNX with TTL
-    │   ├─► PostgreSQL: INSERT with conflict handling
-    │   ├─► SQLite: INSERT OR IGNORE
-    │   └─► InMemory: Lock/Check/Add pattern
-    │
-    ├─► If failed, apply backoff strategy
-    │   ├─► NonBlocking: Return null
-    │   ├─► Blocking: Retry until timeout
-    │   ├─► ExponentialBackoff: Delay * 2^attempt
-    │   └─► LinearBackoff: Delay * attempt
-    │
-    ├─► Success? Update cache
-    │
-    ├─► Publish LockAcquiredEvent
-    │
-    └─► Return Lock object
+        ILockService (src/Core/Services/ILockService.cs)
+              │
+        LockService  ── LockMetrics (in-process counters)
+              │
+        ILockRepository (src/Core/Repository/ILockRepository.cs)
+              │
+   ┌──────────┼──────────────┬──────────────────┐
+InMemory    Redis        PostgreSQL          SQLite
+(Core/      (Backends/   (Backends/          (Backends/
+Repository) Redis)       PostgreSQL)         SQLite)
 ```
 
-### Lock Renewal Flow
-
-```
-RenewAsync() called
-    │
-    ├─► Validate ownership
-    │   └─► Not owned? Throw LockNotOwnedException
-    │
-    ├─► Update TTL in repository
-    │   ├─► Redis: EXPIRE or PEXPIRE
-    │   ├─► PostgreSQL: UPDATE expires_at
-    │   ├─► SQLite: UPDATE expires_at
-    │   └─► InMemory: Update expiration time
-    │
-    ├─► Invalidate cache entry
-    │
-    ├─► Issue new fencing token (if enabled)
-    │
-    ├─► Publish LockRenewedEvent
-    │
-    └─► Return success
-```
-
-### Backend Comparison
-
-#### Redis Backend
-
-**Strengths:**
-- Atomic operations
-- Sub-millisecond latency
-- Horizontal scaling with clustering
-- Automatic key expiration (TTL)
-
-**Implementation:**
-- Uses SETNX for atomic acquire
-- Uses WATCH/MULTI/EXEC for transactions
-- Uses EXPIRE for automatic cleanup
-
-#### PostgreSQL Backend
-
-**Strengths:**
-- ACID compliance
-- Complex query capabilities
-- Audit trail
-- Integration with existing systems
-
-**Implementation:**
-- Row-level locking (FOR UPDATE)
-- Triggers for automatic cleanup
-- Transaction isolation level: SERIALIZABLE
-
-#### SQLite Backend
-
-**Strengths:**
-- Zero configuration
-- File-based
-- Suitable for single-machine
-
-**Implementation:**
-- Uses journal mode: WAL (Write-Ahead Logging)
-- PRAGMA busy_timeout for lock wait handling
-- REPLACE INTO for atomic operations
-
-#### In-Memory Backend
-
-**Strengths:**
-- Maximum performance
-- No external dependencies
-- Great for testing
-
-**Implementation:**
-- ReaderWriterLockSlim for concurrent access
-- Dictionary<string, Lock> for storage
-- Timer-based expiration cleanup
-
-## Concurrency Model
-
-### Lock Acquisition Isolation
-
-**Redis:**
-```lua
--- Atomic SETNX operation
-if redis.call('EXISTS', key) == 0 then
-    redis.call('SETEX', key, duration, ownerId)
-    return 1
-else
-    return 0
-end
-```
-
-**PostgreSQL:**
-```sql
-BEGIN;
-LOCK TABLE locks IN EXCLUSIVE MODE;
-INSERT INTO locks (...) VALUES (...)
-  ON CONFLICT DO NOTHING;
-COMMIT;
-```
-
-**SQLite:**
-```sql
-BEGIN IMMEDIATE;
-INSERT OR IGNORE INTO locks (...) VALUES (...);
-COMMIT;
-```
-
-### Automatic Cleanup
-
-**Redis:**
-- EXPIRE automatically removes expired keys
-
-**PostgreSQL:**
-- Trigger-based cleanup on access
-- Vacuum removes stale rows
-
-**SQLite:**
-- Background cleanup job
-- PRAGMA auto_vacuum
-
-## Extension Points
-
-### Custom Repository Implementation
-
-Implement `ILockRepository` to support new backends:
-
-```csharp
-public class CustomLockRepository : ILockRepository
-{
-    public Task<Lock> CreateLockAsync(Lock @lock) { ... }
-    public Task<bool> UpdateLockAsync(Lock @lock) { ... }
-    public Task<bool> DeleteLockAsync(string lockKey) { ... }
-    // ... implement other methods
-}
-
-// Register in DI
-services.AddScoped<ILockRepository, CustomLockRepository>();
-```
-
-### Custom Event Handlers
-
-Subscribe to lock events for custom behavior:
-
-```csharp
-var subscriber = serviceProvider.GetRequiredService<LockEventSubscriber>();
-
-subscriber.SubscribeToAcquiredEvent(@event =>
-{
-    // Custom handling: logging, metrics, alerts, etc.
-});
-```
-
-### Webhook Integration
-
-Publish events to external systems:
-
-```csharp
-services.AddDistributedLocking(options =>
-{
-    options.WebhookEndpoint = "https://monitoring.example.com/locks";
-    options.EnableWebhookRetry = true;
-    options.MaxWebhookRetries = 3;
-});
-```
-
-## Thread Safety
-
-All components are designed for concurrent access:
-
-- **ILockService**: Thread-safe API
-- **ILockRepository**: Thread-safe implementations
-- **FencingTokenService**: Atomic token generation
-- **LockMonitor**: Concurrent lock registry
-- **LockEventBus**: Thread-safe event publishing
-
-## Performance Optimization
-
-### Caching Strategy
-
-1. **Query Cache**: Cache lock existence
-2. **TTL**: Auto-invalidate after 30 seconds
-3. **LRU**: Evict least-recently-used entries
-4. **Invalidation**: Clear cache on write operations
-
-### Retry Strategy
-
-1. **NonBlocking**: No retries, immediate return
-2. **Blocking**: Exponential backoff up to timeout
-3. **ExponentialBackoff**: 2^attempt delay
-4. **LinearBackoff**: Linear delay increase
-
-### Connection Pooling
-
-- Redis: Built-in connection multiplexing
-- PostgreSQL: Connection pool (default 25)
-- SQLite: Single connection with JOURNAL=WAL
-
-## Security Considerations
-
-### Ownership Verification
-
-All operations verify owner matches lock holder:
-
-```csharp
-if (@lock.OwnerId != requestedOwnerId)
-    throw new LockNotOwnedException();
-```
-
-### Fencing Tokens
-
-Prevent zombie writes after expiration:
-
-```csharp
-if (!tokenService.ValidateToken(resourceId, token))
-    throw new InvalidFencingTokenException();
-```
-
-### Connection Security
-
-- Redis: Supports password authentication
-- PostgreSQL: SSL/TLS support
-- SQLite: File permissions
-
-## Monitoring and Observability
-
-### Metrics
-
-- Acquisition success rate
-- Lock contention indicators
-- Average acquisition time
-- Active lock count
-
-### Logging
-
-Comprehensive structured logging at key points:
-- Lock acquisition started/completed
-- Lock renewal started/completed
-- Lock conflicts
-- Backend errors
-
-### Events
-
-Publish events for external monitoring:
-- Lock acquired
-- Lock released
-- Lock renewed
-- Acquisition failed
-
-## Disaster Recovery
-
-### Data Persistence
-
-- **Redis**: Configurable persistence (RDB, AOF)
-- **PostgreSQL**: Transaction log WAL
-- **SQLite**: File-based with WAL mode
-- **InMemory**: Not persistent (dev only)
-
-### Lock Expiration
-
-Automatic cleanup prevents orphaned locks:
-- TTL-based expiration (primary)
-- Trigger-based cleanup (PostgreSQL)
-- Background cleanup job (SQLite, InMemory)
-
-### Failover
-
-- **Redis**: Sentinel and Cluster support
-- **PostgreSQL**: Replication support
-- **SQLite**: Manual backup strategy
+Everything above `ILockRepository` is backend-agnostic. The repository interface is the
+single seam between lock semantics and storage.
+
+## Module breakdown
+
+### src/Core - the library proper
+
+- **Models** - `Lock` (key, owner, expiry, `FencingToken`, `LockStatus`), `LockAcquisition`
+  (records attempts during a blocking acquire), `LockConfiguration`, `LockMetrics`,
+  `ContentionMetrics`, `LockRequestContext`.
+- **Services**
+  - `LockService` (`ILockService`) - the core orchestrator. `TryAcquireAsync` is a single
+    non-blocking attempt returning `(bool Success, Lock?, string? ErrorMessage)`;
+    `AcquireAsync` wraps it in a retry loop with exponential backoff and an overall
+    acquisition timeout, throwing `LockAcquisitionException` on exhaustion. It also exposes
+    renewal (both owner-based `RenewAsync` and fencing-token-based `RenewLockAsync`),
+    release, and query operations, and records timings into an in-process `LockMetrics`
+    instance reachable via `LockService.GetMetrics()`.
+  - `ILockRetryPolicy` / `DefaultLockRetryPolicy` - encapsulates max retries, initial/max
+    delay and jitter factor; `GetDelay(attempt)` computes the backoff. The default policy is
+    built from `DistributedLockOptions` in DI, and `LockService` consumes it for its
+    blocking-acquire loop (falling back to `DefaultLockRetryPolicy` when constructed
+    without one, so plain `new LockService(repo, logger)` still works).
+  - `FencingTokenService` - issues monotonically increasing tokens per resource so a client
+    holding a stale lock cannot perform a "zombie write". Validation also happens at the
+    repository level via `ILockRepository.ValidateFencingTokenAsync`.
+  - `LockMonitor` - tracks registered locks and drives periodic renewal checks.
+  - `DeadlockDetector` (`IDeadlockDetector`) - builds a wait-for graph from lock
+    requests/holders and detects cycles.
+- **Repository** - `ILockRepository` contract plus the `InMemoryLockRepository` reference
+  implementation. The contract is deliberately storage-flavored (`AcquireAsync`,
+  `RenewAsync`, `ReleaseAsync(key, ownerId)`, `GetByOwnerAsync`, `DeleteExpiredLockAsync`,
+  `ValidateFencingTokenAsync`, ...) rather than CRUD, so each backend can map an operation
+  to its most atomic native primitive instead of emulating generic update semantics.
+- **Configuration** - `DistributedLockOptions` (backend type, connection string, default
+  durations/timeouts, retry policy knobs, `UseFencingTokens`, `EnableAutoRenewal`,
+  `MaxConcurrentLocks`, ...) with `Validate()` returning human-readable errors, and
+  `ServiceCollectionExtensions.AddDistributedLocking(...)` which fails fast on invalid
+  options at registration time instead of at first use.
+- **Exceptions** - one type per failure mode (`LockAcquisitionException`,
+  `LockNotOwnedException`, `LockExpiredException`, `LockRenewalFailedException`,
+  `InvalidFencingTokenException`), all deriving from `DistributedLockException` so callers
+  can catch broadly or narrowly.
+
+### src/Backends - storage implementations
+
+Each backend implements `ILockRepository`:
+
+- **Redis** (`RedisLockRepository`) - atomic key operations with TTL; expiry is delegated
+  to Redis itself.
+- **PostgreSQL** (`PostgresLockRepository`) - relational storage; acquisition relies on
+  conflict handling on the lock key, expiry is checked against `expires_at`.
+- **SQLite** (`SqliteLockRepository`) - file-based, single-node; useful for tests and
+  single-machine coordination without extra infrastructure.
+- **InMemory** (in Core) - dictionary-backed, for tests and in-process scenarios only.
+
+Trade-off recorded here on purpose: Redis gives the lowest latency and free TTL cleanup but
+weaker durability guarantees; PostgreSQL gives ACID and auditability at higher latency;
+SQLite trades multi-node capability for zero setup. The library does not attempt
+Redlock-style multi-node quorum - one backend instance is the source of truth.
+
+### src/Events - lifecycle events
+
+- `LockEvent` hierarchy (`LockAcquiredEvent`, `LockReleasedEvent`, `LockRenewedEvent`,
+  `LockExpiredEvent`, `LockFailedEvent`, `LockContentionEvent`, `LockErrorEvent`, ...).
+- `ILockEventBus` / `InMemoryLockEventBus` - typed pub/sub with a bounded in-memory event
+  history (default 10k entries, trimmed on publish).
+- `ILockEventPublisher` with `InMemoryLockEventPublisher` and a `NoOpLockEventPublisher`
+  (null-object so callers never need `if (publisher != null)`).
+- `LockEventSubscriber` base class with `LoggingLockEventSubscriber` and
+  `MetricsTrackingEventSubscriber` implementations.
+
+### src/Workers - background services
+
+All are standard `BackgroundService` implementations with their own `*Options` classes:
+
+- `LockCleanupWorker` - periodically calls `DeleteExpiredLockAsync` for backends without
+  native TTL (PostgreSQL, SQLite, InMemory).
+- `LockRenewalWorker` - auto-renews registered locks on a schedule (`RenewalSchedule`).
+- `MetricsCollectionWorker` - snapshots `LockMetrics` into `MetricsSnapshot`s.
+- `HealthMonitoringWorker` - probes backend health, exposes `HealthStatus`.
+
+They are intentionally *not* auto-registered by `AddDistributedLocking` - hosting them is
+an application decision (a console consumer of the library may not want four hosted
+services), so each has its own registration extension.
+
+### src/Api - optional HTTP surface
+
+`DistributedLockController`, `HealthCheckController`, `MetricsController` plus middleware
+(`AuthenticationMiddleware`, `ExceptionHandlingMiddleware`, `RateLimitingMiddleware`,
+`RequestLoggingMiddleware`). This exists for deployments that expose locking as a service
+rather than a library; a library-only consumer never touches this namespace.
+
+### src/Caching, src/Formatters, src/Utilities, src/Integration
+
+- `ILockCacheManager` / `InMemoryLockCacheManager` with `CacheKeyGenerator` - read-side
+  caching helpers to reduce backend round-trips for existence checks.
+- `JsonLockSerializer`, `XmlLockSerializer`, `CsvLockExporter` - export/serialization of
+  lock state for tooling and diagnostics.
+- `WebhookPublisher`, `ApiClient`, `HttpClientFactory` - outbound integration (pushing
+  lock events to external systems).
+- Utilities: extension methods and `RetryPolicyHelper`/`ValidationHelper`.
+
+## Dependency injection
+
+`AddDistributedLocking(options => ...)`:
+
+1. Builds and validates `DistributedLockOptions` (throws `InvalidOperationException`
+   listing every validation error - fail-fast, no partially configured container).
+2. Constructs a `DefaultLockRetryPolicy` from the retry knobs and registers it as
+   `ILockRetryPolicy` (a second overload accepts a caller-supplied policy, e.g.
+   Polly-based).
+3. Registers the repository singleton chosen by `options.BackendType` via a `switch`
+   (unknown values throw `NotSupportedException`).
+4. Registers `ILockService` (scoped), `FencingTokenService`, `LockMonitor`,
+   `ILockEventBus` and `IDeadlockDetector` (singletons).
+
+Repositories are singletons because they own connections; `LockService` is scoped and
+stateless apart from its metrics object.
+
+## Data flow: blocking acquire
+
+1. Caller invokes `ILockService.AcquireAsync(key, owner, duration, ct)`.
+2. `LockService` starts a `LockAcquisition` record and loops up to the retry policy's
+   `MaxRetries`, checking the overall acquisition timeout each pass.
+3. Each attempt calls `TryAcquireAsync`, which builds a `Lock` model and delegates to
+   `ILockRepository.AcquireAsync` - the backend performs its atomic insert-if-absent.
+4. Success: status set to `LockStatus.Held`, acquisition latency recorded in
+   `LockMetrics`, lock returned.
+5. Failure: failed attempt recorded, delay from `ILockRetryPolicy.GetDelay(attempt)`
+   (exponential backoff with jitter, capped at the policy's max delay), retry.
+6. Exhaustion or timeout: `LockAcquisitionException` with attempt count.
+
+Renewal via fencing token (`RenewLockAsync`) validates the token against the repository
+first and throws `InvalidFencingTokenException` on mismatch before touching the lock.
+
+## Extension points
+
+- **New backend**: implement `ILockRepository`, register it before/instead of
+  `AddDistributedLocking`'s choice. The interface is the only contract; nothing else in
+  Core knows about concrete backends.
+- **Custom retry behavior**: implement `ILockRetryPolicy` and pass it to the
+  `AddDistributedLocking(ILockRetryPolicy, ...)` overload.
+- **Event consumers**: subclass `LockEventSubscriber` or subscribe on `ILockEventBus`.
+- **External notification**: `WebhookPublisher` for HTTP push of events.
+
+## Known limitations
+
+- Clock-based expiry: correctness of expiration depends on reasonably synchronized clocks
+  between the app nodes and the backend; fencing tokens are the mitigation for the
+  pathological case, not a replacement for sane clocks.
+- No multi-node quorum (Redlock) - a single backend is a single point of truth; use the
+  backend's own HA story (Redis Sentinel, Postgres replication).
+- `LockMetrics` is per-process, not aggregated across nodes; cross-node visibility needs
+  the metrics worker plus an external sink.
+- The in-memory backend and event bus are process-local by definition - fine for tests,
+  meaningless for distribution.
+- Blocking acquire uses polling with backoff, not backend push notification, so worst-case
+  acquisition latency after a release is one backoff interval.
