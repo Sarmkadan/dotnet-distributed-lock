@@ -985,6 +985,108 @@ Console.WriteLine($"\nIs valid configuration: {isValid}");
 public record LockConfiguration(string LockName, TimeSpan Duration, int MaxRetries, TimeSpan RenewalInterval);
 ```
 
+## JsonLockSerializer
+
+The `JsonLockSerializer` class provides JSON serialization and deserialization capabilities for lock data structures in the distributed lock system. It handles serialization of `Lock` objects, collections of locks, and lock metrics with consistent formatting and UTC timezone support. The serializer uses camelCase property naming, ignores null values, and includes proper error handling for robust JSON operations.
+
+### Public Members
+
+```csharp
+public static string SerializeLock(Lock @lock)
+public static string SerializeLocks(IEnumerable<Lock> locks)
+public static Lock? DeserializeLock(string json)
+public static List<Lock> DeserializeLocks(string json)
+public static string SerializeMetrics(LockMetrics metrics)
+public static string SerializeLockPretty(Lock @lock)
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Formatters;
+using SarmKadan.DistributedLock.Models;
+using System;
+
+// Create a lock instance
+var newLock = new Lock(
+    key: "critical-section-123",
+    ownerId: "background-worker-42",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+// Serialize a single lock to JSON
+string lockJson = JsonLockSerializer.SerializeLock(newLock);
+Console.WriteLine("Serialized lock:");
+Console.WriteLine(lockJson);
+
+// Serialize multiple locks to JSON array
+var locks = new List<Lock>
+{
+    newLock,
+    new Lock(
+        key: "user-session-456",
+        ownerId: "auth-service",
+        duration: TimeSpan.FromMinutes(2),
+        fencingToken: 67890
+    )
+};
+string locksJson = JsonLockSerializer.SerializeLocks(locks);
+Console.WriteLine("\nSerialized locks collection:");
+Console.WriteLine(locksJson);
+
+// Deserialize a lock from JSON
+string lockJsonToDeserialize = @"{
+    ""key"": ""critical-section-123"",
+    ""ownerId"": ""background-worker-42"",
+    ""duration"": ""00:05:00"",
+    ""fencingToken"": 12345,
+    ""createdAt"": ""2024-01-15T10:30:00Z"",
+    ""expiresAt"": ""2024-01-15T10:35:00Z""
+}";
+Lock? deserializedLock = JsonLockSerializer.DeserializeLock(lockJsonToDeserialize);
+if (deserializedLock != null)
+{
+    Console.WriteLine($"\nDeserialized lock: {deserializedLock.Key} owned by {deserializedLock.OwnerId}");
+}
+
+// Deserialize multiple locks from JSON array
+string locksJsonToDeserialize = @"[
+    {
+        ""key"": ""critical-section-123"",
+        ""ownerId"": ""background-worker-42"",
+        ""duration"": ""00:05:00"",
+        ""fencingToken"": 12345
+    },
+    {
+        ""key"": ""user-session-456"",
+        ""ownerId"": ""auth-service"",
+        ""duration"": ""00:02:00"",
+        ""fencingToken"": 67890
+    }
+]";
+var deserializedLocks = JsonLockSerializer.DeserializeLocks(locksJsonToDeserialize);
+Console.WriteLine($"\nDeserialized {deserializedLocks.Count} locks from collection");
+
+// Serialize metrics for reporting
+var metrics = new LockMetrics
+{
+    TotalAcquisitions = 150,
+    TotalReleases = 120,
+    TotalRenewals = 30,
+    ActiveLocks = 5,
+    AverageHoldTimeMs = 1250.5
+};
+string metricsJson = JsonLockSerializer.SerializeMetrics(metrics);
+Console.WriteLine("\nSerialized metrics:");
+Console.WriteLine(metricsJson);
+
+// Create pretty-printed JSON for debugging
+string prettyJson = JsonLockSerializer.SerializeLockPretty(newLock);
+Console.WriteLine("\nPretty-printed lock for debugging:");
+Console.WriteLine(prettyJson);
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
