@@ -572,6 +572,66 @@ var locks = await lockService.GetAllActiveLockAsync();
 Console.WriteLine($"All active locks with error: {locks.Count()} locks"); // Output: 0 locks
 ```
 
+## FencingTokenServiceTests
+
+The `FencingTokenServiceTests` class provides comprehensive unit tests for the `FencingTokenService` class. It validates fencing token generation, validation, management, and edge cases to ensure proper distributed lock coordination and prevention of stale writes. The test suite covers token issuance, retrieval, validation (including stale token detection), token revocation, sequence number management, overflow handling, and lock name validation.
+
+### What it does
+
+This test suite validates that the fencing token service correctly:
+- Issues new tokens with positive sequence numbers for new resource keys
+- Tracks tokens independently for different resource keys
+- Retrieves tokens after they've been issued
+- Validates tokens including detection of stale tokens (lower sequence numbers)
+- Validates tokens using the throw-based API
+- Revokes tokens and prevents subsequent retrieval
+- Increments existing tokens to create new generations
+- Handles edge cases like overflow scenarios
+- Validates lock names for proper format
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Tests;
+using Xunit;
+
+// Create a fencing token service for testing
+var service = new FencingTokenService(NullLogger<FencingTokenService>.Instance);
+
+// Test token issuance and validation
+var token1 = service.IssueToken("resource:payments");
+var token2 = service.IssueToken("resource:payments");
+
+// Second token should have higher sequence number
+Assert.True(token2.SequenceNumber > token1.SequenceNumber);
+
+// Validate current token
+bool isValid = service.ValidateToken("resource:payments", token2);
+Assert.True(isValid);
+
+// Test stale token detection
+var staleToken = service.IssueToken("resource:tasks");
+service.IncrementToken("resource:tasks");
+bool staleValid = service.ValidateToken("resource:tasks", staleToken);
+Assert.False(staleValid); // Stale token should be rejected
+
+// Test token revocation
+service.IssueToken("resource:ephemeral");
+service.RevokeToken("resource:ephemeral");
+var revokedToken = service.GetToken("resource:ephemeral");
+Assert.Null(revokedToken);
+
+// Test incrementing tokens
+var original = service.IssueToken("resource:counter");
+var incremented = service.IncrementToken("resource:counter");
+Assert.Equal(original.SequenceNumber + 1, incremented.SequenceNumber);
+
+// Test clearing all tokens
+service.ClearAllTokens();
+Assert.Null(service.GetToken("resource:payments"));
+```
+
 ## AdvancedConcurrencyTests
 
 The `AdvancedConcurrencyTests` class provides comprehensive unit tests for distributed lock operations under high load and stress scenarios. It validates thread safety, consistency, and error handling across various edge cases including high contention, rapid acquire/release cycles, concurrent operations, renewal under load, expiration handling, and error recovery scenarios. The test suite ensures that the distributed lock system maintains data integrity and prevents race conditions even under extreme parallelism.
