@@ -470,6 +470,68 @@ Assert.Equal(1, metrics.CurrentWaiters);
 Assert.Equal(150.0, metrics.AverageWaitTimeMs);
 ```
 
+## LockAcquisitionTests
+
+The `LockAcquisitionTests` class provides comprehensive unit tests for the `LockAcquisition` class, which represents the process of attempting to acquire a distributed lock. It verifies constructor validation, attempt recording, retry logic, timing metrics, and string representation to ensure the lock acquisition tracking system works correctly.
+
+### What it does
+
+This test suite validates that the lock acquisition correctly:
+- Initializes all properties correctly when valid arguments are provided
+- Throws `ArgumentException` for null or whitespace lock keys and requester IDs
+- Records successful attempts by setting `IsSuccessful` to true and recording the acquisition timestamp
+- Records failed attempts by incrementing the attempt count and storing error messages
+- Determines retry eligibility based on remaining attempts and success state
+- Calculates average attempt time from multiple timed attempts
+- Returns zero average time when no attempts have been recorded
+- Generates string representations containing lock key, requester ID, and mode
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+using Xunit;
+
+// Create a lock acquisition for testing
+var acquisition = new LockAcquisition(
+    lockKey: "resource:payments",
+    requesterId: "worker-42",
+    mode: AcquisitionMode.NonBlocking,
+    timeout: TimeSpan.FromSeconds(5),
+    maxRetries: 3
+);
+
+// Verify initial state
+Assert.Equal("resource:payments", acquisition.LockKey);
+Assert.Equal("worker-42", acquisition.RequesterId);
+Assert.Equal(AcquisitionMode.NonBlocking, acquisition.Mode);
+Assert.Equal(3, acquisition.MaxRetries);
+Assert.False(acquisition.IsSuccessful);
+Assert.Empty(acquisition.Attempts);
+
+// Record a successful attempt
+acquisition.RecordAttempt(success: true);
+Assert.True(acquisition.IsSuccessful);
+Assert.NotNull(acquisition.AcquiredAt);
+Assert.Equal(1, acquisition.AttemptCount);
+
+// Record a failed attempt with error message
+acquisition.RecordAttempt(success: false, errorMessage: "Lock contention detected");
+Assert.False(acquisition.IsSuccessful);
+Assert.Equal(2, acquisition.AttemptCount);
+Assert.Equal("Lock contention detected", acquisition.Attempts[1].ErrorMessage);
+
+// Check retry eligibility
+bool canRetry = acquisition.CanRetry; // Returns false after success
+
+// Calculate average attempt time
+TimeSpan averageTime = acquisition.AverageAttemptTime; // Returns time for successful attempt
+
+// Get string representation for logging
+string acquisitionInfo = acquisition.ToString();
+Console.WriteLine(acquisitionInfo);
+```
+
 ## LockMonitorTests
 
 The `LockMonitorTests` class provides comprehensive unit tests for the `LockMonitor` class, which is responsible for monitoring locks and automatically renewing them based on configuration. It verifies constructor validation, lock registration and unregistration, monitoring start/stop behavior, auto-renewal functionality, error handling during renewal operations, and thread safety under concurrent operations.
