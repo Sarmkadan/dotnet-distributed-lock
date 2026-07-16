@@ -914,6 +914,77 @@ Console.WriteLine($"Unix timestamp: {unixTimestamp}");
 Console.WriteLine($"Round-trip successful: {Math.Abs((now - fromTimestamp).TotalMilliseconds) < 1}");
 ```
 
+## ObjectExtensions
+
+The `ObjectExtensions` class provides extension methods for general object operations including serialization, cloning, type conversion, and validation. These utilities simplify common patterns like deep cloning objects, JSON serialization, safe type casting, and fluent API operations. The extensions work with any serializable object and provide robust error handling to prevent exceptions during common operations.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Extensions;
+using System;
+using System.Text.Json;
+
+// Example object to work with
+var lockConfiguration = new LockConfiguration
+{
+    LockName = "critical-section-1",
+    Duration = TimeSpan.FromMinutes(5),
+    MaxRetries = 3,
+    RenewalInterval = TimeSpan.FromMinutes(1)
+};
+
+// Example 1: Deep clone an object
+var clonedConfig = lockConfiguration.DeepClone();
+Console.WriteLine($"Cloned configuration: {clonedConfig?.LockName}");
+
+// Example 2: Serialize to pretty-printed JSON
+string jsonPretty = lockConfiguration.ToJsonString();
+Console.WriteLine("Pretty JSON:");
+Console.WriteLine(jsonPretty);
+
+// Example 3: Serialize to compact JSON
+string jsonCompact = lockConfiguration.ToCompactJsonString();
+Console.WriteLine($"\nCompact JSON: {jsonCompact}");
+
+// Example 4: Check if object is null or default
+bool isNullOrDefault = lockConfiguration.IsNullOrDefault();
+Console.WriteLine($"\nIs null or default: {isNullOrDefault}");
+
+// Example 5: Safe type casting
+object obj = "test-string";
+if (obj.TryCast(out string? castedString))
+{
+    Console.WriteLine($"Cast successful: {castedString}");
+}
+
+// Example 6: Compute hash from object properties
+int hashCode = lockConfiguration.ComputeHash(lockConfiguration.LockName, lockConfiguration.Duration);
+Console.WriteLine($"\nComputed hash: {hashCode}");
+
+// Example 7: Fluent API with Tap
+lockConfiguration
+    .Tap(config => Console.WriteLine($"Processing: {config.LockName}"))
+    .Tap(config => Console.WriteLine($"Duration: {config.Duration.TotalMinutes} minutes"));
+
+// Example 8: Map object to another type
+var lockName = lockConfiguration.MapTo(config => config.LockName);
+Console.WriteLine($"\nMapped lock name: {lockName}");
+
+// Example 9: Get simple type name
+string typeName = lockConfiguration.GetSimpleTypeName();
+Console.WriteLine($"Simple type name: {typeName}");
+
+// Example 10: Validate object properties
+bool isValid = lockConfiguration.Validate(config => 
+    !string.IsNullOrEmpty(config.LockName) && 
+    config.Duration > TimeSpan.Zero);
+Console.WriteLine($"\nIs valid configuration: {isValid}");
+
+// Define a simple record for examples
+public record LockConfiguration(string LockName, TimeSpan Duration, int MaxRetries, TimeSpan RenewalInterval);
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
