@@ -1,4 +1,47 @@
-// existing content ...
+## IDeadlockDetector
+
+The `IDeadlockDetector` interface provides mechanisms to track lock contention and detect potential circular wait chains (deadlocks) in distributed locking scenarios. By recording when owners start and stop waiting, or successfully acquire/release locks, it can identify potential circular dependencies and provide actionable metrics on contention.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<DeadlockDetector>();
+
+var detector = new DeadlockDetector(logger);
+
+// Record a waiter for a lock
+await detector.RecordWaitingAsync("owner-1", "lock-A");
+
+// Check if this would cause a deadlock
+bool wouldDeadlock = detector.WouldDeadlock("owner-1", "lock-A");
+Console.WriteLine($"Would deadlock: {wouldDeadlock}");
+
+// Record successful acquisition
+detector.RecordAcquired("owner-1", "lock-A");
+
+// Record waiting ended
+await detector.RecordWaitEndedAsync("owner-1", "lock-A", 150.0);
+
+// Record release
+detector.RecordReleased("owner-1", "lock-A");
+
+// Retrieve metrics
+var metrics = detector.GetMetrics("lock-A");
+if (metrics != null)
+{
+    Console.WriteLine($"Lock A contention: {metrics.WaitCount} waits");
+}
+
+// Get all metrics
+var allMetrics = detector.GetAllMetrics();
+Console.WriteLine($"Total tracked locks: {allMetrics.Count}");
+```
+
 
 ## FencingTokenService
 
