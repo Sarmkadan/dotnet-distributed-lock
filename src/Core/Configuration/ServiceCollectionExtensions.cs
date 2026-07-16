@@ -115,6 +115,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILockService, LockService>();
         services.AddSingleton<FencingTokenService>();
         services.AddSingleton<LockMonitor>();
+        services.AddSingleton<Events.ILockEventBus, Events.InMemoryLockEventBus>();
+        services.AddSingleton<IDeadlockDetector, DeadlockDetector>();
 
         return services;
     }
