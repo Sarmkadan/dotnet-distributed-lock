@@ -577,6 +577,112 @@ monitor.UnregisterLock("critical-section-1");
 await monitor.StopMonitoringAsync();
 ```
 
+## LockServiceTests
+
+The `LockServiceTests` class provides comprehensive unit tests for the `LockService` class, which implements the core distributed lock functionality. It verifies constructor validation, lock acquisition and release operations, renewal behavior, status checks, metrics tracking, and error handling scenarios. The test suite covers both successful operations and edge cases like repository errors, expired locks, and concurrent operations.
+
+### What it does
+
+This test suite validates that the lock service correctly:
+- Validates constructor parameters and throws `ArgumentNullException` for null repository or logger
+- Acquires locks successfully when the repository grants them
+- Returns appropriate error messages when the repository denies lock acquisition
+- Handles repository exceptions gracefully by returning error messages
+- Renews locks when the repository allows renewal
+- Returns appropriate values when renewal fails or repository throws exceptions
+- Releases locks successfully when they exist
+- Returns `false` when attempting to release non-existent locks
+- Handles repository exceptions during release operations
+- Checks lock status correctly based on repository responses
+- Returns `false` when repository throws exceptions during status checks
+- Lists all active locks from the repository
+- Returns empty enumerable when repository throws exceptions during listing
+- Tracks metrics correctly after successful lock operations
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+// Create a mock repository that grants locks
+var repositoryMock = new Mock<ILockRepository>();
+
+// Setup mock behavior for successful lock acquisition
+repositoryMock
+    .Setup(r => r.AcquireAsync(It.IsAny<Lock>(), It.IsAny<CancellationToken>()))
+    .ReturnsAsync(true);
+
+// Setup mock behavior for lock existence check
+repositoryMock
+    .Setup(r => r.ExistsAsync("test-lock", It.IsAny<CancellationToken>()))
+    .ReturnsAsync(true);
+
+// Setup mock behavior for getting a lock
+repositoryMock
+    .Setup(r => r.GetByKeyAsync("test-lock", It.IsAny<CancellationToken>()))
+    .ReturnsAsync(new Lock(
+        key: "test-lock",
+        ownerId: "test-owner",
+        duration: TimeSpan.FromMinutes(5),
+        fencingToken: 12345
+    ));
+
+// Setup mock behavior for getting all active locks
+repositoryMock
+    .Setup(r => r.GetAllActiveLockAsync(It.IsAny<CancellationToken>()))
+    .ReturnsAsync(new List<Lock>
+    {
+        new Lock("lock-1", "owner-1", TimeSpan.FromMinutes(5), 1),
+        new Lock("lock-2", "owner-2", TimeSpan.FromMinutes(5), 2)
+    });
+
+// Create the lock service with the mocked repository
+var lockService = new LockService(repositoryMock.Object, NullLogger<LockService>.Instance);
+
+// Test constructor validation
+Assert.Throws<ArgumentNullException>(() => new LockService(null!, NullLogger<LockService>.Instance));
+Assert.Throws<ArgumentNullException>(() => new LockService(repositoryMock.Object, null!));
+
+// Test successful lock acquisition
+var (success, lockId, fencingToken) = await lockService.TryAcquireAsync(
+    "test-lock",
+    "test-owner",
+    TimeSpan.FromMinutes(5)
+);
+Assert.True(success);
+Assert.NotNull(lockId);
+Assert.True(fencingToken > 0);
+
+// Test lock status check
+bool isLocked = await lockService.IsLockedAsync("test-lock");
+Assert.True(isLocked);
+
+// Test getting a specific lock
+var retrievedLock = await lockService.GetLockAsync("test-lock");
+Assert.NotNull(retrievedLock);
+Assert.Equal("test-lock", retrievedLock.Key);
+
+// Test getting all active locks
+var activeLocks = await lockService.GetAllActiveLockAsync();
+Assert.NotEmpty(activeLocks);
+Assert.Equal(2, activeLocks.Count());
+
+// Test lock renewal
+bool renewed = await lockService.RenewAsync("test-lock", "test-owner");
+Assert.True(renewed);
+
+// Test lock release
+bool released = await lockService.ReleaseAsync("test-lock", "test-owner");
+Assert.True(released);
+
+// Test metrics tracking
+var metrics = await lockService.GetMetrics();
+Assert.NotNull(metrics);
+Assert.Equal(1, metrics.TotalAcquisitions);
+```
+
 ## LockServiceAdditionalTests
 
 The `LockServiceAdditionalTests` class provides additional unit tests for the `LockService` class, focusing on edge cases and error handling scenarios. It verifies that the lock service gracefully handles repository errors and missing locks by returning appropriate default values (false, null, or empty enumerable) instead of throwing exceptions.
