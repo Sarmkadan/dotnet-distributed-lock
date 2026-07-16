@@ -153,6 +153,63 @@ await lockMonitor.StopMonitoringAsync();
 lockMonitor.Dispose();
 ```
 
+## DistributedLockOptions
+
+The `DistributedLockOptions` class provides configuration for the distributed lock system, allowing fine-grained control over lock acquisition behavior, retry policies, backend selection, and monitoring. It supports various backends (Redis, SQL Server, PostgreSQL, Azure Blob Storage) and enables features like automatic renewal, fencing tokens, metrics collection, and deadlock detection.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+// Configure distributed lock options for Redis backend
+var options = new DistributedLockOptions
+{
+    BackendType = BackendType.Redis,
+    ConnectionString = "localhost:6379,password=yourpassword",
+    DefaultLockDuration = TimeSpan.FromMinutes(5),
+    DefaultAcquisitionTimeout = TimeSpan.FromSeconds(30),
+    DefaultRenewalInterval = TimeSpan.FromMinutes(2),
+    DefaultMaxRetries = 3,
+    DefaultRetryDelayMs = 200,
+    DefaultAcquisitionMode = AcquisitionMode.WaitUntilAvailable,
+    EnableAutoRenewal = true,
+    UseFencingTokens = true,
+    MonitoringInterval = TimeSpan.FromSeconds(30),
+    MaxConcurrentLocks = 1000,
+    EnableMetrics = true,
+    EnableLogging = true,
+    RetryPolicyMaxRetries = 5,
+    RetryPolicyInitialDelayMs = 100,
+    RetryPolicyMaxDelayMs = 2000,
+    RetryPolicyJitterFactor = 0.25,
+};
+
+// Register with DI container
+var services = new ServiceCollection();
+services.AddSingleton(options);
+services.AddLogging(builder => builder.AddConsole());
+
+// Example: Using options with LockService
+var lockService = new LockService(
+    new RedisLockRepository(options.ConnectionString),
+    options,
+    logger
+);
+
+// Validate configuration
+var validationErrors = options.Validate();
+if (validationErrors.Any())
+{
+    foreach (var error in validationErrors)
+    {
+        Console.WriteLine($"Validation error: {error}");
+    }
+}
+```
+
 ## LockService
 
 The `LockService` class is the core service for managing distributed locks in the system. It provides methods to acquire, renew, release, and query locks with comprehensive retry logic, metrics tracking, and logging. The service supports both blocking and non-blocking acquisition patterns, automatic renewal for long-running operations, and fencing token validation to prevent split-brain scenarios.
