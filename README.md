@@ -51,6 +51,31 @@ Console.WriteLine($"Is resource locked after revocation: {isLocked}");
 fencingTokenService.ClearAllTokens();
 ```
 
+## ILockRetryPolicy
+
+The `ILockRetryPolicy` interface defines the contract for configuring retry behavior when acquiring a distributed lock. It exposes properties for the maximum number of retries, the initial and maximum delay between attempts, and a jitter factor to randomize delays, plus a method to compute the delay for a given attempt. The default implementation `DefaultLockRetryPolicy` provides exponential back‑off with optional jitter.
+
+### Usage Example
+
+```csharp
+using System;
+using SarmKadan.DistributedLock.Services;
+
+// Create a retry policy using the default implementation
+ILockRetryPolicy retryPolicy = new DefaultLockRetryPolicy(
+    maxRetries: 5,
+    initialDelay: TimeSpan.FromMilliseconds(200),
+    maxDelay: TimeSpan.FromSeconds(2),
+    jitterFactor: 0.2);
+
+// Compute and display the delay for each retry attempt
+for (int attempt = 0; attempt < retryPolicy.MaxRetries; attempt++)
+{
+    TimeSpan delay = retryPolicy.GetDelay(attempt);
+    Console.WriteLine($"Attempt {attempt + 1}: wait {delay.TotalMilliseconds:F0} ms");
+}
+```
+
 ## LockMonitor
 
 The `LockMonitor` class is responsible for monitoring locks and handling automatic renewal based on configuration. It allows registering locks for monitoring, starting and stopping the monitoring loop, and retrieving the list of monitored locks.
