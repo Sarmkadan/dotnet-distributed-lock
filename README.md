@@ -1,45 +1,35 @@
 // existing content ...
 
-## InMemoryLockRepository
+## LockMonitor
 
-The `InMemoryLockRepository` class provides an in-memory implementation of the `ILockRepository` interface, primarily intended for testing and development purposes. It stores locks in a dictionary and uses a reader-writer lock to ensure thread safety. Note that this repository is not suitable for production use in a distributed system.
+The `LockMonitor` class is responsible for monitoring locks and handling automatic renewal based on configuration. It allows registering locks for monitoring, starting and stopping the monitoring loop, and retrieving the list of monitored locks.
 
 ### Usage Example
 
 ```csharp
-using SarmKadan.DistributedLock.Repository;
+using SarmKadan.DistributedLock.Services;
 using SarmKadan.DistributedLock.Models;
-using SarmKadan.DistributedLock.Enums;
+using Microsoft.Extensions.Logging;
 
-var repository = new InMemoryLockRepository();
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<LockMonitor>();
 
-// Acquire a lock
-var @lock = new Lock("my-lock", "owner-123");
-await repository.AcquireAsync(@lock);
+var lockService = new LockService(); // Initialize with your lock service
+var lockMonitor = new LockMonitor(lockService, logger);
 
-// Check if lock exists
-var exists = await repository.ExistsAsync("my-lock");
-Console.WriteLine($"Lock exists: {exists}");
+// Register a lock for monitoring
+lockMonitor.RegisterLock("my-lock", "owner-123", TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(30));
 
-// Get lock by key
-var lockByKey = await repository.GetByKeyAsync("my-lock");
-Console.WriteLine($"Lock by key: {@lockByKey}");
+// Start monitoring
+lockMonitor.StartMonitoring(TimeSpan.FromSeconds(10));
 
-// Renew the lock
-var renewed = await repository.RenewAsync("my-lock", "owner-123", TimeSpan.FromSeconds(30));
-Console.WriteLine($"Lock renewed: {renewed}");
+// Get monitored locks
+var monitoredLocks = lockMonitor.GetMonitoredLocks();
+Console.WriteLine($"Monitored locks: {string.Join(", ", monitoredLocks)}");
 
-// Release the lock
-var released = await repository.ReleaseAsync("my-lock", "owner-123");
-Console.WriteLine($"Lock released: {released}");
+// Stop monitoring
+await lockMonitor.StopMonitoringAsync();
 
-// Get all active locks
-var activeLocks = await repository.GetAllActiveLockAsync();
-Console.WriteLine($"Active locks: {string.Join(", ", activeLocks)}");
-
-// Clear all locks
-var clearedCount = await repository.ClearAllAsync();
-Console.WriteLine($"Cleared locks: {clearedCount}");
+// Dispose
+lockMonitor.Dispose();
 ```
-
-This example demonstrates basic usage of the `InMemoryLockRepository`, including acquiring, renewing, releasing, and clearing locks, as well as checking for lock existence and retrieving active locks.
