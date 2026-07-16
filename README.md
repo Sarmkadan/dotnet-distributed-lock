@@ -218,6 +218,60 @@ if (validationErrors.Any())
 }
 ```
 
+## LockCleanupWorker
+
+The `LockCleanupWorker` class is a background service that periodically cleans up expired locks from the backend storage (Redis, PostgreSQL, SQLite, etc.). It prevents database/Redis bloat by removing locks that are no longer needed, runs on a configurable schedule, and logs cleanup statistics. The worker can also be triggered manually for testing or benchmarking purposes.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Workers;
+using SarmKadan.DistributedLock.Backends.SQLite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<LockCleanupWorker>();
+
+// Initialize lock repository
+var lockRepository = new SqliteLockRepository(
+    "/var/data/distributed-locks.db",
+    logger
+);
+
+// Create cleanup worker with default options
+var cleanupWorker = new LockCleanupWorker(
+    lockRepository,
+    logger
+);
+
+// Start the background cleanup worker
+var cts = new CancellationTokenSource();
+_ = cleanupWorker.RunAsync(cts.Token);
+
+// Optionally: trigger manual cleanup
+await cleanupWorker.RunCleanupOnceAsync();
+
+// Configure custom cleanup options
+var customOptions = new LockCleanupWorkerOptions
+{
+    InitialDelayMs = 60000, // 1 minute initial delay
+    CleanupIntervalMs = 7200000, // 2 hours between cleanups
+    BatchSize = 500,
+    VerboseLogging = true,
+    MinimumExpiredDuration = TimeSpan.FromMinutes(10)
+};
+
+var customCleanupWorker = new LockCleanupWorker(
+    lockRepository,
+    logger,
+    customOptions
+);
+
+// Stop the worker when done
+await cleanupWorker.StopAsync(CancellationToken.None);
+```
+
 ## SqliteLockRepository
 
 The `SqliteLockRepository` class is a SQLite-based implementation of the lock repository for distributed locking scenarios. It provides atomic operations for acquiring, renewing, releasing, and querying locks using SQLite as the distributed data store. This implementation supports automatic cleanup of expired locks, fencing token validation, and comprehensive monitoring capabilities.
