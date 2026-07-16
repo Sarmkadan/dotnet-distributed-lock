@@ -429,6 +429,69 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## MetricsController
+
+The `MetricsController` class provides HTTP endpoints for monitoring and analyzing distributed lock operations. It exposes system-wide, lock-specific, and performance metrics that help track lock usage patterns, success rates, contention events, and acquisition times. The controller maintains an in-memory cache of lock metrics and provides endpoints to retrieve aggregated statistics, individual lock metrics, and performance percentiles.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Api.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<MetricsController>();
+
+// Initialize with your lock service
+var lockService = new LockService(lockRepository, logger);
+var metricsController = new MetricsController(lockService, logger);
+
+// Get system-wide metrics
+var systemMetrics = metricsController.GetSystemMetrics();
+if (systemMetrics.Value != null)
+{
+    Console.WriteLine($"Total lock operations: {systemMetrics.Value.TotalLockOperations}");
+    Console.WriteLine($"Success rate: {systemMetrics.Value.SuccessRate:F2}%");
+    Console.WriteLine($"Active locks: {systemMetrics.Value.ActiveLocks}");
+}
+
+// Get metrics for a specific lock
+var lockMetrics = metricsController.GetLockMetrics("critical-section-lock");
+if (lockMetrics.Value != null)
+{
+    Console.WriteLine($"Lock critical-section-lock metrics:");
+    Console.WriteLine($"  Attempts: {lockMetrics.Value.AcquisitionAttempts}");
+    Console.WriteLine($"  Successes: {lockMetrics.Value.SuccessfulAcquisitions}");
+    Console.WriteLine($"  Failures: {lockMetrics.Value.FailedAcquisitions}");
+    Console.WriteLine($"  Avg hold time: {lockMetrics.Value.AverageHoldTimeMs:F2}ms");
+}
+
+// Get performance metrics
+var performanceMetrics = metricsController.GetPerformanceMetrics();
+if (performanceMetrics.Value != null)
+{
+    Console.WriteLine($"Performance metrics:");
+    Console.WriteLine($"  Median acquisition time: {performanceMetrics.Value.MedianAcquisitionTimeMs:F2}ms");
+    Console.WriteLine($"  P95 acquisition time: {performanceMetrics.Value.P95AcquisitionTimeMs:F2}ms");
+    Console.WriteLine($"  P99 acquisition time: {performanceMetrics.Value.P99AcquisitionTimeMs:F2}ms");
+}
+
+// Record metrics (typically called internally by LockService)
+var recordRequest = new RecordMetricsRequest
+{
+    LockName = "api-rate-limit-lock",
+    Successful = true,
+    HoldTimeMs = 150,
+    ContentionDetected = false
+};
+var recordResult = metricsController.RecordMetrics(recordRequest);
+
+// Reset all metrics (for testing/debugging)
+var resetResult = metricsController.ResetMetrics();
+Console.WriteLine(resetResult.Value?.Message);
+```
+
 ## LockCleanupWorker
 
 The `LockCleanupWorker` class is a background service that periodically cleans up expired locks from the backend storage (Redis, PostgreSQL, SQLite, etc.). It prevents database/Redis bloat by removing locks that are no longer needed, runs on a configurable schedule, and logs cleanup statistics. The worker can also be triggered manually for testing or benchmarking purposes.
