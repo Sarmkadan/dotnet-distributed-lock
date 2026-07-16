@@ -880,6 +880,64 @@ Console.WriteLine($"Cleared {allCleared} locks");
 await redisLockRepository.DisposeAsync();
 ```
 
+## HealthCheckController
+
+The `HealthCheckController` class provides HTTP endpoints for monitoring the health of the distributed lock API service. It implements three standard health check patterns used by orchestration platforms and load balancers:
+
+- **Liveness**: Indicates whether the service is running and responding to requests
+- **Readiness**: Indicates whether the service can accept requests and connect to its backend dependencies  
+- **Detailed Health**: Provides comprehensive health status including response times, runtime information, and backend connectivity
+
+### Usage Example
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using SarmKadan.DistributedLock.Api.Controllers;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<HealthCheckController>();
+
+// Initialize with your lock repository and logger
+var lockRepository = new SqliteLockRepository("/var/data/distributed-locks.db", logger);
+var healthCheckController = new HealthCheckController(lockRepository, logger);
+
+// Liveness check - basic service status
+var livenessResult = healthCheckController.Liveness();
+if (livenessResult.Result is OkObjectResult okResult)
+{
+    var response = okResult.Value as HealthCheckResponse;
+    Console.WriteLine($"Liveness Status: {response?.Status}");
+    Console.WriteLine($"Version: {response?.Version}");
+    Console.WriteLine($"Timestamp: {response?.Timestamp}");
+}
+
+// Readiness check - backend connectivity
+var readinessResult = await healthCheckController.Readiness();
+if (readinessResult.Result is OkObjectResult readyResult)
+{
+    var response = readyResult.Value as HealthCheckResponse;
+    Console.WriteLine($"Readiness Status: {response?.Status}");
+    Console.WriteLine($"Backend Connected: {response?.Details?.BackendConnected}");
+    if (!response?.Details?.BackendConnected == true)
+    {
+        Console.WriteLine($"Error: {response?.Details?.ErrorMessage}");
+    }
+}
+
+// Detailed health check - comprehensive metrics
+var detailedResult = await healthCheckController.DetailedHealth();
+if (detailedResult.Result is OkObjectResult detailedOkResult)
+{
+    var response = detailedOkResult.Value as DetailedHealthResponse;
+    Console.WriteLine($"Health Status: {response?.Status}");
+    Console.WriteLine($"Response Time: {response?.ResponseTimeMs}ms");
+    Console.WriteLine($"Framework: {response?.Runtime?.Framework}");
+    Console.WriteLine($"Uptime: {response?.Runtime?.Uptime}");
+    Console.WriteLine($"Version: {response?.Version}");
+}
+```
+
 ## ExceptionHandlingMiddleware
 
 The `ExceptionHandlingMiddleware` class is a global exception handling middleware that catches all unhandled exceptions during HTTP request processing and converts them to appropriate HTTP responses with meaningful error messages. It prevents sensitive stack traces from being exposed to clients while providing structured error responses that include the error message, error code, and timestamp. The middleware maps domain-specific exceptions to their corresponding HTTP status codes for improved client clarity.
