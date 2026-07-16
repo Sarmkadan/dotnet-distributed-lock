@@ -152,3 +152,86 @@ await lockMonitor.StopMonitoringAsync();
 // Dispose
 lockMonitor.Dispose();
 ```
+
+## LockService
+
+The `LockService` class is the core service for managing distributed locks in the system. It provides methods to acquire, renew, release, and query locks with comprehensive retry logic, metrics tracking, and logging. The service supports both blocking and non-blocking acquisition patterns, automatic renewal for long-running operations, and fencing token validation to prevent split-brain scenarios.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<LockService>();
+
+// Initialize the lock service with a repository and logger
+var lockService = new LockService(lockRepository, logger);
+
+// Try to acquire a lock (non-blocking)
+var (success, acquiredLock, errorMessage) = await lockService.TryAcquireAsync(
+    "distributed-lock-1",
+    "worker-service-01",
+    TimeSpan.FromMinutes(5)
+);
+
+if (success && acquiredLock != null)
+{
+    Console.WriteLine($"Lock acquired: {acquiredLock.Key} by {acquiredLock.OwnerId}");
+    
+    // Renew the lock before it expires
+    bool renewed = await lockService.RenewAsync(
+        "distributed-lock-1",
+        "worker-service-01",
+        TimeSpan.FromMinutes(5)
+    );
+    
+    if (renewed)
+    {
+        Console.WriteLine("Lock renewed successfully");
+    }
+    
+    // Get lock information
+    var existingLock = await lockService.GetLockAsync("distributed-lock-1");
+    if (existingLock != null)
+    {
+        Console.WriteLine($"Lock is held by: {existingLock.OwnerId}");
+    }
+    
+    // Check if lock is currently held
+    bool isLocked = await lockService.IsLockedAsync("distributed-lock-1");
+    Console.WriteLine($"Is locked: {isLocked}");
+    
+    // Release the lock when done
+    bool released = await lockService.ReleaseAsync(
+        "distributed-lock-1",
+        "worker-service-01"
+    );
+    
+    if (released)
+    {
+        Console.WriteLine("Lock released successfully");
+    }
+}
+
+// Acquire a lock with blocking retry (waits until lock is available)
+var lockWithRetry = await lockService.AcquireAsync(
+    "critical-section-lock",
+    "background-job-42",
+    TimeSpan.FromMinutes(2)
+);
+
+Console.WriteLine($"Lock acquired with retry: {lockWithRetry.Key}");
+
+// Get all active locks in the system
+var allActiveLocks = await lockService.GetAllActiveLockAsync();
+Console.WriteLine($"Total active locks: {allActiveLocks.Count()}");
+
+// Get metrics for monitoring and observability
+var metrics = lockService.GetMetrics();
+Console.WriteLine($"Total acquisitions: {metrics.TotalAcquisitions}");
+Console.WriteLine($"Total renewals: {metrics.TotalRenewals}");
+Console.WriteLine($"Total releases: {metrics.TotalReleases}");
+```
