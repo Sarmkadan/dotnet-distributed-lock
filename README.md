@@ -494,6 +494,118 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## RetryPolicyHelper
+
+The `RetryPolicyHelper` class provides utility methods for implementing retry logic with exponential backoff and jitter. It's essential for handling transient failures in distributed lock operations where temporary unavailability or contention is expected. The helper supports both asynchronous and synchronous operations, with configurable retry counts, initial delays, and backoff multipliers.
+
+### Public Members
+
+```csharp
+public static async Task<T> ExecuteWithRetryAsync<T>
+public static T ExecuteWithRetry<T>
+public static async Task<T> ExecuteWithLinearRetryAsync<T>
+public static RetryPolicy CreatePolicy
+public static RetryPolicy Aggressive { get; }
+public static RetryPolicy Moderate { get; }
+public static RetryPolicy Conservative { get; }
+public int MaxRetries { get; set; }
+public int InitialDelayMs { get; set; }
+public double BackoffMultiplier { get; set; }
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Helpers;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger("RetryPolicyHelper");
+
+// Example 1: Retry an async operation with exponential backoff
+var result = await RetryPolicyHelper.ExecuteWithRetryAsync(async () =>
+{
+    // Simulate a transient failure (e.g., network issue, lock contention)
+    if (DateTime.UtcNow.Second % 3 == 0)
+    {
+        throw new InvalidOperationException("Temporary service unavailable");
+    }
+    
+    return "Operation completed successfully";
+}, 
+maxRetries: 5,
+initialDelayMs: 200,
+backoffMultiplier: 1.8);
+
+Console.WriteLine(result);
+
+// Example 2: Retry a synchronous operation
+var data = RetryPolicyHelper.ExecuteWithRetry(() =>
+{
+    // Simulate database query that might fail temporarily
+    if (DateTime.UtcNow.Second % 2 == 0)
+    {
+        throw new TimeoutException("Database connection timed out");
+    }
+    
+    return new { Id = 42, Name = "Test Data", Timestamp = DateTime.UtcNow };
+},
+maxRetries: 3,
+initialDelayMs: 150);
+
+Console.WriteLine($"Retrieved data: {data.Id} - {data.Name}");
+
+// Example 3: Linear retry for predictable delays
+var linearResult = await RetryPolicyHelper.ExecuteWithLinearRetryAsync(async () =>
+{
+    // Operation with linear backoff
+    if (DateTime.UtcNow.Second % 4 == 0)
+    {
+        throw new Exception("Service temporarily unavailable");
+    }
+    
+    return "Linear retry successful";
+},
+maxRetries: 4,
+delayIncrementMs: 100);
+
+Console.WriteLine(linearResult);
+
+// Example 4: Using predefined retry policies
+var policy = RetryPolicyHelper.Policies.Aggressive;
+
+var aggressiveResult = await RetryPolicyHelper.ExecuteWithRetryAsync(async () =>
+{
+    // High contention scenario
+    return await TryAcquireLockWithHighContentionAsync();
+},
+maxRetries: policy.MaxRetries,
+initialDelayMs: policy.InitialDelayMs,
+backoffMultiplier: policy.BackoffMultiplier);
+
+// Example 5: Custom retry policy with specific conditions
+var customPolicy = RetryPolicyHelper.CreatePolicy(
+    maxRetries: 5,
+    initialDelayMs: 100,
+    backoffMultiplier: 2.0);
+
+var customResult = await RetryPolicyHelper.ExecuteWithRetryAsync(async () =>
+{
+    var lockService = new LockService(lockRepository, logger);
+    var (success, _, _) = await lockService.TryAcquireAsync(
+        "critical-section-lock",
+        "worker-service-1",
+        TimeSpan.FromMinutes(1));
+    
+    if (!success) throw new LockAcquisitionException("Could not acquire lock");
+    
+    return "Lock acquired successfully";
+},
+maxRetries: customPolicy.MaxRetries,
+initialDelayMs: customPolicy.InitialDelayMs,
+backoffMultiplier: customPolicy.BackoffMultiplier);
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
