@@ -218,9 +218,92 @@ if (validationErrors.Any())
 }
 ```
 
-## RedisLockRepository
+## PostgresLockRepository
 
-The `RedisLockRepository` class is a high-performance Redis-based implementation of the lock repository for distributed locking scenarios. It provides atomic operations for acquiring, renewing, releasing, and querying locks using Redis as the distributed data store. This implementation supports automatic cleanup of expired locks, fencing token validation, and comprehensive monitoring capabilities.
+The `PostgresLockRepository` class is a PostgreSQL-based implementation of the lock repository for distributed locking scenarios. It provides atomic operations for acquiring, renewing, releasing, and querying locks using PostgreSQL as the distributed data store. This implementation supports automatic cleanup of expired locks, fencing token validation, and comprehensive monitoring capabilities.
+
+The repository uses PostgreSQL advisory locks for session-level locking to ensure atomic operations, and stores lock metadata in a dedicated `distributed_locks` table with proper indexing for performance. It implements `IAsyncDisposable` for resource cleanup and provides methods for managing lock lifecycle including acquisition, renewal, validation, and cleanup of expired locks.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Backends.PostgreSQL;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<PostgresLockRepository>();
+
+// Initialize PostgreSQL lock repository
+var postgresLockRepository = new PostgresLockRepository(
+    "Host=localhost;Port=5432;Database=distributed_locks;Username=postgres;Password=yourpassword",
+    logger
+);
+
+// Create a lock instance
+var newLock = new Lock(
+    key: "distributed-lock-1",
+    ownerId: "worker-service-01",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+// Acquire the lock atomically
+bool acquired = await postgresLockRepository.AcquireAsync(newLock);
+Console.WriteLine($"Lock acquired: {acquired}");
+
+// Check if lock exists
+bool exists = await postgresLockRepository.ExistsAsync("distributed-lock-1");
+Console.WriteLine($"Lock exists: {exists}");
+
+// Get lock by key
+var existingLock = await postgresLockRepository.GetByKeyAsync("distributed-lock-1");
+if (existingLock != null)
+{
+    Console.WriteLine($"Lock found: {existingLock.Key} owned by {existingLock.OwnerId}");
+}
+
+// Renew the lock
+bool renewed = await postgresLockRepository.RenewAsync(
+    "distributed-lock-1",
+    "worker-service-01",
+    TimeSpan.FromMinutes(5)
+);
+Console.WriteLine($"Lock renewed: {renewed}");
+
+// Get all active locks
+var allActiveLocks = await postgresLockRepository.GetAllActiveLockAsync();
+Console.WriteLine($"Total active locks: {allActiveLocks.Count()}");
+
+// Get locks by owner
+var ownerLocks = await postgresLockRepository.GetByOwnerAsync("worker-service-01");
+Console.WriteLine($"Locks owned by worker-service-01: {ownerLocks.Count()}");
+
+// Validate fencing token
+bool tokenValid = await postgresLockRepository.ValidateFencingTokenAsync(
+    "distributed-lock-1",
+    12345
+);
+Console.WriteLine($"Fencing token valid: {tokenValid}");
+
+// Release the lock when done
+bool released = await postgresLockRepository.ReleaseAsync(
+    "distributed-lock-1",
+    "worker-service-01"
+);
+Console.WriteLine($"Lock released: {released}");
+
+// Clean up expired locks
+int expiredDeleted = await postgresLockRepository.DeleteExpiredLockAsync();
+Console.WriteLine($"Deleted {expiredDeleted} expired locks");
+
+// Clear all locks (use with caution in production)
+int allCleared = await postgresLockRepository.ClearAllAsync();
+Console.WriteLine($"Cleared {allCleared} locks");
+
+// Dispose the repository when done (implements IAsyncDisposable)
+await postgresLockRepository.DisposeAsync();
+```
 
 ### Usage Example
 
