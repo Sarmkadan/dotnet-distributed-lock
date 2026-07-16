@@ -218,6 +218,107 @@ if (validationErrors.Any())
 }
 ```
 
+## SqliteLockRepository
+
+The `SqliteLockRepository` class is a SQLite-based implementation of the lock repository for distributed locking scenarios. It provides atomic operations for acquiring, renewing, releasing, and querying locks using SQLite as the distributed data store. This implementation supports automatic cleanup of expired locks, fencing token validation, and comprehensive monitoring capabilities.
+
+The repository uses SQLite for storage with proper indexing for performance. It implements `IAsyncDisposable` for resource cleanup and provides methods for managing lock lifecycle including acquisition, renewal, validation, and cleanup of expired locks.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Backends.SQLite;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<SqliteLockRepository>();
+
+// Initialize SQLite lock repository
+var sqliteLockRepository = new SqliteLockRepository(
+    "/var/data/distributed-locks.db",
+    logger
+);
+
+// Create a lock instance
+var newLock = new Lock(
+    key: "distributed-lock-1",
+    ownerId: "worker-service-01",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+// Acquire the lock atomically
+bool acquired = await sqliteLockRepository.AcquireAsync(newLock);
+Console.WriteLine($"Lock acquired: {acquired}");
+
+// Check if lock exists
+bool exists = await sqliteLockRepository.ExistsAsync("distributed-lock-1");
+Console.WriteLine($"Lock exists: {exists}");
+
+// Get lock by key
+var existingLock = await sqliteLockRepository.GetByKeyAsync("distributed-lock-1");
+if (existingLock != null)
+{
+    Console.WriteLine($"Lock found: {existingLock.Key} owned by {existingLock.OwnerId}");
+}
+
+// Get lock by key and owner (for validation)
+var lockByOwner = await sqliteLockRepository.GetByKeyAndOwnerAsync(
+    "distributed-lock-1",
+    "worker-service-01"
+);
+if (lockByOwner != null)
+{
+    Console.WriteLine($"Lock found for owner: {lockByOwner.Key}");
+}
+
+// Update lock metadata
+bool updated = await sqliteLockRepository.UpdateAsync(newLock);
+Console.WriteLine($"Lock updated: {updated}");
+
+// Renew the lock
+bool renewed = await sqliteLockRepository.RenewAsync(
+    "distributed-lock-1",
+    "worker-service-01",
+    TimeSpan.FromMinutes(5)
+);
+Console.WriteLine($"Lock renewed: {renewed}");
+
+// Get all active locks
+var allActiveLocks = await sqliteLockRepository.GetAllActiveLockAsync();
+Console.WriteLine($"Total active locks: {allActiveLocks.Count()}");
+
+// Get locks by owner
+var ownerLocks = await sqliteLockRepository.GetByOwnerAsync("worker-service-01");
+Console.WriteLine($"Locks owned by worker-service-01: {ownerLocks.Count()}");
+
+// Validate fencing token
+bool tokenValid = await sqliteLockRepository.ValidateFencingTokenAsync(
+    "distributed-lock-1",
+    12345
+);
+Console.WriteLine($"Fencing token valid: {tokenValid}");
+
+// Release the lock when done
+bool released = await sqliteLockRepository.ReleaseAsync(
+    "distributed-lock-1",
+    "worker-service-01"
+);
+Console.WriteLine($"Lock released: {released}");
+
+// Clean up expired locks
+int expiredDeleted = await sqliteLockRepository.DeleteExpiredLockAsync();
+Console.WriteLine($"Deleted {expiredDeleted} expired locks");
+
+// Clear all locks (use with caution in production)
+int allCleared = await sqliteLockRepository.ClearAllAsync();
+Console.WriteLine($"Cleared {allCleared} locks");
+
+// Dispose the repository when done (implements IAsyncDisposable)
+await sqliteLockRepository.DisposeAsync();
+```
+
 ## PostgresLockRepository
 
 The `PostgresLockRepository` class is a PostgreSQL-based implementation of the lock repository for distributed locking scenarios. It provides atomic operations for acquiring, renewing, releasing, and querying locks using PostgreSQL as the distributed data store. This implementation supports automatic cleanup of expired locks, fencing token validation, and comprehensive monitoring capabilities.
