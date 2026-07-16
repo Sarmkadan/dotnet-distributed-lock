@@ -20,11 +20,18 @@ public sealed class LockService : ILockService
     private readonly ILockRepository _repository;
     private readonly ILogger<LockService> _logger;
     private readonly LockMetrics _metrics;
+    private readonly ILockRetryPolicy _retryPolicy;
 
     public LockService(ILockRepository repository, ILogger<LockService> logger)
+        : this(repository, logger, new DefaultLockRetryPolicy())
+    {
+    }
+
+    public LockService(ILockRepository repository, ILogger<LockService> logger, ILockRetryPolicy retryPolicy)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
         _metrics = new LockMetrics();
     }
 
@@ -68,8 +75,7 @@ public sealed class LockService : ILockService
         TimeSpan? duration = null,
         CancellationToken cancellationToken = default)
     {
-        var maxRetries = Constants.LockConstants.DefaultMaxRetries;
-        var retryDelay = Constants.LockConstants.DefaultRetryDelayMilliseconds;
+        var maxRetries = _retryPolicy.MaxRetries;
         var acquisitionTimeout = Constants.LockConstants.DefaultAcquisitionTimeout;
 
         var acquisition = new LockAcquisition(lockKey, ownerId, AcquisitionMode.Blocking, acquisitionTimeout, maxRetries);
@@ -94,8 +100,7 @@ public sealed class LockService : ILockService
 
             if (attempt < maxRetries - 1)
             {
-                await Task.Delay(retryDelay, cancellationToken);
-                retryDelay = Math.Min(retryDelay * 2, Constants.LockConstants.MaximumRetryDelayMilliseconds);
+                await Task.Delay(_retryPolicy.GetDelay(attempt), cancellationToken);
             }
         }
 
