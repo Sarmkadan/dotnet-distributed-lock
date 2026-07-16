@@ -809,6 +809,53 @@ var outOfBoundsLock = lockArray.SafeGetAt(10); // null
 var negativeIndexLock = lockArray.SafeGetAt(-1); // null
 ```
 
+## StringExtensions
+
+The `StringExtensions` class provides extension methods for string manipulation and validation commonly used in distributed locking scenarios. It includes methods for validating lock names, sanitizing strings for lock identifiers, and converting strings to various byte encodings. These utilities help ensure consistent string handling across the lock system and prevent common issues with invalid characters or encoding mismatches.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Extensions;
+using System;
+
+// Validate a lock name before attempting to acquire a lock
+string lockName = "critical-section-123";
+bool isValid = lockName.IsValidLockName();
+Console.WriteLine($"Is valid lock name: {isValid}"); // Output: True
+
+// Sanitize a user-provided string for use as a lock name
+string userInput = "My Critical Section!@#"
+string sanitizedLockName = userInput.SanitizeForLockName();
+Console.WriteLine($"Sanitized lock name: {sanitizedLockName}"); // Output: My_Critical_Section____
+
+// Convert strings to byte arrays for hashing or storage
+string data = "Hello, Distributed Lock System"
+byte[] utf8Bytes = data.ToUtf8Bytes();
+byte[] asciiBytes = data.ToAsciiBytes();
+Console.WriteLine($"UTF-8 bytes length: {utf8Bytes.Length}, ASCII bytes length: {asciiBytes.Length}");
+
+// Parse hex strings (useful for fencing tokens)
+string hexToken = "deadbeefcafebabe"
+byte[] tokenBytes = hexToken.FromHexString();
+Console.WriteLine($"Hex token parsed to {tokenBytes.Length} bytes");
+
+// Validate GUID format
+string guidString = "550e8400-e29b-41d4-a716-446655440000"
+bool isGuidValid = guidString.IsValidGuid();
+Console.WriteLine($"Is valid GUID: {isGuidValid}"); // Output: True
+
+// Truncate long strings for display
+string longString = "This is a very long lock identifier that needs to be shortened"
+string truncated = longString.TruncateWithEllipsis(20);
+Console.WriteLine($"Truncated: {truncated}"); // Output: This is a very lon...
+
+// Split delimited strings into lists
+string lockList = "lock-1, lock-2, lock-3, lock-4"
+var lockNames = lockList.ToTrimmedList();
+Console.WriteLine($"Parsed {lockNames.Count} lock names: {string.Join(", ", lockNames)}");
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
