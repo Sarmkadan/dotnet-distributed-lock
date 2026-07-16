@@ -572,6 +572,64 @@ var locks = await lockService.GetAllActiveLockAsync();
 Console.WriteLine($"All active locks with error: {locks.Count()} locks"); // Output: 0 locks
 ```
 
+## AdvancedConcurrencyTests
+
+The `AdvancedConcurrencyTests` class provides comprehensive unit tests for distributed lock operations under high load and stress scenarios. It validates thread safety, consistency, and error handling across various edge cases including high contention, rapid acquire/release cycles, concurrent operations, renewal under load, expiration handling, and error recovery scenarios. The test suite ensures that the distributed lock system maintains data integrity and prevents race conditions even under extreme parallelism.
+
+### What it does
+
+This test suite validates that the distributed lock system correctly:
+- Handles high contention scenarios where many workers race for the same lock
+- Manages multiple locks concurrently without interference between different lock operations
+- Processes simultaneous renewal and acquisition operations without race conditions
+- Supports rapid acquire-release-acquire sequences with proper state cleanup
+- Executes concurrent operations across many lock keys with many workers
+- Maintains consistency through complete lock lifecycle stress tests (acquire, renew, release)
+- Tracks metrics accurately under concurrent load with many simultaneous operations
+- Handles lock expiration and reacquisition by new owners
+- Recovers gracefully from errors while maintaining repository consistency
+- Ensures lock fairness so multiple workers can acquire locks rather than monopolization
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using Xunit;
+
+// Create test instance
+var tests = new AdvancedConcurrencyTests();
+
+// Test high contention scenario with many workers racing for the same lock
+await tests.HighContention_ManyWorkersRacingForSameLock();
+
+// Test concurrent operations across multiple locks without interference
+await tests.HighContention_MultipleLocksWithoutInterference();
+
+// Test simultaneous renewal and acquisition operations
+await tests.RenewalUnderLoad_SimultaneousRenewalsAndAcquisitions();
+
+// Test rapid acquire-release-acquire sequences
+await tests.RapidCycle_AcquireReleaseAcquireSequence();
+
+// Test concurrent operations with many keys and workers
+await tests.ConcurrentOperations_ManyKeysWithManyWorkers();
+
+// Test complete lock lifecycle under stress
+await tests.CompleteLifecycleStress_AcquireRenewReleaseRepeatedly();
+
+// Test metrics tracking under concurrent load
+await tests.MetricsUnderConcurrentLoad_CorrectlyTrackOperations();
+
+// Test expiration handling and reacquisition
+await tests.ExpirationHandling_LocksExpireAndCanBeReacquired();
+
+// Test error recovery and repository consistency
+await tests.ErrorRecovery_RepositoryRemainsConsistentAfterFailures();
+
+// Test lock fairness across multiple workers
+await tests.LockFairness_SomeWorkersCanAcquire();
+```
+
 ## LockRenewalWorker
 
 The `LockRenewalWorker` class is a background service that automatically renews distributed locks before they expire. It monitors locks registered for renewal and extends their duration by the specified renewal interval, preventing accidental lock expiration during long-running operations. The worker runs on a configurable schedule and handles renewal failures gracefully with retry logic.
