@@ -606,6 +606,102 @@ initialDelayMs: customPolicy.InitialDelayMs,
 backoffMultiplier: customPolicy.BackoffMultiplier);
 ```
 
+## ValidationHelper
+
+The `ValidationHelper` class provides utility methods for validating inputs and configurations in the distributed lock system. It includes validation methods for lock names, durations, renewal intervals, fencing tokens, API keys, and other critical parameters. The helper collects validation errors and provides methods to check overall validity, throw exceptions if any errors exist, and parse values with type safety.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Helpers;
+using SarmKadan.DistributedLock.Models;
+
+// Validate a lock name
+ValidationHelper.ValidateLockName("user-session-lock-123");
+
+// Validate duration (must be positive)
+ValidationHelper.ValidateDuration(TimeSpan.FromMinutes(5));
+
+// Validate renewal interval
+ValidationHelper.ValidateRenewalInterval(TimeSpan.FromMinutes(2));
+
+// Validate fencing token
+ValidationHelper.ValidateFencingToken(12345UL);
+
+// Validate owner ID
+ValidationHelper.ValidateOwnerId("worker-service-01");
+
+// Validate API key format
+ValidationHelper.ValidateApiKey("sk_live_abc123xyz789");
+
+// Validate that a lock is not expired
+var lockInfo = new Lock(
+    key: "distributed-lock-1",
+    ownerId: "worker-service-01",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+ValidationHelper.ValidateLockNotExpired(lockInfo);
+
+// Validate lock configuration with multiple checks
+ValidationHelper.ValidateLockConfiguration(
+    lockName: "critical-section-lock",
+    duration: TimeSpan.FromMinutes(10),
+    renewalInterval: TimeSpan.FromMinutes(2),
+    fencingToken: 67890UL,
+    ownerId: "background-task-worker"
+);
+
+// Check if any validation errors occurred
+if (!ValidationHelper.IsValid)
+{
+    Console.WriteLine("Validation errors:");
+    foreach (var error in ValidationHelper.Errors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+
+// Throw exception if any errors exist
+ValidationHelper.ThrowIfAnyErrors("Invalid lock configuration");
+
+// Validate HTTP headers for required values
+var headers = new Dictionary<string, string>
+{
+    ["X-API-Key"] = "sk_live_abc123xyz789",
+    ["X-Request-Id"] = "req-12345"
+};
+ValidationHelper.ValidateHeaders(headers, ["X-API-Key", "X-Request-Id"]);
+
+// Try to parse a value with type safety
+if (ValidationHelper.TryParseAs<int>("42", out var parsedValue))
+{
+    Console.WriteLine($"Parsed value: {parsedValue}");
+}
+
+// Get validation result for programmatic checking
+var validationResult = ValidationHelper.ValidateLockConfiguration(
+    lockName: "api-rate-limit-lock",
+    duration: TimeSpan.FromSeconds(30),
+    renewalInterval: TimeSpan.FromSeconds(10),
+    fencingToken: 11111UL,
+    ownerId: "rate-limiter-service"
+);
+
+if (validationResult.IsValid)
+{
+    Console.WriteLine("Configuration is valid!");
+}
+else
+{
+    Console.WriteLine("Configuration errors:");
+    foreach (var error in validationResult.Errors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
