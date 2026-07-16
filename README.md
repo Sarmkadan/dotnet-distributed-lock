@@ -494,6 +494,39 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## DefaultLockRetryPolicyTests
+
+The `DefaultLockRetryPolicyTests` class contains comprehensive unit tests for the `DefaultLockRetryPolicy` class, verifying constructor behavior, parameter validation, and delay calculation logic. It tests default values, custom configuration, boundary conditions, and the exponential backoff algorithm with jitter to ensure the retry policy behaves correctly under various scenarios.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using Xunit;
+
+// Create a retry policy with default values
+var defaultPolicy = new DefaultLockRetryPolicy();
+Assert.Equal(Constants.LockConstants.DefaultMaxRetries, defaultPolicy.MaxRetries);
+
+// Create a retry policy with custom values
+var customPolicy = new DefaultLockRetryPolicy(
+    maxRetries: 5,
+    initialDelay: TimeSpan.FromMilliseconds(200),
+    maxDelay: TimeSpan.FromSeconds(2),
+    jitterFactor: 0.2
+);
+Assert.Equal(5, customPolicy.MaxRetries);
+Assert.Equal(TimeSpan.FromMilliseconds(200), customPolicy.InitialDelay);
+
+// Test delay calculation for exponential backoff with jitter
+var delay = customPolicy.GetDelay(3); // 3rd retry attempt
+Console.WriteLine($"Delay for attempt 3: {delay.TotalMilliseconds}ms");
+
+// Verify parameter validation throws appropriate exceptions
+Assert.Throws<ArgumentOutOfRangeException>(() => new DefaultLockRetryPolicy(maxRetries: -1));
+Assert.Throws<ArgumentOutOfRangeException>(() => new DefaultLockRetryPolicy(jitterFactor: 1.5));
+```
+
 ## RetryPolicyHelper
 
 The `RetryPolicyHelper` class provides utility methods for implementing retry logic with exponential backoff and jitter. It's essential for handling transient failures in distributed lock operations where temporary unavailability or contention is expected. The helper supports both asynchronous and synchronous operations, with configurable retry counts, initial delays, and backoff multipliers.
