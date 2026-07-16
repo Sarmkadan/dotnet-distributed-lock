@@ -532,6 +532,134 @@ string acquisitionInfo = acquisition.ToString();
 Console.WriteLine(acquisitionInfo);
 ```
 
+## LockingRealWorldIntegrationTests
+
+The `LockingRealWorldIntegrationTests` class provides comprehensive integration tests demonstrating practical real-world scenarios for distributed locking. These tests validate that the distributed lock system works correctly in production-like situations including database migrations, report generation, job processing with fencing tokens, multi-resource coordination, scheduled tasks, deadlock detection, contention analysis, lock lifecycle management, and high-throughput operations.
+
+### What it does
+
+This test suite validates that the distributed lock system correctly:
+- Prevents concurrent database migrations from running simultaneously
+- Maintains locks during long-running operations with auto-renewal
+- Uses fencing tokens to prevent stale writes when locks expire
+- Coordinates access across multiple resources without deadlocks
+- Ensures scheduled tasks run on only one instance in a distributed system
+- Detects circular wait dependencies (deadlocks) using the deadlock detector
+- Tracks lock contention metrics to identify bottlenecks
+- Manages complete lock lifecycle: acquire, use, renew, release
+- Handles high-throughput scenarios with rapid acquire/release cycles
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Repository;
+using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
+
+// Initialize services for integration testing
+var repository = new InMemoryLockRepository();
+var lockService = new LockService(repository, NullLogger<LockService>.Instance);
+var fencingService = new FencingTokenService(NullLogger<FencingTokenService>.Instance);
+var deadlockDetector = new DeadlockDetector(NullLogger<DeadlockDetector>.Instance);
+
+// Example 1: Prevent concurrent database migrations
+const string migrationLockKey = "db-migration:main";
+var (migrationAcquired, _, _) = await lockService.TryAcquireAsync(
+    migrationLockKey, "app-instance-1", TimeSpan.FromMinutes(5));
+if (migrationAcquired)
+{
+    // Run database migrations...
+    await lockService.ReleaseAsync(migrationLockKey, "app-instance-1");
+}
+
+// Example 2: Long-running report generation with auto-renewal
+const string reportLockKey = "report-generation:monthly";
+var (reportAcquired, reportLock, _) = await lockService.TryAcquireAsync(
+    reportLockKey, "worker-1", TimeSpan.FromMinutes(10));
+if (reportAcquired)
+{
+    // Simulate long operation
+    await Task.Delay(TimeSpan.FromMinutes(8));
+    
+    // Renew lock to prevent expiration
+    await lockService.RenewAsync(reportLockKey, "worker-1", TimeSpan.FromMinutes(10));
+    
+    // Complete report...
+    await lockService.ReleaseAsync(reportLockKey, "worker-1");
+}
+
+// Example 3: Job processing with fencing tokens to prevent stale writes
+const string jobLockKey = "job-processing:queue-1";
+var (jobAcquired, _, _) = await lockService.TryAcquireAsync(
+    jobLockKey, "processor-1", TimeSpan.FromMinutes(5));
+if (jobAcquired)
+{
+    // Issue fencing token at start of processing
+    var token = fencingService.IssueToken(jobLockKey);
+    
+    // Process job...
+    
+    // Validate token before writing to prevent zombie writes
+    if (fencingService.ValidateToken(jobLockKey, token))
+    {
+        // Write to shared resource...
+    }
+    
+    await lockService.ReleaseAsync(jobLockKey, "processor-1");
+}
+
+// Example 4: Multi-resource coordination
+var resources = new[] { "resource:a", "resource:b", "resource:c" };
+Array.Sort(resources); // Acquire in consistent order
+
+foreach (var resource in resources)
+{
+    var (acquired, _, _) = await lockService.TryAcquireAsync(
+        resource, "coordinator-1", TimeSpan.FromMinutes(5));
+    if (acquired)
+    {
+        // Perform coordinated operation...
+        await lockService.ReleaseAsync(resource, "coordinator-1");
+    }
+}
+
+// Example 5: Scheduled task that runs on only one instance
+const string taskName = "daily-cleanup";
+const string taskLockKey = "task:" + taskName;
+var (taskAcquired, _, _) = await lockService.TryAcquireAsync(
+    taskLockKey, "server-1", TimeSpan.FromMinutes(5));
+if (taskAcquired)
+{
+    // Execute task...
+    await lockService.ReleaseAsync(taskLockKey, "server-1");
+}
+
+// Example 6: Deadlock detection
+// Setup: Worker A holds lock 1, Worker B holds lock 2
+deadlockDetector.RecordAcquired("worker-a", "lock:1");
+deadlockDetector.RecordAcquired("worker-b", "lock:2");
+
+// Worker A waits for lock 2
+await deadlockDetector.RecordWaitingAsync("worker-a", "lock:2");
+
+// Check if Worker B waiting for lock 1 would cause deadlock
+bool wouldDeadlock = deadlockDetector.WouldDeadlock("worker-b", "lock:1");
+if (wouldDeadlock)
+{
+    // Handle deadlock scenario...
+}
+
+// Example 7: Contention analysis
+// Track lock contention metrics
+await deadlockDetector.RecordWaitingAsync("worker-1", "resource:critical");
+var metrics = deadlockDetector.GetMetrics("resource:critical");
+if (metrics != null && metrics.TotalWaiters > 10)
+{
+    // Alert: High contention detected
+}
+```
+
 ## LockMonitorTests
 
 The `LockMonitorTests` class provides comprehensive unit tests for the `LockMonitor` class, which is responsible for monitoring locks and automatically renewing them based on configuration. It verifies constructor validation, lock registration and unregistration, monitoring start/stop behavior, auto-renewal functionality, error handling during renewal operations, and thread safety under concurrent operations.
