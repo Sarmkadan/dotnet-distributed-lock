@@ -856,6 +856,64 @@ var lockNames = lockList.ToTrimmedList();
 Console.WriteLine($"Parsed {lockNames.Count} lock names: {string.Join(", ", lockNames)}");
 ```
 
+## DateTimeExtensions
+
+The `DateTimeExtensions` class provides extension methods for DateTime operations commonly used in distributed locking scenarios. It includes methods for checking lock expiration status, calculating remaining time until expiration, formatting dates, and adding jitter to time intervals. These utilities help ensure consistent time handling across the lock system and prevent common issues with time synchronization.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Extensions;
+using System;
+
+// Example lock expiration time
+var lockExpiration = DateTime.UtcNow.AddMinutes(5);
+
+// Check if lock has expired
+bool isExpired = lockExpiration.IsExpired();
+Console.WriteLine($"Lock expired: {isExpired}");
+
+// Check if lock is still valid
+bool isValid = lockExpiration.IsValid();
+Console.WriteLine($"Lock valid: {isValid}");
+
+// Get remaining time until lock expires
+TimeSpan remainingTime = lockExpiration.GetRemainingTime();
+Console.WriteLine($"Remaining time: {remainingTime.TotalSeconds:F0} seconds");
+
+// Get remaining time in different units
+long remainingSeconds = lockExpiration.GetRemainingSeconds();
+long remainingMilliseconds = lockExpiration.GetRemainingMilliseconds();
+Console.WriteLine($"Remaining: {remainingSeconds}s / {remainingMilliseconds}ms");
+
+// Check if lock expires within a grace period (e.g., 1 minute)
+bool needsRenewal = lockExpiration.ExpiresWithin(TimeSpan.FromMinutes(1));
+Console.WriteLine($"Needs renewal: {needsRenewal}");
+
+// Format dates for logging and storage
+string iso8601 = lockExpiration.ToIso8601String();
+Console.WriteLine($"ISO 8601: {iso8601}");
+
+string humanReadable = lockExpiration.ToHumanReadableFormat();
+Console.WriteLine($"Human readable: {humanReadable}");
+
+// Round to nearest time interval (useful for metrics aggregation)
+var rounded = DateTime.UtcNow.RoundToNearest(TimeSpan.FromMinutes(5));
+Console.WriteLine($"Rounded to nearest 5 minutes: {rounded}");
+
+// Add random jitter to renewal intervals to avoid thundering herd
+TimeSpan renewalInterval = TimeSpan.FromMinutes(2);
+TimeSpan jitteredInterval = renewalInterval.AddRandomJitter(maxJitterPercentage: 15);
+Console.WriteLine($"Renewal interval with jitter: {jitteredInterval.TotalSeconds:F0}s");
+
+// Convert between DateTime and Unix timestamp
+DateTime now = DateTime.UtcNow;
+long unixTimestamp = now.ToUnixTimestamp();
+DateTime fromTimestamp = DateTimeExtensions.FromUnixTimestamp(unixTimestamp);
+Console.WriteLine($"Unix timestamp: {unixTimestamp}");
+Console.WriteLine($"Round-trip successful: {Math.Abs((now - fromTimestamp).TotalMilliseconds) < 1}");
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
