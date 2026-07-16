@@ -218,6 +218,68 @@ if (validationErrors.Any())
 }
 ```
 
+## HealthMonitoringWorker
+
+The `HealthMonitoringWorker` class is a background service that monitors the health of the distributed lock system. It periodically verifies backend connectivity, records health status including consecutive failures, and alerts when issues are detected with the lock service or backends. The worker runs on a configurable schedule and provides methods to retrieve the current health status and reset failure counters.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Workers;
+using SarmKadan.DistributedLock.Repository;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<HealthMonitoringWorker>();
+
+// Initialize lock repository
+var lockRepository = new SqliteLockRepository(
+    "/var/data/distributed-locks.db",
+    logger
+);
+
+// Create health monitoring worker with default options
+var healthWorker = new HealthMonitoringWorker(
+    lockRepository,
+    logger
+);
+
+// Start the background health monitoring
+var cts = new CancellationTokenSource();
+_ = healthWorker.RunAsync(cts.Token);
+
+// Get current health status
+var status = healthWorker.GetStatus();
+Console.WriteLine($"Healthy: {status.IsHealthy}");
+Console.WriteLine($"Backend connected: {status.BackendConnected}");
+Console.WriteLine($"Last check: {status.LastCheckTime}");
+Console.WriteLine($"Check duration: {status.CheckDurationMs}ms");
+Console.WriteLine($"Consecutive failures: {status.ConsecutiveFailures}");
+Console.WriteLine($"Last error: {status.LastErrorMessage ?? "None"}");
+
+// Configure custom health monitoring options
+var customOptions = new HealthMonitoringWorkerOptions
+{
+    CheckIntervalMs = 60000, // 1 minute between checks
+    FailureThreshold = 5,     // Alert after 5 consecutive failures
+    AlertOnUnhealthy = true,  // Send alerts when unhealthy
+    CheckTimeout = TimeSpan.FromSeconds(15) // 15 second timeout
+};
+
+var customHealthWorker = new HealthMonitoringWorker(
+    lockRepository,
+    logger,
+    customOptions
+);
+
+// Reset failure counter when health recovers
+healthWorker.ResetFailureCounter();
+
+// Stop the worker when done
+await healthWorker.StopAsync(CancellationToken.None);
+```
+
 ## MetricsCollectionWorker
 
 The `MetricsCollectionWorker` class is a background service that periodically collects and stores metrics about lock operations, cache performance, and custom application metrics. It tracks acquisition/renewal/release operations, maintains historical snapshots of metrics, and provides methods to retrieve current and historical metrics for monitoring and observability purposes.
