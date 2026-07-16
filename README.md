@@ -410,6 +410,66 @@ var customMetricsWorker = new MetricsCollectionWorker(
 await metricsWorker.StopAsync(CancellationToken.None);
 ```
 
+## DeadlockDetectorTests
+
+The `DeadlockDetectorTests` class provides comprehensive unit tests for the `DeadlockDetector` class, which implements deadlock detection logic for distributed locking scenarios. It verifies that the deadlock detector correctly:
+- Tracks lock ownership and waiter chains
+- Detects circular wait dependencies (deadlocks)
+- Maintains metrics on contention and deadlock events
+- Handles concurrent operations safely
+- Validates input parameters and throws appropriate exceptions
+
+### What it does
+
+This test suite validates that the deadlock detector correctly:
+- Returns `false` when there are no existing ownerships (no deadlock possible)
+- Returns `true` when detecting simple circular wait scenarios
+- Returns `false` when there is no circular wait (contention without deadlock)
+- Detects deadlocks in longer chains of waiting owners
+- Validates null parameters and throws `ArgumentNullException`
+- Tracks waiters and records wait times
+- Maintains ownership state correctly
+- Provides metrics for monitoring and observability
+- Handles concurrent waiting and acquisition operations
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using Xunit;
+
+// Create a deadlock detector with a logger
+var detector = new DeadlockDetector(logger);
+
+// Test basic deadlock detection
+bool wouldDeadlock = detector.WouldDeadlock("owner-A", "lock:1");
+Assert.False(wouldDeadlock); // No deadlock when no locks are held
+
+// Simulate a deadlock scenario:
+// owner-A holds lock:1
+detector.RecordAcquired("owner-A", "lock:1");
+
+// owner-B holds lock:2 and wants lock:1
+detector.RecordAcquired("owner-B", "lock:2");
+
+// owner-B starts waiting for lock:1
+detector.RecordWaitingAsync("owner-B", "lock:1");
+
+// owner-A tries to wait for lock:2 → circular dependency → deadlock!
+bool isDeadlock = detector.WouldDeadlock("owner-A", "lock:2");
+Assert.True(isDeadlock);
+
+// Record wait completion with timing
+await detector.RecordWaitEndedAsync("owner-B", "lock:1", 150.0);
+
+// Check metrics
+await detector.RecordWaitingAsync("owner-C", "lock:1");
+var metrics = detector.GetMetrics("lock:1");
+Assert.NotNull(metrics);
+Assert.Equal(1, metrics.CurrentWaiters);
+Assert.Equal(150.0, metrics.AverageWaitTimeMs);
+```
+
 ## LockServiceAdditionalTests
 
 The `LockServiceAdditionalTests` class provides additional unit tests for the `LockService` class, focusing on edge cases and error handling scenarios. It verifies that the lock service gracefully handles repository errors and missing locks by returning appropriate default values (false, null, or empty enumerable) instead of throwing exceptions.
