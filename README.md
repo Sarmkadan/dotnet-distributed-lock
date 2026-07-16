@@ -1193,6 +1193,101 @@ Console.WriteLine("\nPretty-printed lock for debugging:");
 Console.WriteLine(prettyJson);
 ```
 
+## CsvLockExporter
+
+The `CsvLockExporter` class provides CSV export functionality for lock data, enabling integration with reporting tools, audit systems, and data analysis pipelines. It exports individual locks, collections of locks, and lock metrics to CSV format with proper escaping, headers, and configurable formatting options. The exporter supports both in-memory string generation and streaming to files or network streams for handling large datasets efficiently.
+
+### Public Members
+
+```csharp
+public static string ExportLock
+public static string ExportLocks
+public static async Task ExportLocksToStreamAsync
+public static string ExportMetrics
+public bool IncludeHeader { get; set; }
+public char Delimiter { get; set; }
+public bool IncludeMetadata { get; set; }
+public Encoding Encoding { get; set; }
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Formatters;
+using SarmKadan.DistributedLock.Models;
+using System;
+using System.IO;
+
+// Create sample lock data
+var locks = new List<Lock>
+{
+    new Lock(
+        key: "user-session-lock-123",
+        name: "User Session Lock",
+        ownerId: "auth-service-42",
+        duration: TimeSpan.FromMinutes(5),
+        fencingToken: 12345,
+        autoRenew: true
+    ),
+    new Lock(
+        key: "api-rate-limit-lock",
+        name: "API Rate Limit Lock",
+        ownerId: "rate-limiter-service",
+        duration: TimeSpan.FromSeconds(30),
+        fencingToken: 67890,
+        autoRenew: false
+    )
+};
+
+// Export a single lock to CSV
+string singleLockCsv = CsvLockExporter.ExportLock(locks[0]);
+Console.WriteLine("Single lock CSV:");
+Console.WriteLine(singleLockCsv);
+
+// Export multiple locks to CSV
+string multipleLocksCsv = CsvLockExporter.ExportLocks(locks);
+Console.WriteLine("\nMultiple locks CSV:");
+Console.WriteLine(multipleLocksCsv);
+
+// Export to a file
+await File.WriteAllTextAsync("locks-export.csv", multipleLocksCsv);
+
+// Export to a stream (memory-efficient for large datasets)
+using (var memoryStream = new MemoryStream())
+{
+    await CsvLockExporter.ExportLocksToStreamAsync(locks, memoryStream);
+    
+    // Reset stream position to read
+    memoryStream.Position = 0;
+    using (var reader = new StreamReader(memoryStream))
+    {
+        string streamCsv = await reader.ReadToEndAsync();
+        Console.WriteLine("\nStream export CSV:");
+        Console.WriteLine(streamCsv);
+    }
+}
+
+// Export lock metrics
+var metrics = new List<LockMetrics>
+{
+    new LockMetrics
+    {
+        Id = "user-session-lock-123",
+        AcquisitionAttempts = 150,
+        SuccessfulAcquisitions = 145,
+        FailedAcquisitions = 5,
+        AverageHoldTimeMs = 1250.5,
+        MaxHoldTimeMs = 5000,
+        ContentionCount = 2,
+        LastAcquisitionTime = DateTime.UtcNow
+    }
+};
+
+string metricsCsv = CsvLockExporter.ExportMetrics(metrics);
+Console.WriteLine("\nMetrics CSV:");
+Console.WriteLine(metricsCsv);
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
