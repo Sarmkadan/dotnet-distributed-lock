@@ -1067,6 +1067,70 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 // The middleware will automatically handle exceptions thrown by subsequent middleware
 ```
 
+## ILockCacheManager
+
+The `ILockCacheManager` interface provides an in-memory cache for storing and retrieving `Lock` objects to reduce backend storage access and improve performance. It tracks cache statistics including hits, misses, and hit rate, and supports configurable cache size, TTL (time-to-live), and compression. The cache automatically manages lock expiration and provides methods for CRUD operations on cached locks.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Caching;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<InMemoryLockCacheManager>();
+
+// Create cache with custom configuration
+var cacheManager = new InMemoryLockCacheManager(
+    maxCacheSize: 1000,
+    ttlSeconds: 300,
+    enableCompression: true,
+    logger: logger
+);
+
+// Store a lock in cache
+var newLock = new Lock(
+    key: "distributed-lock-1",
+    ownerId: "worker-service-01",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+await cacheManager.SetAsync(newLock);
+
+// Retrieve a lock from cache
+var cachedLock = await cacheManager.GetAsync("distributed-lock-1");
+if (cachedLock != null)
+{
+    Console.WriteLine($"Lock found in cache: {cachedLock.Key} owned by {cachedLock.OwnerId}");
+    Console.WriteLine($"Cached at: {cachedLock.CachedAt}");
+    Console.WriteLine($"Last accessed: {cachedLock.LastAccessTime}");
+    Console.WriteLine($"Is expired: {cachedLock.IsExpired}");
+}
+
+// Get all cached locks
+var allLocks = await cacheManager.GetAllAsync();
+Console.WriteLine($"Total cached locks: {allLocks.Count}");
+
+// Check cache statistics
+var stats = cacheManager.GetStatistics();
+Console.WriteLine($"Cache hits: {stats.Hits}");
+Console.WriteLine($"Cache misses: {stats.Misses}");
+Console.WriteLine($"Hit rate: {stats.HitRate:F2}%");
+Console.WriteLine($"Cached items: {stats.CachedItems}");
+Console.WriteLine($"Cache size: {stats.CacheSize}");
+
+// Remove a lock from cache
+await cacheManager.RemoveAsync("distributed-lock-1");
+
+// Clear all cached locks
+await cacheManager.ClearAsync();
+
+// Get cache statistics (alternative method)
+Console.WriteLine($"Current cache stats - Items: {cacheManager.CachedItems}, Hits: {cacheManager.Hits}, Misses: {cacheManager.Misses}, HitRate: {cacheManager.HitRate:F2}%");
+```
+
 ## LockService
 
 The `LockService` class is the core service for managing distributed locks in the system. It provides methods to acquire, renew, release, and query locks with comprehensive retry logic, metrics tracking, and logging. The service supports both blocking and non-blocking acquisition patterns, automatic renewal for long-running operations, and fencing token validation to prevent split-brain scenarios.
