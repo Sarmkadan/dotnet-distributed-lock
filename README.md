@@ -567,6 +567,136 @@ string activeLocksPattern = CacheKeyGenerator.GenerateActiveLockKeysPattern();
 Console.WriteLine($"Active locks pattern: {activeLocksPattern}"); // Output: lock:active:*
 ```
 
+## DistributedCacheExtensions
+
+The `DistributedCacheExtensions` class provides extension methods for `IDistributedCache` that simplify working with distributed caches in distributed lock scenarios. It offers type-safe JSON serialization/deserialization, common caching patterns, and robust error handling to ensure cache operations never throw exceptions. The extensions support absolute expiration, sliding expiration, bulk operations, and pattern-based invalidation (where supported by the cache provider).
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Caching;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using System;
+
+// Initialize a distributed cache (e.g., Redis, MemoryCache, etc.)
+var cache = new MemoryDistributedCache(new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
+
+// Cache a complex object as JSON
+var userSession = new UserSession
+{
+    UserId = "user-123",
+    LockCount = 5,
+    LastActivity = DateTime.UtcNow,
+    ActiveLocks = new List<string> { "lock-1", "lock-2", "lock-3" }
+};
+
+// Set a value with absolute expiration
+await cache.SetAsJsonAsync(
+    "user-session:user-123",
+    userSession,
+    expiration: TimeSpan.FromMinutes(30)
+);
+
+// Get a cached value with type safety
+var cachedSession = await cache.GetAsJsonAsync<UserSession>("user-session:user-123");
+if (cachedSession != null)
+{
+    Console.WriteLine($"Found cached session for user {cachedSession.UserId} with {cachedSession.ActiveLocks.Count} active locks");
+}
+
+// Use GetOrCreateAsync for cache-aside pattern
+var lockInfo = await cache.GetOrCreateAsync(
+    "lock-info:critical-section-1",
+    async () =>
+    {
+        // Expensive computation or database lookup
+        return await FetchLockInfoFromDatabaseAsync("critical-section-1");
+    },
+    expiration: TimeSpan.FromMinutes(15)
+);
+
+// Check if a key exists
+bool exists = await cache.ExistsAsync("user-session:user-123");
+Console.WriteLine($"Session exists: {exists}");
+
+// Remove a single key
+await cache.RemoveAsync("temp-cache-key");
+
+// Remove multiple keys
+await cache.RemoveAsync("lock:temp-1", "lock:temp-2", "lock:temp-3");
+
+// Set expiration to a specific time
+await cache.SetExpirationAsync(
+    "user-session:user-123",
+    DateTime.UtcNow.AddHours(1)
+);
+
+// Cache with sliding expiration (resets on access)
+await cache.SetWithSlidingExpirationAsync(
+    "rate-limit:api-endpoint-1",
+    new RateLimitInfo
+    {
+        RequestCount = 100,
+        WindowStart = DateTime.UtcNow
+    },
+    slidingExpiration: TimeSpan.FromMinutes(5)
+);
+
+// Pattern-based invalidation (conceptual - provider-specific implementation required)
+// For Redis: use SCAN + DEL pattern
+// For other providers: implement provider-specific pattern matching
+await cache.InvalidatePatternAsync("lock:temp-*");
+
+// Helper method for cache-aside pattern with lock coordination
+async Task<UserSession?> GetUserSessionWithLockAsync(IDistributedCache cache, string userId)
+{
+    // Try cache first
+    var cached = await cache.GetAsJsonAsync<UserSession>($"user-session:{userId}");
+    if (cached != null) return cached;
+    
+    // Cache miss - acquire distributed lock for this user
+    var lockService = new LockService(...); // Your lock service
+    var (success, _, _) = await lockService.TryAcquireAsync(
+        $"user-session-lock:{userId}",
+        "session-manager",
+        TimeSpan.FromSeconds(10)
+    );
+    
+    if (success)
+    {
+        try
+        {
+            // Double-check cache after acquiring lock
+            cached = await cache.GetAsJsonAsync<UserSession>($"user-session:{userId}");
+            if (cached != null) return cached;
+            
+            // Fetch from database
+            var session = await FetchUserSessionFromDatabaseAsync(userId);
+            
+            // Cache for future requests
+            await cache.SetAsJsonAsync(
+                $"user-session:{userId}",
+                session,
+                expiration: TimeSpan.FromMinutes(30)
+            );
+            
+            return session;
+        }
+        finally
+        {
+            await lockService.ReleaseAsync($"user-session-lock:{userId}", "session-manager");
+        }
+    }
+    
+    return null; // Could not acquire lock
+}
+
+// Example types used above
+public record UserSession(string UserId, int LockCount, DateTime LastActivity, List<string> ActiveLocks);
+public record RateLimitInfo(int RequestCount, DateTime WindowStart);
+```
+
 ## MetricsController
 
 The `MetricsController` class provides HTTP endpoints for monitoring and analyzing distributed lock operations. It exposes system-wide, lock-specific, and performance metrics that help track lock usage patterns, success rates, contention events, and acquisition times. The controller maintains an in-memory cache of lock metrics and provides endpoints to retrieve aggregated statistics, individual lock metrics, and performance percentiles.
