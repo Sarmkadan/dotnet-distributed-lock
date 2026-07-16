@@ -494,6 +494,79 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## CacheKeyGenerator
+
+The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Caching;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+
+// Initialize a distributed cache (e.g., Redis, MemoryCache, etc.)
+var cache = new MemoryDistributedCache(new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
+
+// Generate keys for various cache operations
+string lockKey = CacheKeyGenerator.GenerateLockKey("user-session-lock-123");
+Console.WriteLine($"Lock key: {lockKey}"); // Output: lock:user-session-lock-123
+
+string metricsKey = CacheKeyGenerator.GenerateMetricsKey("user-session-lock-123");
+Console.WriteLine($"Metrics key: {metricsKey}"); // Output: metrics:user-session-lock-123
+
+string systemMetricsKey = CacheKeyGenerator.GenerateSystemMetricsKey();
+Console.WriteLine($"System metrics key: {systemMetricsKey}"); // Output: metrics:system
+
+string ownerLocksKey = CacheKeyGenerator.GenerateOwnerLocksKey("user-service-42");
+Console.WriteLine($"Owner locks key: {ownerLocksKey}"); // Output: lock:owner:user-service-42
+
+string statusKey = CacheKeyGenerator.GenerateStatusKey("user-session-lock-123");
+Console.WriteLine($"Status key: {statusKey}"); // Output: status:user-session-lock-123
+
+string configurationKey = CacheKeyGenerator.GenerateConfigurationKey("default-lock-timeout");
+Console.WriteLine($"Configuration key: {configurationKey}"); // Output: config:default-lock-timeout
+
+string tagKey = CacheKeyGenerator.GenerateTagKey("session-management", "user-locks");
+Console.WriteLine($"Tag key: {tagKey}"); // Output: tag:session-management:user-locks
+
+// Check if a key is a lock key
+bool isLockKey = CacheKeyGenerator.IsLockKey(lockKey);
+Console.WriteLine($"Is lock key: {isLockKey}"); // Output: True
+
+// Check if a key is a metrics key
+bool isMetricsKey = CacheKeyGenerator.IsMetricsKey(metricsKey);
+Console.WriteLine($"Is metrics key: {isMetricsKey}"); // Output: True
+
+// Extract lock ID from a cache key
+string? extractedLockId = CacheKeyGenerator.ExtractLockIdFromKey(lockKey);
+Console.WriteLine($"Extracted lock ID: {extractedLockId}"); // Output: user-session-lock-123
+
+// Get keys to invalidate on lock acquisition
+string[] acquisitionKeys = CacheKeySets.GetKeysByAcquisition("user-session-lock-123", "user-service-42");
+Console.WriteLine("Keys to invalidate on acquisition:");
+foreach (var key in acquisitionKeys)
+{
+    Console.WriteLine($"  - {key}");
+}
+
+// Get keys to invalidate on lock release
+string[] releaseKeys = CacheKeySets.GetKeysByRelease("user-session-lock-123", "user-service-42");
+Console.WriteLine("Keys to invalidate on release:");
+foreach (var key in releaseKeys)
+{
+    Console.WriteLine($"  - {key}");
+}
+
+// Generate a query key for parameterized queries
+string queryKey = CacheKeyGenerator.GenerateQueryKey("get-active-locks", "user-service-42", "active");
+Console.WriteLine($"Query key: {queryKey}");
+
+// Generate a pattern for finding all active locks
+string activeLocksPattern = CacheKeyGenerator.GenerateActiveLockKeysPattern();
+Console.WriteLine($"Active locks pattern: {activeLocksPattern}"); // Output: lock:active:*
+```
+
 ## MetricsController
 
 The `MetricsController` class provides HTTP endpoints for monitoring and analyzing distributed lock operations. It exposes system-wide, lock-specific, and performance metrics that help track lock usage patterns, success rates, contention events, and acquisition times. The controller maintains an in-memory cache of lock metrics and provides endpoints to retrieve aggregated statistics, individual lock metrics, and performance percentiles.
