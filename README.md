@@ -470,6 +470,51 @@ Assert.Equal(1, metrics.CurrentWaiters);
 Assert.Equal(150.0, metrics.AverageWaitTimeMs);
 ```
 
+## LockMonitorTests
+
+The `LockMonitorTests` class provides comprehensive unit tests for the `LockMonitor` class, which is responsible for monitoring locks and automatically renewing them based on configuration. It verifies constructor validation, lock registration and unregistration, monitoring start/stop behavior, auto-renewal functionality, error handling during renewal operations, and thread safety under concurrent operations.
+
+### What it does
+
+This test suite validates that the lock monitor correctly:
+- Validates constructor parameters and throws `ArgumentNullException` for null services or loggers
+- Registers locks for monitoring and tracks them appropriately
+- Prevents duplicate lock registrations for the same lock
+- Unregisters locks and handles non-existent lock unregistration gracefully
+- Starts and stops monitoring loops without errors
+- Renews locks at configured intervals while skipping locks not due for renewal
+- Handles renewal failures and exceptions gracefully without stopping monitoring
+- Maintains consistency under concurrent registration and unregistration operations
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Tests;
+using Xunit;
+
+// Create a lock monitor with mocked lock service and logger
+var lockServiceMock = new Mock<ILockService>();
+var logger = NullLogger<LockMonitor>.Instance;
+var monitor = new LockMonitor(lockServiceMock.Object, logger);
+
+// Register a lock for monitoring with 30-second duration and 20-second renewal interval
+monitor.RegisterLock("critical-section-1", "background-worker-42", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(20));
+
+// Start monitoring with 10-second check interval
+monitor.StartMonitoring(TimeSpan.FromSeconds(10));
+
+// Get monitored locks
+var monitoredLocks = monitor.GetMonitoredLocks();
+Console.WriteLine($"Monitoring {monitoredLocks.Count()} locks");
+
+// Unregister a lock when done
+monitor.UnregisterLock("critical-section-1");
+
+// Stop monitoring when shutting down
+await monitor.StopMonitoringAsync();
+```
+
 ## LockServiceAdditionalTests
 
 The `LockServiceAdditionalTests` class provides additional unit tests for the `LockService` class, focusing on edge cases and error handling scenarios. It verifies that the lock service gracefully handles repository errors and missing locks by returning appropriate default values (false, null, or empty enumerable) instead of throwing exceptions.
