@@ -494,6 +494,68 @@ renewalWorker.UnregisterFromRenewal("critical-section-lock");
 await renewalWorker.StopAsync(CancellationToken.None);
 ```
 
+## InMemoryLockCacheManagerTests
+
+The `InMemoryLockCacheManagerTests` class contains comprehensive unit tests for the `InMemoryLockCacheManager` implementation. It verifies cache operations including Get, Set, Remove, GetAll, Clear, and statistics tracking for the in-memory lock cache that reduces backend storage access and improves performance in distributed locking scenarios.
+
+### What it does
+
+This test suite validates that the in-memory lock cache correctly:
+- Manages lock storage and retrieval operations
+- Handles null and empty keys appropriately
+- Maintains cache consistency under concurrent operations
+- Tracks cache statistics (hits, misses, hit rate)
+- Respects cache configuration settings
+- Handles edge cases like overwriting existing locks and removing non-existent locks
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Caching;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+// Create an in-memory lock cache manager
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<InMemoryLockCacheManager>();
+var cacheManager = new InMemoryLockCacheManager(logger: logger);
+
+// Store a lock in cache
+var newLock = new Lock(
+    key: "critical-section-123",
+    ownerId: "background-worker-42",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+await cacheManager.SetAsync(newLock);
+
+// Retrieve a lock from cache
+var cachedLock = await cacheManager.GetAsync("critical-section-123");
+if (cachedLock != null)
+{
+    Console.WriteLine($"Lock found in cache: {cachedLock.Key} owned by {cachedLock.OwnerId}");
+    Console.WriteLine($"Cached at: {cachedLock.CachedAt}");
+    Console.WriteLine($"Last accessed: {cachedLock.LastAccessTime}");
+}
+
+// Get all cached locks
+var allLocks = await cacheManager.GetAllAsync();
+Console.WriteLine($"Total cached locks: {allLocks.Count}");
+
+// Check cache statistics
+var stats = cacheManager.GetStatistics();
+Console.WriteLine($"Cache hits: {stats.Hits}");
+Console.WriteLine($"Cache misses: {stats.Misses}");
+Console.WriteLine($"Hit rate: {stats.HitRate:F2}%");
+
+// Remove a lock from cache
+await cacheManager.RemoveAsync("critical-section-123");
+
+// Clear all cached locks
+await cacheManager.ClearAsync();
+```
+
 ## InMemoryLockEventBusTests
 
 The `InMemoryLockEventBusTests` class contains comprehensive unit tests for the `InMemoryLockEventBus` implementation. It verifies subscription management, event publishing, subscriber counting, correlation ID propagation, exception handling, and concurrency scenarios for the in-memory event bus that handles lock-related events in the distributed lock system.
