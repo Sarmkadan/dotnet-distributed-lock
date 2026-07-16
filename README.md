@@ -985,6 +985,112 @@ Console.WriteLine($"\nIs valid configuration: {isValid}");
 public record LockConfiguration(string LockName, TimeSpan Duration, int MaxRetries, TimeSpan RenewalInterval);
 ```
 
+## XmlLockSerializer
+
+The `XmlLockSerializer` class provides XML serialization and deserialization capabilities for lock data structures in the distributed lock system. It handles serialization of `Lock` objects, collections of locks, and lock metrics with proper XML formatting, namespace management, and error handling. The serializer uses XML 1.0 compliant output with UTF-8 encoding and includes comprehensive validation for enterprise integration scenarios.
+
+### Public Members
+
+```csharp
+public static string SerializeLock(Lock @lock)
+public static string SerializeLocks(IEnumerable<Lock> locks)
+public static Lock? DeserializeLock(string xml)
+public static List<Lock> DeserializeLocks(string xml)
+public static string ExportMetrics(IEnumerable<LockMetrics> metrics)
+```
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Formatters;
+using SarmKadan.DistributedLock.Models;
+using System;
+
+// Create a lock instance
+var newLock = new Lock(
+    key: "critical-section-123",
+    ownerId: "background-worker-42",
+    duration: TimeSpan.FromMinutes(5),
+    fencingToken: 12345
+);
+
+// Serialize a single lock to XML
+string lockXml = XmlLockSerializer.SerializeLock(newLock);
+Console.WriteLine("Serialized lock:");
+Console.WriteLine(lockXml);
+
+// Serialize multiple locks to XML
+var locks = new List<Lock>
+{
+    newLock,
+    new Lock(
+        key: "user-session-456",
+        ownerId: "auth-service",
+        duration: TimeSpan.FromMinutes(2),
+        fencingToken: 67890
+    )
+};
+string locksXml = XmlLockSerializer.SerializeLocks(locks);
+Console.WriteLine("\nSerialized locks collection:");
+Console.WriteLine(locksXml);
+
+// Deserialize a lock from XML
+string lockXmlToDeserialize = @"<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<Lock xmlns=\"http://sarmkadan.com/distributedlock/2026\">
+  <Key>critical-section-123</Key>
+  <OwnerId>background-worker-42</OwnerId>
+  <Duration>PT5M</Duration>
+  <FencingToken>12345</FencingToken>
+  <CreatedAt>2024-01-15T10:30:00Z</CreatedAt>
+  <ExpiresAt>2024-01-15T10:35:00Z</ExpiresAt>
+</Lock>";
+
+Lock? deserializedLock = XmlLockSerializer.DeserializeLock(lockXmlToDeserialize);
+if (deserializedLock != null)
+{
+    Console.WriteLine($"\nDeserialized lock: {deserializedLock.Key} owned by {deserializedLock.OwnerId}");
+}
+
+// Deserialize multiple locks from XML
+string locksXmlToDeserialize = @"<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<Locks xmlns=\"http://sarmkadan.com/distributedlock/2026\" Count=\"2\" ExportTime=\"2024-01-15T10:30:00.0000000Z\">
+  <Lock>
+    <Key>critical-section-123</Key>
+    <OwnerId>background-worker-42</OwnerId>
+    <Duration>PT5M</Duration>
+    <FencingToken>12345</FencingToken>
+  </Lock>
+  <Lock>
+    <Key>user-session-456</Key>
+    <OwnerId>auth-service</OwnerId>
+    <Duration>PT2M</Duration>
+    <FencingToken>67890</FencingToken>
+  </Lock>
+</Locks>";
+
+var deserializedLocks = XmlLockSerializer.DeserializeLocks(locksXmlToDeserialize);
+Console.WriteLine($"\nDeserialized {deserializedLocks.Count} locks from collection");
+
+// Export metrics in XML format
+var metrics = new List<LockMetrics>
+{
+    new LockMetrics
+    {
+        Id = "critical-section-123",
+        AcquisitionAttempts = 150,
+        SuccessfulAcquisitions = 145,
+        FailedAcquisitions = 5,
+        AverageHoldTimeMs = 1250.5,
+        MaxHoldTimeMs = 5000,
+        ContentionCount = 2,
+        LastAcquisitionTime = DateTime.UtcNow
+    }
+};
+string metricsXml = XmlLockSerializer.ExportMetrics(metrics);
+Console.WriteLine("\nExported metrics:");
+Console.WriteLine(metricsXml);
+```
+
 ## JsonLockSerializer
 
 The `JsonLockSerializer` class provides JSON serialization and deserialization capabilities for lock data structures in the distributed lock system. It handles serialization of `Lock` objects, collections of locks, and lock metrics with consistent formatting and UTC timezone support. The serializer uses camelCase property naming, ignores null values, and includes proper error handling for robust JSON operations.
