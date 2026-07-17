@@ -347,84 +347,90 @@ This extension class provides methods to:
 - Collect standard metrics for monitoring and alerting (`GetStandardMetrics`)
 
 
+## XmlLockSerializerValidation
+
+The `XmlLockSerializerValidation` class provides validation utilities for lock data structures that have been serialized or deserialized using XML. It ensures that lock instances maintain semantic invariants after XML serialization/deserialization, helping to detect corruption or data integrity issues in persisted lock state. The class offers three validation approaches: returning error lists for programmatic processing, boolean checks for quick validation, and exception-throwing validations for immediate failure handling.
+
 ### Usage Example
 
 ```csharp
+using SarmKadan.DistributedLock.Formatters;
 using SarmKadan.DistributedLock.Models;
 using System;
-using System.Collections.Generic;
+using System.Xml.Serialization;
 
-// Create a lock acquired event
-var acquiredEvent = new LockAcquiredEvent(
-    lockId: "user-session-lock-123",
-    ownerId: "auth-service-42",
-    status: LockStatus.Acquired,
-    duration: TimeSpan.FromMinutes(5),
-    expiresAt: DateTime.UtcNow.AddMinutes(5),
-    fencingToken: 12345UL
-)
+// Create a lock with proper values
+var originalLock = new Lock
 {
-    SourceSystem = "authentication-service",
-    CorrelationId = Guid.NewGuid().ToString()
+    Key = "user-session-lock-123",
+    OwnerId = "auth-service-42",
+    Status = LockStatus.Acquired,
+    AcquiredAt = DateTime.UtcNow,
+    ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+    Duration = TimeSpan.FromMinutes(5),
+    RenewedAt = DateTime.UtcNow.AddMinutes(2),
+    RenewalCount = 2,
+    FencingToken = FencingToken.NewToken()
 };
 
-// Check if acquisition was successful
-bool isSuccessful = acquiredEvent.IsAcquisitionSuccessful();
-logger.LogInformation("Lock acquisition successful: {IsSuccessful}", isSuccessful);
-
-// Get lock and owner information
-string? lockId = acquiredEvent.GetLockId();
-string? ownerId = acquiredEvent.GetOwnerId();
-string? fencingToken = acquiredEvent.GetFencingToken();
-
-logger.LogInformation("Lock ID: {LockId}, Owner: {OwnerId}, Fencing Token: {FencingToken}",
-    lockId, ownerId, fencingToken);
-
-// Get duration and expiration time
-TimeSpan duration = acquiredEvent.GetDuration();
-DateTime? expiresAt = acquiredEvent.GetExpirationTime();
-
-logger.LogInformation("Lock held for: {Duration}, Expires at: {ExpiresAt}",
-    duration, expiresAt?.ToString("O"));
-
-// Format event for logging
-string logString = acquiredEvent.ToLogString(includeTimestamp: true);
-logger.LogInformation("Event log: {LogString}", logString);
-
-// Convert any event to a failure notification
-var failureEvent = acquiredEvent.ToFailureEvent("Lock acquisition timeout after 30 seconds");
-logger.LogWarning("Converted to failure event: {Reason}", failureEvent.Reason);
-
-// Check if event occurred within a time range
-bool isWithinRange = acquiredEvent.IsWithinTimeRange(
-    DateTime.UtcNow.AddMinutes(-10),
-    DateTime.UtcNow.AddMinutes(10)
-);
-logger.LogInformation("Event within time range: {IsWithinRange}", isWithinRange);
-
-// Check if event is related to a specific lock
-bool isRelatedToSessionLock = acquiredEvent.IsRelatedToLock("user-session-lock-123");
-logger.LogInformation("Event related to 'user-session-lock-123': {IsRelated}", isRelatedToSessionLock);
-
-// Example with a failure event
-var failedEvent = new LockFailedEvent(
-    lockId: "payment-processing-lock",
-    ownerId: "payment-service-1",
-    reason: "Database connection timeout"
-)
+// Serialize to XML
+var serializer = new XmlSerializer(typeof(Lock));
+string xml;
+using (var writer = new StringWriter())
 {
-    SourceSystem = "payment-service",
-    CorrelationId = Guid.NewGuid().ToString()
-};
+    serializer.Serialize(writer, originalLock);
+    xml = writer.ToString();
+}
 
-// Check if event represents a failure
-bool isFailure = failedEvent.IsFailure();
-logger.LogInformation("Event is failure: {IsFailure}", isFailure);
+Console.WriteLine("Serialized lock XML:");
+Console.WriteLine(xml);
 
-// Get lock information from failure event
-string? failureLockId = failedEvent.GetLockId();
-string? failureOwnerId = failedEvent.GetOwnerId();
+// Deserialize from XML
+Lock? deserializedLock;
+using (var reader = new StringReader(xml))
+{
+    deserializedLock = (Lock?)serializer.Deserialize(reader);
+}
 
-logger.LogInformation("Failure - Lock ID: {LockId}, Owner: {OwnerId}, Reason: {Reason}",
-    failureLockId, failureOwnerId, failedEvent.Reason);
+// Validate the deserialized lock using the validation methods
+var validationErrors = XmlLockSerializerValidation.Validate(deserializedLock);
+
+if (validationErrors.Count > 0)
+{
+    Console.WriteLine("Validation errors found:");
+    foreach (var error in validationErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+else
+{
+    Console.WriteLine("Lock is valid after deserialization!");
+}
+
+// Use boolean validation for quick checks
+bool isValid = XmlLockSerializerValidation.IsValid(deserializedLock);
+Console.WriteLine($"Is valid: {isValid}");
+
+// Use EnsureValid for immediate validation with detailed error messages
+try
+{
+    XmlLockSerializerValidation.EnsureValid(deserializedLock);
+    Console.WriteLine("Lock validated successfully!");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation failed: {ex.Message}");
+}
+
+// Validate the serializer instance itself (always valid as it's stateless)
+var serializerErrors = XmlLockSerializerValidation.Validate(serializer);
+Console.WriteLine($"Serializer validation errors: {serializerErrors.Count}");
+
+// Validate a FencingToken after deserialization
+if (deserializedLock?.FencingToken is not null)
+{
+    var tokenErrors = XmlLockSerializerValidation.Validate(deserializedLock.FencingToken);
+    Console.WriteLine($"FencingToken validation errors: {tokenErrors.Count}");
+}
 ```
