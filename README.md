@@ -154,6 +154,51 @@ bool isAdjacent = newToken.IsAdjacentTo(newerToken.WithSequenceNumber(101));
 Console.WriteLine($"Tokens are adjacent: {isAdjacent}");
 ```
 
+## FencingTokenJsonExtensions
+
+The `FencingTokenJsonExtensions` class provides extension methods for serializing and deserializing `FencingToken` instances to and from JSON strings using System.Text.Json. This enables easy storage and transmission of fencing tokens in distributed systems, with support for both compact and indented JSON formatting.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+using System;
+
+// Create a new fencing token
+var token = FencingToken.NewToken();
+Console.WriteLine($"Original token: {token}");
+
+// Serialize to JSON (compact format)
+string jsonCompact = token.ToJson();
+Console.WriteLine($"Compact JSON: {jsonCompact}");
+// Output: {"token":"abc123","sequenceNumber":12345,"issuedAt":"2025-07-19T14:30:00Z"}
+
+// Serialize to JSON (indented format for readability)
+string jsonIndented = token.ToJson(indented: true);
+Console.WriteLine($"Indented JSON:\n{jsonIndented}");
+
+// Deserialize from JSON
+FencingToken? deserializedToken = FencingTokenJsonExtensions.FromJson(jsonCompact);
+Console.WriteLine($"Deserialized token: {deserializedToken}");
+
+// Try to deserialize with error handling
+if (FencingTokenJsonExtensions.TryFromJson(jsonCompact, out var tryToken))
+{
+    Console.WriteLine($"TryFromJson succeeded: {tryToken}");
+}
+else
+{
+    Console.WriteLine("TryFromJson failed");
+}
+
+// Deserialize null or empty strings
+FencingToken? nullToken = FencingTokenJsonExtensions.FromJson(null);
+Console.WriteLine($"FromJson(null): {nullToken}"); // Output: null
+
+FencingToken? emptyToken = FencingTokenJsonExtensions.FromJson("");
+Console.WriteLine($"FromJson(empty): {emptyToken}"); // Output: null
+```
+
 ## LockRequestContextExtensions
 
 The `LockRequestContextExtensions` class provides extension methods for `LockRequestContext` to enhance functionality for audit trails, diagnostics, and distributed tracing scenarios. These utilities help determine lock request expiration status, calculate remaining time, generate diagnostic reports, check successful completion within duration, and collect standard metrics for monitoring and alerting.
