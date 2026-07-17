@@ -2200,6 +2200,83 @@ Console.WriteLine("\nMetrics CSV:");
 Console.WriteLine(metricsCsv);
 ```
 
+## LockEventSubscriberValidation
+
+The `LockEventSubscriberValidation` class provides validation helpers for `LockEventSubscriber` and related event subscriber types. It includes methods to validate subscriber instances, check their validity, and ensure they meet required criteria. The validation supports both synchronous and exception-throwing validation patterns, making it suitable for use in event handling pipelines and lock system components.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Events;
+using SarmKadan.DistributedLock.Models;
+using Microsoft.Extensions.Logging;
+
+// Create a basic lock event subscriber
+var basicSubscriber = new LockEventSubscriber(
+    subscriberId: "event-handler-1",
+    eventTypes: ["LockAcquired", "LockReleased"],
+    handler: (ev) => Console.WriteLine($"Event received: {ev.GetType().Name}")
+);
+
+// Validate the subscriber (returns list of problems)
+var validationProblems = basicSubscriber.Validate();
+if (validationProblems.Count > 0)
+{
+    foreach (var problem in validationProblems)
+    {
+        Console.WriteLine($"Validation issue: {problem}");
+    }
+}
+
+// Check if subscriber is valid (returns boolean)
+bool isValid = basicSubscriber.IsValid();
+Console.WriteLine($"Subscriber is valid: {isValid}");
+
+// Ensure subscriber is valid (throws if invalid)
+basicSubscriber.EnsureValid();
+
+// Create a metrics tracking event subscriber
+var metricsSubscriber = new MetricsTrackingEventSubscriber(
+    subscriberId: "metrics-collector-1",
+    eventTypes: ["LockAcquired", "LockReleased"],
+    handler: (ev) => Console.WriteLine($"Metrics event: {ev.GetType().Name}"),
+    getMetrics: () => new EventMetrics
+    {
+        Acquisitions = 42,
+        Releases = 38,
+        Failures = 0,
+        ContentionEvents = 2,
+        Timestamp = DateTime.UtcNow
+    }
+);
+
+// Validate metrics subscriber with detailed validation
+var metricsProblems = metricsSubscriber.Validate();
+if (metricsProblems.Count == 0)
+{
+    Console.WriteLine("Metrics subscriber is valid!");
+}
+
+// Ensure metrics subscriber is valid (throws if invalid)
+metricsSubscriber.EnsureValid();
+
+// Validate EventMetrics directly
+var metrics = new EventMetrics
+{
+    Acquisitions = 100,
+    Releases = 95,
+    Failures = 2,
+    ContentionEvents = 1,
+    Timestamp = DateTime.UtcNow
+};
+
+var metricsValidation = metrics.Validate();
+if (metricsValidation.Count == 0)
+{
+    Console.WriteLine("EventMetrics are valid!");
+}
+```
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
