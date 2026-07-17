@@ -5,6 +5,7 @@
 // =============================================================================
 
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace SarmKadan.DistributedLock.Backends.SQLite;
 
@@ -13,11 +14,12 @@ namespace SarmKadan.DistributedLock.Backends.SQLite;
 /// </summary>
 public static class SqliteLockRepositoryJsonExtensions
 {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web)
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     /// <summary>
@@ -26,17 +28,16 @@ public static class SqliteLockRepositoryJsonExtensions
     /// <param name="value">The repository instance to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the repository.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public static string ToJson(this SqliteLockRepository value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions)
-            {
-                WriteIndented = true
-            }
-            : _jsonSerializerOptions;
+        var options = indented switch
+        {
+            true => new JsonSerializerOptions(_jsonOptions) { WriteIndented = true },
+            false => _jsonOptions
+        };
 
         return JsonSerializer.Serialize(value, options);
     }
@@ -45,40 +46,35 @@ public static class SqliteLockRepositoryJsonExtensions
     /// Deserializes a JSON string to a <see cref="SqliteLockRepository"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>A <see cref="SqliteLockRepository"/> instance, or null if the JSON is null or whitespace.</returns>
+    /// <returns>A <see cref="SqliteLockRepository"/> instance, or null if the JSON is null, empty, or whitespace.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized.</exception>
     public static SqliteLockRepository? FromJson(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
+        ArgumentException.ThrowIfNullOrEmpty(json);
 
-        return JsonSerializer.Deserialize<SqliteLockRepository>(json, _jsonSerializerOptions);
+        return JsonSerializer.Deserialize<SqliteLockRepository>(json, _jsonOptions);
     }
 
     /// <summary>
     /// Attempts to deserialize a JSON string to a <see cref="SqliteLockRepository"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized instance, or null on failure.</param>
+    /// <param name="value">Receives the deserialized instance if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/> or whitespace.</exception>
     public static bool TryFromJson(string json, out SqliteLockRepository? value)
     {
-        value = null;
-
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return false;
-        }
+        ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
-            value = JsonSerializer.Deserialize<SqliteLockRepository>(json, _jsonSerializerOptions);
+            value = JsonSerializer.Deserialize<SqliteLockRepository>(json, _jsonOptions);
             return true;
         }
         catch (JsonException)
         {
+            value = null;
             return false;
         }
     }
