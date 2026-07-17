@@ -46,10 +46,13 @@ public static class InMemoryLockRepositoryJsonExtensions
     /// Deserializes a JSON string to an <see cref="InMemoryLockRepository"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>An <see cref="InMemoryLockRepository"/> instance, or null if the JSON is null or empty.</returns>
+    /// <returns>An <see cref="InMemoryLockRepository"/> instance, or null if the JSON is null, empty, or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown if the JSON is invalid or cannot be deserialized.</exception>
     public static InMemoryLockRepository? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
             return null;
 
@@ -62,6 +65,7 @@ public static class InMemoryLockRepositoryJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized repository, or null if deserialization fails.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out InMemoryLockRepository? value)
     {
         value = null;
