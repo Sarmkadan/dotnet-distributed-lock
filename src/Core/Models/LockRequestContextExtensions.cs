@@ -51,64 +51,64 @@ public static class LockRequestContextExtensions
         ArgumentNullException.ThrowIfNull(context);
 
         var report = new System.Text.StringBuilder();
-        report.AppendLine(CultureInfo.InvariantCulture, $"=== Lock Request Diagnostic Report ===");
-        report.AppendLine(CultureInfo.InvariantCulture, $"RequestId: {context.RequestId}");
-        report.AppendLine(CultureInfo.InvariantCulture, $"LockKey: {context.LockKey}");
-        report.AppendLine(CultureInfo.InvariantCulture, $"RequesterId: {context.RequesterId}");
+        report.AppendLine("=== Lock Request Diagnostic Report ===");
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RequestId: {0}", context.RequestId));
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "LockKey: {0}", context.LockKey));
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RequesterId: {0}", context.RequesterId));
 
         if (!string.IsNullOrEmpty(context.RequestorName))
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"RequestorName: {context.RequestorName}");
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RequestorName: {0}", context.RequestorName));
         }
 
-        report.AppendLine(CultureInfo.InvariantCulture, $"Mode: {context.Mode}");
-        report.AppendLine(CultureInfo.InvariantCulture, $"RequestedDuration: {context.RequestedDuration.TotalSeconds:F2}s");
-        report.AppendLine(CultureInfo.InvariantCulture, $"RequestedAt: {context.RequestedAt:O}");
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "Mode: {0}", context.Mode));
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RequestedDuration: {0:F2}s", context.RequestedDuration.TotalSeconds));
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RequestedAt: {0}", context.RequestedAt.ToString("O", CultureInfo.InvariantCulture)));
 
         if (context.CompletedAt.HasValue)
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"CompletedAt: {context.CompletedAt.Value:O}");
-            report.AppendLine(CultureInfo.InvariantCulture, $"Duration: {context.Duration.TotalSeconds:F2}s");
-            report.AppendLine(CultureInfo.InvariantCulture, $"Successful: {context.Successful}");
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "CompletedAt: {0}", context.CompletedAt.Value.ToString("O", CultureInfo.InvariantCulture)));
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "Duration: {0:F2}s", context.Duration.TotalSeconds));
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "Successful: {0}", context.Successful));
 
             if (!string.IsNullOrEmpty(context.FailureReason))
             {
-                report.AppendLine(CultureInfo.InvariantCulture, $"FailureReason: {context.FailureReason}");
+                report.AppendLine(string.Format(CultureInfo.InvariantCulture, "FailureReason: {0}", context.FailureReason));
             }
         }
         else
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"Status: In Progress");
-            report.AppendLine(CultureInfo.InvariantCulture, $"RemainingTime: {context.RemainingTime().TotalSeconds:F2}s");
-            report.AppendLine(CultureInfo.InvariantCulture, $"HasExpired: {context.HasExpired()}");
+            report.AppendLine("Status: In Progress");
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RemainingTime: {0:F2}s", context.RemainingTime().TotalSeconds));
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "HasExpired: {0}", context.HasExpired()));
         }
 
-        report.AppendLine(CultureInfo.InvariantCulture, $"RetryCount: {context.RetryCount}");
+        report.AppendLine(string.Format(CultureInfo.InvariantCulture, "RetryCount: {0}", context.RetryCount));
 
         if (!string.IsNullOrEmpty(context.CorrelationId))
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"CorrelationId: {context.CorrelationId}");
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "CorrelationId: {0}", context.CorrelationId));
         }
 
         if (!string.IsNullOrEmpty(context.UserId))
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"UserId: {context.UserId}");
+            report.AppendLine(string.Format(CultureInfo.InvariantCulture, "UserId: {0}", context.UserId));
             if (!string.IsNullOrEmpty(context.SessionId))
             {
-                report.AppendLine(CultureInfo.InvariantCulture, $"SessionId: {context.SessionId}");
+                report.AppendLine(string.Format(CultureInfo.InvariantCulture, "SessionId: {0}", context.SessionId));
             }
         }
 
         if (includeCustomProperties && context.CustomProperties.Count > 0)
         {
-            report.AppendLine(CultureInfo.InvariantCulture, $"CustomProperties:");
+            report.AppendLine("CustomProperties:");
             foreach (var kvp in context.CustomProperties)
             {
-                report.AppendLine(CultureInfo.InvariantCulture, $"  {kvp.Key}: {kvp.Value}");
+                report.AppendLine(string.Format(CultureInfo.InvariantCulture, "  {0}: {1}", kvp.Key, kvp.Value));
             }
         }
 
-        report.AppendLine(CultureInfo.InvariantCulture, $"=== End of Report ===");
+        report.AppendLine("=== End of Report ===");
         return report.ToString();
     }
 
@@ -123,7 +123,7 @@ public static class LockRequestContextExtensions
         ArgumentNullException.ThrowIfNull(context);
 
         return context.Successful && context.CompletedAt.HasValue &&
-               context.CompletedAt.Value <= context.RequestedAt.Add(context.RequestedDuration);
+            context.CompletedAt.Value <= context.RequestedAt.Add(context.RequestedDuration);
     }
 
     /// <summary>
