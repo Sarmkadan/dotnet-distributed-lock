@@ -203,6 +203,88 @@ Console.WriteLine($"FromJson(empty): {emptyToken}"); // Output: null
 
 The `LockRequestContextExtensions` class provides extension methods for `LockRequestContext` to enhance functionality for audit trails, diagnostics, and distributed tracing scenarios. These utilities help determine lock request expiration status, calculate remaining time, generate diagnostic reports, check successful completion within duration, and collect standard metrics for monitoring and alerting.
 
+## ValidationHelperValidation
+
+The `ValidationHelperValidation` class provides comprehensive validation utilities for lock configuration parameters through a set of static methods that validate lock names, durations, renewal intervals, fencing tokens, owner IDs, expiration dates, and API keys. It offers three validation approaches: returning error lists for programmatic processing, boolean checks for quick validation, and exception-throwing validations for immediate failure handling. The class supports both individual lock validations and batch validation of multiple configurations.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Utilities.Helpers;
+using System;
+
+// Validate a simple lock configuration
+var simpleErrors = ValidationHelperValidation.Validate(
+    lockName: "user-session-lock-123",
+    duration: TimeSpan.FromMinutes(5),
+    renewalInterval: TimeSpan.FromMinutes(1)
+);
+
+if (simpleErrors.Count > 0)
+{
+    Console.WriteLine("Validation errors:");
+    foreach (var error in simpleErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+else
+{
+    Console.WriteLine("Lock configuration is valid!");
+}
+
+// Validate a complete lock configuration with all parameters
+var completeErrors = ValidationHelperValidation.Validate(
+    lockName: "payment-processing-lock",
+    duration: TimeSpan.FromMinutes(30),
+    renewalInterval: TimeSpan.FromMinutes(5),
+    fencingToken: 12345UL,
+    ownerId: "payment-service-42",
+    expiresAt: DateTime.UtcNow.AddMinutes(30),
+    apiKey: "sk_live_abc123xyz789"
+);
+
+// Use boolean validation for quick checks
+bool isValid = ValidationHelperValidation.IsValid(
+    lockName: "cache-lock",
+    duration: TimeSpan.FromSeconds(30)
+);
+Console.WriteLine($"Is valid: {isValid}");
+
+// Use EnsureValid for immediate validation with detailed error messages
+try
+{
+    ValidationHelperValidation.EnsureValid(
+        lockName: "resource-lock",
+        duration: TimeSpan.FromHours(2),
+        renewalInterval: TimeSpan.FromMinutes(10)
+    );
+    Console.WriteLine("Configuration validated successfully!");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation failed: {ex.Message}");
+}
+
+// Validate multiple configurations at once
+var configurations = new[]
+{
+    ("user-session-lock-1", TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(1)),
+    ("user-session-lock-2", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5)),
+    ("payment-lock", TimeSpan.FromHours(1), TimeSpan.FromMinutes(15))
+};
+
+var batchErrors = ValidationHelperValidation.Validate(configurations);
+if (batchErrors.Count > 0)
+{
+    Console.WriteLine($"Batch validation found {batchErrors.Count} errors:");
+    foreach (var error in batchErrors)
+    {
+        Console.WriteLine(error);
+    }
+}
+```
+
 ### Usage Example
 
 ```csharp
