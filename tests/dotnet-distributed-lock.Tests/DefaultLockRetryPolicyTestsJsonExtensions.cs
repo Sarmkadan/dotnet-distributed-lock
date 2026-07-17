@@ -5,6 +5,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -61,7 +62,7 @@ public static class DefaultLockRetryPolicyTestsJsonExtensions
     /// <param name="value">Receives the deserialized instance if successful; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
-    public static bool TryFromJson(string json, out DefaultLockRetryPolicyTests? value)
+    public static bool TryFromJson(string json, [NotNullWhen(true)] out DefaultLockRetryPolicyTests? value)
     {
         ArgumentNullException.ThrowIfNull(json);
 
