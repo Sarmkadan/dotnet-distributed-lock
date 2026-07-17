@@ -46,6 +46,53 @@ Console.WriteLine($"Tag key: {tagKey}"); // Output: tag:session-management:user-
 
 The `LockEventExtensions` class provides extension methods for `LockEvent` types to enable common operations such as formatting, validation, and conversion between event types. These utilities simplify working with lock events by providing a consistent API for extracting information, checking event properties, and converting events to other types.
 
+
+## InvalidFencingTokenExceptionExtensions
+
+The `InvalidFencingTokenExceptionExtensions` class provides utility methods for analyzing and working with `InvalidFencingTokenException` instances. These extensions help determine the relationship between provided and current fencing tokens, create new exception instances with updated tokens, and extract detailed token information for logging and debugging purposes.
+
+### What it does
+
+This extension class provides methods to:
+
+- Check if the provided token differs from the current token (`IsTokenMismatch`)
+- Determine if the provided token is older than the current token (`IsTokenSuperseded`)
+- Identify if the provided token is newer than the current token (`IsTokenFromFuture`)
+- Create a new exception with updated tokens (`WithTokens`)
+- Get a formatted string containing both token values for logging (`GetTokenDetails`)
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Exceptions;
+using System;
+
+try
+{
+    // Attempt to acquire a distributed lock with an outdated fencing token
+    await lockService.AcquireAsync("resource-123", "stale-token-456", TimeSpan.FromSeconds(30));
+}
+catch (InvalidFencingTokenException ex)
+{
+    // Check the relationship between tokens
+    bool isMismatch = ex.IsTokenMismatch();
+    bool isSuperseded = ex.IsTokenSuperseded(); // true if provided token is older
+    bool isFromFuture = ex.IsTokenFromFuture(); // true if provided token is newer
+    
+    Console.WriteLine($"Token mismatch: {isMismatch}");
+    Console.WriteLine($"Token superseded: {isSuperseded}");
+    Console.WriteLine($"Token from future: {isFromFuture}");
+    
+    // Get detailed token information for logging
+    string tokenDetails = ex.GetTokenDetails();
+    Console.WriteLine($"Token details: {tokenDetails}");
+    
+    // Create a new exception with updated tokens
+    var updatedException = ex.WithTokens("new-provided-token-789", "new-current-token-789");
+    Console.WriteLine($"Updated exception: {updatedException.GetTokenDetails()}");
+}
+```
+
 ### What it does
 
 This extension class provides methods to:
