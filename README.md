@@ -106,6 +106,54 @@ This extension class provides methods to:
 - Determine if events are related to specific locks (`IsRelatedToLock`)
 - Extract fencing tokens from acquisition events (`GetFencingToken`)
 
+## FencingTokenExtensions
+
+The `FencingTokenExtensions` class provides extension methods for `FencingToken` to enable common operations such as parsing, string conversion, age calculation, and comparison operations. These utilities simplify working with fencing tokens by providing a consistent API for token manipulation, validation, and relationship checking.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+using System;
+
+// Generate a new fencing token
+var newToken = FencingToken.NewToken();
+Console.WriteLine($"New token: {newToken}");
+
+// Parse a fencing token from string
+string tokenString = "12345";
+if (FencingToken.TryParse(tokenString, out var parsedToken))
+{
+    Console.WriteLine($"Parsed token: {parsedToken}");
+}
+
+// Convert token to string representation
+string tokenAsString = newToken.ToTokenString();
+Console.WriteLine($"Token as string: {tokenAsString}");
+
+// Get the age of a token
+TimeSpan age = newToken.GetAge();
+Console.WriteLine($"Token age: {age.TotalSeconds} seconds");
+
+// Compare tokens
+var olderToken = newToken.WithSequenceNumber(100);
+var newerToken = newToken.WithSequenceNumber(200);
+
+bool isLess = newToken.IsLessThan(newerToken);
+bool isGreaterOrEqual = newerToken.IsGreaterThanOrEqual(newToken);
+bool isLessOrEqual = newToken.IsLessThanOrEqual(newerToken);
+
+Console.WriteLine($"Token comparison - IsLessThan: {isLess}, IsGreaterThanOrEqual: {isGreaterOrEqual}, IsLessThanOrEqual: {isLessOrEqual}");
+
+// Calculate sequence difference
+long sequenceDiff = newerToken.SequenceDifference(newToken);
+Console.WriteLine($"Sequence difference: {sequenceDiff}");
+
+// Check if tokens are adjacent
+bool isAdjacent = newToken.IsAdjacentTo(newerToken.WithSequenceNumber(101));
+Console.WriteLine($"Tokens are adjacent: {isAdjacent}");
+```
+
 ## LockRequestContextExtensions
 
 The `LockRequestContextExtensions` class provides extension methods for `LockRequestContext` to enhance functionality for audit trails, diagnostics, and distributed tracing scenarios. These utilities help determine lock request expiration status, calculate remaining time, generate diagnostic reports, check successful completion within duration, and collect standard metrics for monitoring and alerting.
