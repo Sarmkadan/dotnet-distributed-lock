@@ -112,10 +112,7 @@ public static class LockConfigurationValidation
     /// <param name="value">The configuration to check.</param>
     /// <returns>True if valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static bool IsValid([NotNull] this LockConfiguration? value)
-    {
-        return value is not null && !value.Validate().Any();
-    }
+    public static bool IsValid([NotNull] this LockConfiguration? value) => value is not null && !value.Validate().Any();
 
     /// <summary>
     /// Ensures the configuration is valid, throwing an <see cref="ArgumentException"/> with detailed error messages if not.
