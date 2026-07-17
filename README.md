@@ -106,15 +106,78 @@ This extension class provides methods to:
 - Determine if events are related to specific locks (`IsRelatedToLock`)
 - Extract fencing tokens from acquisition events (`GetFencingToken`)
 
+## LockRequestContextExtensions
+
+The `LockRequestContextExtensions` class provides extension methods for `LockRequestContext` to enhance functionality for audit trails, diagnostics, and distributed tracing scenarios. These utilities help determine lock request expiration status, calculate remaining time, generate diagnostic reports, check successful completion within duration, and collect standard metrics for monitoring and alerting.
+
 ### Usage Example
 
 ```csharp
-using SarmKadan.DistributedLock.Events;
 using SarmKadan.DistributedLock.Models;
-using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 
-var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-var logger = loggerFactory.CreateLogger<LockEventExtensions>();
+// Create a lock request context
+var requestContext = new LockRequestContext(
+    requestId: Guid.NewGuid().ToString(),
+    lockKey: "user-session-lock-123",
+    requesterId: "auth-service-42",
+    mode: LockMode.Exclusive,
+    requestedDuration: TimeSpan.FromSeconds(30),
+    requestedAt: DateTime.UtcNow
+)
+{
+    RequestorName = "Authentication Service",
+    UserId = "user-789",
+    SessionId = "session-abc-123",
+    CustomProperties = new Dictionary<string, object>
+    {
+        ["priority"] = "high",
+        ["operation"] = "user_login"
+    }
+};
+
+// Check if the lock request has expired
+bool hasExpired = requestContext.HasExpired();
+Console.WriteLine($"Has expired: {hasExpired}");
+
+// Get the remaining time before expiration
+TimeSpan remainingTime = requestContext.RemainingTime();
+Console.WriteLine($"Remaining time: {remainingTime.TotalSeconds:F2} seconds");
+
+// Generate a diagnostic report for logging and debugging
+string diagnosticReport = requestContext.ToDiagnosticString();
+Console.WriteLine(diagnosticReport);
+
+// Determine if the request was completed successfully within the requested duration
+bool isSuccessfulWithinDuration = requestContext.IsSuccessfulWithinDuration();
+Console.WriteLine($"Successful within duration: {isSuccessfulWithinDuration}");
+
+// Get standard metrics for monitoring and alerting
+var metrics = requestContext.GetStandardMetrics();
+foreach (var metric in metrics)
+{
+    Console.WriteLine($"{metric.Key}: {metric.Value}");
+}
+```
+
+### What it does
+
+This extension class provides methods to:
+
+- Check if a lock request has expired based on the requested duration (`HasExpired`)
+- Calculate the remaining time before expiration (`RemainingTime`)
+- Generate a detailed diagnostic report containing request information (`ToDiagnosticString`)
+- Determine if a request was completed successfully within the requested duration (`IsSuccessfulWithinDuration`)
+- Collect standard metrics for monitoring and alerting (`GetStandardMetrics`)
+
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Models;
+using System;
+using System.Collections.Generic;
 
 // Create a lock acquired event
 var acquiredEvent = new LockAcquiredEvent(
