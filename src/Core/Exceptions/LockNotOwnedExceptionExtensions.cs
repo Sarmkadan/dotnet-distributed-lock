@@ -3,11 +3,10 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace SarmKadan.DistributedLock.Exceptions;
 
@@ -26,23 +25,23 @@ public static class LockNotOwnedExceptionExtensions
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return $"""
-Lock ownership conflict detected:
+        return FormattableString.Invariant($$"""
+Lock ownership conflict detected.
 
-Lock Key:      {exception.LockKey}
-Correct Owner:  {exception.OwnerId}
+Lock Key: {exception.LockKey}
+Correct Owner: {exception.OwnerId}
 Provided Owner: {exception.ProvidedOwnerId}
 
-Error Details:  {exception.Message}
+Error Details: {exception.Message}
 
 Suggested Actions:
-1. Verify the lock key matches the intended resource
-2. Ensure you are using the correct owner identifier
-3. Check if the lock was released by another process
-4. Consider using a retry policy with exponential backoff for lock acquisition
+- Verify the lock key matches the intended resource
+- Ensure you are using the correct owner identifier
+- Check if the lock was released by another process
+- Consider using a retry policy with exponential backoff for lock acquisition
 
-If this is unexpected, investigate concurrent access patterns or potential race conditions in your code.
-""";
+If this is unexpected, investigate concurrent access patterns or potential race conditions.
+""");
     }
 
     /// <summary>
