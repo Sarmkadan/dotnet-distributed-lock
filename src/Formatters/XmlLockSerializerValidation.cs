@@ -10,27 +10,23 @@ using System.Globalization;
 using SarmKadan.DistributedLock.Models;
 
 /// <summary>
-/// Provides validation helpers for <see cref="XmlLockSerializer"/> instances.
-/// Validates that serialized/deserialized lock data maintains semantic invariants.
+/// Provides validation helpers for lock data structures that have been serialized or deserialized.
+/// Validates that lock instances maintain semantic invariants after XML serialization/deserialization.
 /// </summary>
 public static class XmlLockSerializerValidation
 {
     /// <summary>
     /// Validates that an <see cref="XmlLockSerializer"/> instance is semantically valid.
+    /// Note: XmlLockSerializer is a stateless utility class and cannot be meaningfully validated.
     /// </summary>
     /// <param name="value">The serializer instance to validate.</param>
-    /// <returns>An enumerable of human-readable validation problems; empty if valid.</returns>
+    /// <returns>An empty enumerable, as XmlLockSerializer has no validation state.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static IReadOnlyList<string> Validate(this XmlLockSerializer? value)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var problems = new List<string>();
-
-        // Validate serializer state (none currently tracked)
-        // The actual validation happens when serializing/deserializing specific data structures
-
-        return problems.AsReadOnly();
+        return Array.Empty<string>();
     }
 
     /// <summary>
@@ -38,10 +34,7 @@ public static class XmlLockSerializerValidation
     /// </summary>
     /// <param name="value">The serializer instance to check.</param>
     /// <returns>True if the instance is valid; otherwise, false.</returns>
-    public static bool IsValid(this XmlLockSerializer? value)
-    {
-        return Validate(value).Count == 0;
-    }
+    public static bool IsValid(this XmlLockSerializer? value) => Validate(value).Count == 0;
 
     /// <summary>
     /// Ensures that an <see cref="XmlLockSerializer"/> instance is semantically valid.
@@ -328,30 +321,21 @@ public static class XmlLockSerializerValidation
     /// </summary>
     /// <param name="lock">The lock to check.</param>
     /// <returns>True if the lock is valid; otherwise, false.</returns>
-    public static bool IsValid(this Lock? @lock)
-    {
-        return Validate(@lock).Count == 0;
-    }
+    public static bool IsValid(this Lock? @lock) => Validate(@lock).Count == 0;
 
     /// <summary>
     /// Determines whether a <see cref="FencingToken"/> instance is semantically valid.
     /// </summary>
     /// <param name="token">The fencing token to check.</param>
     /// <returns>True if the token is valid; otherwise, false.</returns>
-    public static bool IsValid(this FencingToken? token)
-    {
-        return Validate(token).Count == 0;
-    }
+    public static bool IsValid(this FencingToken? token) => Validate(token).Count == 0;
 
     /// <summary>
     /// Determines whether a <see cref="LockMetrics"/> instance is semantically valid.
     /// </summary>
     /// <param name="metrics">The metrics to check.</param>
     /// <returns>True if the metrics are valid; otherwise, false.</returns>
-    public static bool IsValid(this LockMetrics? metrics)
-    {
-        return Validate(metrics).Count == 0;
-    }
+    public static bool IsValid(this LockMetrics? metrics) => Validate(metrics).Count == 0;
 
     /// <summary>
     /// Ensures that a <see cref="Lock"/> instance is semantically valid.
