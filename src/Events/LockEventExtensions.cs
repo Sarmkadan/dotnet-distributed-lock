@@ -88,7 +88,7 @@ public static class LockEventExtensions
             LockRenewedEvent renewed => renewed.OwnerId,
             LockFailedEvent failed => failed.OwnerId,
             LockAcquisitionFailedEvent acquisitionFailed => acquisitionFailed.RequesterId,
-            LockContentionEvent contention => contention.CompetingParties.FirstOrDefault(),
+            LockContentionEvent contention => contention.CompetingParties.Count > 0 ? contention.CompetingParties[0] : null,
             _ => null
         };
     }
@@ -165,6 +165,11 @@ public static class LockEventExtensions
     public static bool IsWithinTimeRange(this LockEvent lockEvent, DateTime startTime, DateTime endTime)
     {
         ArgumentNullException.ThrowIfNull(lockEvent);
+
+    if (startTime > endTime)
+    {
+        throw new ArgumentOutOfRangeException(nameof(startTime), "Start time must be before or equal to end time.");
+    }
 
         return lockEvent.OccurredAt >= startTime && lockEvent.OccurredAt <= endTime;
     }
