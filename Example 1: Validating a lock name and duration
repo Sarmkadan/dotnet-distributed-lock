@@ -1,0 +1,9 @@
+var validationErrors = ValidationHelperValidation.Validate("my-lock", TimeSpan.FromMinutes(30));
+if (validationErrors.Any())
+{
+    Console.WriteLine("Validation errors:");
+    foreach (var error in validationErrors)
+    {
+        Console.WriteLine(error);
+    }
+}

@@ -1,0 +1,9 @@
+try
+{
+    ValidationHelperValidation.EnsureValid("my-lock", TimeSpan.FromMinutes(30));
+    Console.WriteLine("Lock name and duration are valid.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Error: " + ex.Message);
+}
