@@ -30,7 +30,10 @@ public static class FencingTokenJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the fencing token.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this FencingToken value, bool indented = false)
+    public static string ToJson(this FencingToken value, bool indented = false) =>
+        ToJsonInternal(value, indented);
+
+    private static string ToJsonInternal(FencingToken value, bool indented)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -44,12 +47,15 @@ public static class FencingTokenJsonExtensions
     /// <summary>
     /// Deserializes a <see cref="FencingToken"/> from a JSON string.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized fencing token, or null if the JSON is null or empty.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <param name="json">The JSON string to deserialize. Null or empty strings return null.</param>
+    /// <returns>The deserialized fencing token, or null if the JSON is null, empty, or whitespace.</returns>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid, malformed, or cannot be deserialized into a <see cref="FencingToken"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static FencingToken? FromJson(string? json)
     {
-        if (string.IsNullOrEmpty(json))
+        ArgumentNullException.ThrowIfNull(json);
+
+        if (string.IsNullOrWhiteSpace(json))
             return null;
 
         return JsonSerializer.Deserialize<FencingToken>(json, _jsonOptions);
@@ -61,12 +67,20 @@ public static class FencingTokenJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized fencing token if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string? json, out FencingToken? value)
     {
-        value = null;
+        if (json is null)
+        {
+            value = null;
+            return false;
+        }
 
         if (string.IsNullOrEmpty(json))
+        {
+            value = null;
             return true;
+        }
 
         try
         {
@@ -75,6 +89,7 @@ public static class FencingTokenJsonExtensions
         }
         catch (JsonException)
         {
+            value = null;
             return false;
         }
     }
@@ -95,11 +110,20 @@ public static class FencingTokenJsonExtensions
             if (root.ValueKind == JsonValueKind.Null)
                 return null;
 
-            var token = root.GetProperty("token").GetString()
-                ?? throw new JsonException("Missing required 'token' property.");
+            if (!root.TryGetProperty("token", out var tokenProperty) || tokenProperty.ValueKind == JsonValueKind.Null)
+                throw new JsonException("Missing required 'token' property.");
 
-            var sequenceNumber = root.GetProperty("sequenceNumber").GetInt64();
-            var issuedAt = root.GetProperty("issuedAt").GetDateTime();
+            var token = tokenProperty.GetString()
+                    ?? throw new JsonException("Token property cannot be null.");
+
+            if (!root.TryGetProperty("sequenceNumber", out var sequenceNumberProperty))
+                throw new JsonException("Missing required 'sequenceNumber' property.");
+
+            if (!root.TryGetProperty("issuedAt", out var issuedAtProperty))
+                throw new JsonException("Missing required 'issuedAt' property.");
+
+            var sequenceNumber = sequenceNumberProperty.GetInt64();
+            var issuedAt = issuedAtProperty.GetDateTime();
 
             return new FencingToken(token, sequenceNumber, issuedAt);
         }
