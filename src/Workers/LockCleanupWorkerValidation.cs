@@ -7,7 +7,7 @@
 
 namespace SarmKadan.DistributedLock.Workers;
 
-using System.Globalization;
+using System.Reflection;
 
 /// <summary>
 /// Provides validation helpers for <see cref="LockCleanupWorker"/> instances.
@@ -27,13 +27,7 @@ public static class LockCleanupWorkerValidation
         ArgumentNullException.ThrowIfNull(value);
 
         var errors = new List<string>();
-        var options = GetWorkerOptions(value);
-
-        if (options is null)
-        {
-            errors.Add("Worker options cannot be null.");
-            return errors;
-        }
+        var options = GetWorkerOptions(value) ?? new LockCleanupWorkerOptions();
 
         if (options.InitialDelayMs < 0)
         {
@@ -100,10 +94,19 @@ public static class LockCleanupWorkerValidation
 
     private static LockCleanupWorkerOptions? GetWorkerOptions(LockCleanupWorker worker)
     {
-        // Use reflection to access the private _options field
+        ArgumentNullException.ThrowIfNull(worker);
+
+        const string fieldName = "_options";
         var field = typeof(LockCleanupWorker).GetField(
-            "_options",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return field?.GetValue(worker) as LockCleanupWorkerOptions;
+            fieldName,
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        if (field is null)
+        {
+            throw new InvalidOperationException(
+                $"Failed to find private field '{fieldName}' on type {typeof(LockCleanupWorker).FullName}.");
+        }
+
+        return field.GetValue(worker) as LockCleanupWorkerOptions;
     }
 }
