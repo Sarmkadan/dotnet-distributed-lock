@@ -9,11 +9,11 @@ namespace SarmKadan.DistributedLock.Exceptions;
 public static class InvalidFencingTokenExceptionExtensions
 {
     /// <summary>
-    /// Determines whether the provided token matches the current token exactly.
+    /// Determines whether the provided token does not match the current token exactly.
     /// </summary>
     /// <param name="exception">The exception instance.</param>
-    /// <returns>True if the tokens match; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    /// <returns><see langword="true"/> if the tokens differ; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <see langword="null"/>.</exception>
     public static bool IsTokenMismatch(this InvalidFencingTokenException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -28,14 +28,16 @@ public static class InvalidFencingTokenExceptionExtensions
     /// Gets a value indicating whether the provided token is older than the current token.
     /// </summary>
     /// <param name="exception">The exception instance.</param>
-    /// <returns>True if the provided token is older; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    /// <returns><see langword="true"/> if the provided token is older; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Tokens are compared using ordinal comparison. This method assumes tokens are monotonically increasing values
+    /// such as GUIDs, timestamps, or incrementing counters where older tokens have lower values.
+    /// </remarks>
     public static bool IsTokenSuperseded(this InvalidFencingTokenException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        // Since tokens are typically GUIDs or incrementing values, we can compare them directly
-        // Older tokens will have lower values when parsed as Guid or compared as strings
         return string.CompareOrdinal(exception.ProvidedToken, exception.CurrentToken) < 0;
     }
 
@@ -43,8 +45,12 @@ public static class InvalidFencingTokenExceptionExtensions
     /// Gets a value indicating whether the provided token is newer than the current token.
     /// </summary>
     /// <param name="exception">The exception instance.</param>
-    /// <returns>True if the provided token is newer; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    /// <returns><see langword="true"/> if the provided token is newer; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Tokens are compared using ordinal comparison. This method assumes tokens are monotonically increasing values
+    /// such as GUIDs, timestamps, or incrementing counters where newer tokens have higher values.
+    /// </remarks>
     public static bool IsTokenFromFuture(this InvalidFencingTokenException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -60,7 +66,10 @@ public static class InvalidFencingTokenExceptionExtensions
     /// <param name="newCurrentToken">The new current token value.</param>
     /// <returns>A new <see cref="InvalidFencingTokenException"/> instance.</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="exception"/>, <paramref name="newProvidedToken"/>, or <paramref name="newCurrentToken"/> is null.
+    /// Thrown when <paramref name="exception"/>, <paramref name="newProvidedToken"/>, or <paramref name="newCurrentToken"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="newProvidedToken"/> or <paramref name="newCurrentToken"/> is <see langword="null"/> or empty.
     /// </exception>
     public static InvalidFencingTokenException WithTokens(
         this InvalidFencingTokenException exception,
@@ -79,11 +88,7 @@ public static class InvalidFencingTokenExceptionExtensions
     /// </summary>
     /// <param name="exception">The exception instance.</param>
     /// <returns>A formatted string containing both token values.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is <see langword="null"/>.</exception>
     public static string GetTokenDetails(this InvalidFencingTokenException exception)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        return $"Provided: '{exception.ProvidedToken}', Current: '{exception.CurrentToken}'";
-    }
+        => $"Provided: '{exception.ProvidedToken}', Current: '{exception.CurrentToken}'";
 }
