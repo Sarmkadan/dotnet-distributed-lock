@@ -13,7 +13,11 @@ using System.Text.Json.Serialization;
 /// <summary>
 /// Provides extension methods for <see cref="JsonLockSerializer"/> to enable fluent JSON serialization/deserialization.
 /// </summary>
-public static class JsonLockSerializerJsonExtensions
+/// <remarks>
+/// This static class contains convenience methods for serializing and deserializing <see cref="JsonLockSerializer"/> instances
+/// to and from JSON strings using <see cref="System.Text.Json"/> with configured options.
+/// </remarks>
+public sealed class JsonLockSerializerJsonExtensions
 {
     private static readonly JsonSerializerOptions _options = new()
     {
@@ -34,6 +38,7 @@ public static class JsonLockSerializerJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the serializer.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+    /// <exception cref="JsonException">Thrown when serialization fails.</exception>
     public static string ToJson(this JsonLockSerializer value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -50,7 +55,7 @@ public static class JsonLockSerializerJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A deserialized <see cref="JsonLockSerializer"/> instance, or null if the JSON is null or whitespace.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is malformed.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is malformed or deserialization fails.</exception>
     public static JsonLockSerializer? FromJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -74,8 +79,11 @@ public static class JsonLockSerializerJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized instance if successful, otherwise null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out JsonLockSerializer? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
