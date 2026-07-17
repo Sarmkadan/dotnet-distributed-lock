@@ -27,48 +27,33 @@ public static class LockServiceValidation
 
         var problems = new List<string>();
 
-        // Validate repository (should not be null)
-        if (value.GetType().GetField("_repository", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) is null)
-        {
-            problems.Add("Repository dependency is null.");
-        }
+        // LockService constructor already validates dependencies, but we can check for logical consistency
+        var metrics = value.GetMetrics();
 
-        // Validate logger (should not be null)
-        if (value.GetType().GetField("_logger", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(value) is null)
+        if (metrics is null)
         {
-            problems.Add("Logger dependency is null.");
+            problems.Add("Metrics instance is null.");
         }
-
-        // Validate metrics (should not be null and should have reasonable initial values)
-        var metricsField = value.GetType().GetProperty("GetMetrics", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        if (metricsField is not null)
+        else
         {
-            var metrics = value.GetMetrics();
-            if (metrics is null)
+            // Validate metrics timestamps are reasonable
+            var now = DateTime.UtcNow;
+            var createdAt = metrics.CreatedAt;
+            var lastUpdatedAt = metrics.LastUpdatedAt;
+
+            if (createdAt > now.AddMinutes(1))
             {
-                problems.Add("Metrics instance is null.");
+                problems.Add("Metrics CreatedAt timestamp is in the future.");
             }
-            else
+
+            if (lastUpdatedAt > now.AddMinutes(1))
             {
-                // Validate metrics timestamps are reasonable
-                var now = DateTime.UtcNow;
-                var createdAt = metrics.CreatedAt;
-                var lastUpdatedAt = metrics.LastUpdatedAt;
+                problems.Add("Metrics LastUpdatedAt timestamp is in the future.");
+            }
 
-                if (createdAt > now.AddMinutes(1))
-                {
-                    problems.Add("Metrics CreatedAt timestamp is in the future.");
-                }
-
-                if (lastUpdatedAt > now.AddMinutes(1))
-                {
-                    problems.Add("Metrics LastUpdatedAt timestamp is in the future.");
-                }
-
-                if (createdAt > lastUpdatedAt)
-                {
-                    problems.Add("Metrics CreatedAt timestamp is after LastUpdatedAt.");
-                }
+            if (createdAt > lastUpdatedAt)
+            {
+                problems.Add("Metrics CreatedAt timestamp is after LastUpdatedAt.");
             }
         }
 
@@ -82,7 +67,7 @@ public static class LockServiceValidation
     /// <returns><see langword="true"/> if the service is valid; otherwise, <see langword="false"/>.</returns>
     public static bool IsValid(this LockService? value)
     {
-        return !value?.Validate().Any() ?? false;
+        return value?.Validate().Count == 0;
     }
 
     /// <summary>
