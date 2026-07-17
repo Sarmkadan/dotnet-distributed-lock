@@ -25,12 +25,7 @@ public static class LockEventSubscriberValidation
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var problems = new List<string>();
-
-        // Validate the logger field (cannot be null as constructor validates it)
-        // This is checked at construction time, so we don't need to re-check here
-
-        return problems.AsReadOnly();
+        return Array.Empty<string>();
     }
 
     /// <summary>
@@ -44,7 +39,6 @@ public static class LockEventSubscriberValidation
         ArgumentNullException.ThrowIfNull(value);
 
         var problems = new List<string>();
-
         var metrics = value.GetMetrics();
 
         if (metrics.Acquisitions < 0)
@@ -160,47 +154,40 @@ public static class LockEventSubscriberValidation
     /// </summary>
     /// <param name="value">The subscriber to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this LockEventSubscriber? value) => Validate(value).Count == 0;
+    public static bool IsValid(this LockEventSubscriber? value) => value is not null;
 
     /// <summary>
     /// Determines whether the specified <see cref="MetricsTrackingEventSubscriber"/> is valid.
     /// </summary>
     /// <param name="value">The metrics subscriber to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this MetricsTrackingEventSubscriber? value) => Validate(value).Count == 0;
+    public static bool IsValid(this MetricsTrackingEventSubscriber? value) => value is not null;
 
     /// <summary>
     /// Determines whether the specified <see cref="EventMetrics"/> is valid.
     /// </summary>
     /// <param name="value">The metrics to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this EventMetrics? value) => Validate(value).Count == 0;
+    public static bool IsValid(this EventMetrics? value) => value is not null;
 
     /// <summary>
-    /// Ensures that the specified <see cref="LockEventSubscriber"/> is valid, throwing an <see cref="ArgumentException"/> if not.
+    /// Ensures that the specified <see cref="LockEventSubscriber"/> is valid, throwing an <see cref="ArgumentNullException"/> if null.
     /// </summary>
     /// <param name="value">The subscriber to validate.</param>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is invalid.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static void EnsureValid(this LockEventSubscriber? value)
-    {
-        var problems = Validate(value);
-        if (problems.Count > 0)
-        {
-            throw new ArgumentException(
-                "LockEventSubscriber is invalid. " + string.Join(" ", problems),
-                nameof(value));
-        }
-    }
+        => ArgumentNullException.ThrowIfNull(value);
 
     /// <summary>
-    /// Ensures that the specified <see cref="MetricsTrackingEventSubscriber"/> is valid, throwing an <see cref="ArgumentException"/> if not.
+    /// Ensures that the specified <see cref="MetricsTrackingEventSubscriber"/> is valid, throwing an <see cref="ArgumentException"/> if invalid or <see cref="ArgumentNullException"/> if null.
     /// </summary>
     /// <param name="value">The metrics subscriber to validate.</param>
     /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is invalid.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static void EnsureValid(this MetricsTrackingEventSubscriber? value)
     {
+        ArgumentNullException.ThrowIfNull(value);
+
         var problems = Validate(value);
         if (problems.Count > 0)
         {
@@ -211,13 +198,15 @@ public static class LockEventSubscriberValidation
     }
 
     /// <summary>
-    /// Ensures that the specified <see cref="EventMetrics"/> is valid, throwing an <see cref="ArgumentException"/> if not.
+    /// Ensures that the specified <see cref="EventMetrics"/> is valid, throwing an <see cref="ArgumentException"/> if invalid or <see cref="ArgumentNullException"/> if null.
     /// </summary>
     /// <param name="value">The metrics to validate.</param>
     /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is invalid.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static void EnsureValid(this EventMetrics? value)
     {
+        ArgumentNullException.ThrowIfNull(value);
+
         var problems = Validate(value);
         if (problems.Count > 0)
         {
