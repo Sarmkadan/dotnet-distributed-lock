@@ -64,10 +64,12 @@ public class FencingToken : IEquatable<FencingToken>, IComparable<FencingToken>
     /// </summary>
     /// <param name="other">The other token to compare.</param>
     /// <returns>True if this token's sequence number is greater than the other; otherwise, false.</returns>
-    public bool IsGreaterThan(FencingToken other)
-    {
-        return other is null || SequenceNumber > other.SequenceNumber;
-    }
+/// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
+public bool IsGreaterThan(FencingToken other)
+{
+    ArgumentNullException.ThrowIfNull(other);
+    return SequenceNumber > other.SequenceNumber;
+}
 
     /// <summary>
     /// Validates that this token is valid and not expired.

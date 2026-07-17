@@ -99,11 +99,11 @@ public static class FencingTokenExtensions
     /// <param name="token">The current token.</param>
     /// <param name="other">The other token to compare with.</param>
     /// <returns>True if this token's sequence number is less than the other; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="other"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
     public static bool IsLessThan(this FencingToken token, FencingToken other)
     {
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(other);
+        ArgumentNullException.ThrowIfNull(token);
         return token.SequenceNumber < other.SequenceNumber;
     }
 
@@ -113,11 +113,11 @@ public static class FencingTokenExtensions
     /// <param name="token">The current token.</param>
     /// <param name="other">The other token to compare with.</param>
     /// <returns>True if this token's sequence number is greater than or equal to the other; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="other"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
     public static bool IsGreaterThanOrEqual(this FencingToken token, FencingToken other)
     {
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(other);
+        ArgumentNullException.ThrowIfNull(token);
         return token.SequenceNumber >= other.SequenceNumber;
     }
 
@@ -127,11 +127,11 @@ public static class FencingTokenExtensions
     /// <param name="token">The current token.</param>
     /// <param name="other">The other token to compare with.</param>
     /// <returns>True if this token's sequence number is less than or equal to the other; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="other"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
     public static bool IsLessThanOrEqual(this FencingToken token, FencingToken other)
     {
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(other);
+        ArgumentNullException.ThrowIfNull(token);
         return token.SequenceNumber <= other.SequenceNumber;
     }
 
@@ -174,11 +174,15 @@ public static class FencingTokenExtensions
     /// <param name="token">The current token.</param>
     /// <param name="other">The other token to compare with.</param>
     /// <returns>True if the tokens are adjacent; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="other"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
+    /// <remarks>
+    /// Two tokens are considered adjacent if their sequence numbers differ by exactly 1.
+    /// If the tokens have the same sequence number, this method returns false.
+    /// </remarks>
     public static bool IsAdjacentTo(this FencingToken token, FencingToken other)
     {
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(other);
+        ArgumentNullException.ThrowIfNull(token);
 
         return Math.Abs(token.SequenceNumber - other.SequenceNumber) == 1;
     }
@@ -189,11 +193,11 @@ public static class FencingTokenExtensions
     /// <param name="token">The current token.</param>
     /// <param name="other">The other token to compare with.</param>
     /// <returns>The difference between sequence numbers (current - other).</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="token"/> or <paramref name="other"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is null.</exception>
     public static long SequenceDifference(this FencingToken token, FencingToken other)
     {
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(other);
+        ArgumentNullException.ThrowIfNull(token);
 
         return token.SequenceNumber - other.SequenceNumber;
     }
