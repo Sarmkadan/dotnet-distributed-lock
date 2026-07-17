@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 
 /// <summary>
-/// Extension methods for ValidationHelper that provide comprehensive validation
+/// Extension methods for <see cref="ValidationHelper"/> that provide comprehensive validation
 /// and error reporting capabilities.
 /// </summary>
 public static class ValidationHelperValidation
@@ -19,43 +19,23 @@ public static class ValidationHelperValidation
     /// Validates all aspects of lock configuration parameters and returns
     /// human-readable problems.
     /// </summary>
-    /// <param name="lockName">The lock name to validate</param>
-    /// <param name="duration">The lock duration to validate</param>
-    /// <param name="renewalInterval">Optional renewal interval to validate</param>
-    /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <param name="lockName">The lock name to validate.</param>
+    /// <param name="duration">The lock duration to validate.</param>
+    /// <param name="renewalInterval">Optional renewal interval to validate.</param>
+    /// <returns>List of validation problems, or empty list if valid.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockName"/> is null.</exception>
     public static IReadOnlyList<string> Validate(
         string? lockName,
         TimeSpan duration,
         TimeSpan? renewalInterval = null)
     {
+        ArgumentNullException.ThrowIfNull(lockName);
+
         var errors = new List<string>();
 
-        try
-        {
-            ValidationHelper.ValidateLockName(lockName);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
-
-        try
-        {
-            ValidationHelper.ValidateDuration(duration);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
-
-        try
-        {
-            ValidationHelper.ValidateRenewalInterval(renewalInterval, duration);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateLockName(lockName);
+        ValidationHelper.ValidateDuration(duration);
+        ValidationHelper.ValidateRenewalInterval(renewalInterval, duration);
 
         return errors.AsReadOnly();
     }
@@ -63,14 +43,17 @@ public static class ValidationHelperValidation
     /// <summary>
     /// Validates lock configuration parameters with additional validations.
     /// </summary>
-    /// <param name="lockName">The lock name to validate</param>
-    /// <param name="duration">The lock duration to validate</param>
-    /// <param name="renewalInterval">Optional renewal interval to validate</param>
-    /// <param name="fencingToken">The fencing token to validate</param>
-    /// <param name="ownerId">The owner ID to validate</param>
-    /// <param name="expiresAt">The expiration date to validate</param>
-    /// <param name="apiKey">The API key to validate</param>
-    /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <param name="lockName">The lock name to validate.</param>
+    /// <param name="duration">The lock duration to validate.</param>
+    /// <param name="renewalInterval">Optional renewal interval to validate.</param>
+    /// <param name="fencingToken">The fencing token to validate.</param>
+    /// <param name="ownerId">The owner ID to validate.</param>
+    /// <param name="expiresAt">The expiration date to validate.</param>
+    /// <param name="apiKey">The API key to validate.</param>
+    /// <returns>List of validation problems, or empty list if valid.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if <paramref name="lockName"/> or <paramref name="ownerId"/> or <paramref name="apiKey"/> is null.
+    /// </exception>
     public static IReadOnlyList<string> Validate(
         string? lockName,
         TimeSpan duration,
@@ -80,77 +63,32 @@ public static class ValidationHelperValidation
         DateTime expiresAt,
         string? apiKey)
     {
+        ArgumentNullException.ThrowIfNull(lockName);
+        ArgumentNullException.ThrowIfNull(ownerId);
+        ArgumentNullException.ThrowIfNull(apiKey);
+
         var errors = new List<string>();
 
         // Validate lock name
-        try
-        {
-            ValidationHelper.ValidateLockName(lockName);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateLockName(lockName);
 
         // Validate duration
-        try
-        {
-            ValidationHelper.ValidateDuration(duration);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateDuration(duration);
 
         // Validate renewal interval
-        try
-        {
-            ValidationHelper.ValidateRenewalInterval(renewalInterval, duration);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateRenewalInterval(renewalInterval, duration);
 
         // Validate fencing token
-        try
-        {
-            ValidationHelper.ValidateFencingToken(fencingToken);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateFencingToken(fencingToken);
 
         // Validate owner ID
-        try
-        {
-            ValidationHelper.ValidateOwnerId(ownerId);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateOwnerId(ownerId);
 
         // Validate expiration
-        try
-        {
-            ValidationHelper.ValidateLockNotExpired(expiresAt);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateLockNotExpired(expiresAt);
 
         // Validate API key
-        try
-        {
-            ValidationHelper.ValidateApiKey(apiKey);
-        }
-        catch (Exception ex)
-        {
-            errors.Add(ex.Message);
-        }
+        ValidationHelper.ValidateApiKey(apiKey);
 
         return errors.AsReadOnly();
     }
@@ -158,8 +96,9 @@ public static class ValidationHelperValidation
     /// <summary>
     /// Validates a collection of lock configuration parameters.
     /// </summary>
-    /// <param name="configurations">Collection of lock configurations to validate</param>
-    /// <returns>List of validation problems, or empty list if all valid</returns>
+    /// <param name="configurations">Collection of lock configurations to validate.</param>
+    /// <returns>List of validation problems, or empty list if all valid.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configurations"/> is null.</exception>
     public static IReadOnlyList<string> Validate(
         IEnumerable<(string? LockName, TimeSpan Duration, TimeSpan? RenewalInterval)> configurations)
     {
@@ -206,10 +145,10 @@ public static class ValidationHelperValidation
     /// <summary>
     /// Determines whether the specified lock configuration is valid.
     /// </summary>
-    /// <param name="lockName">The lock name to check</param>
-    /// <param name="duration">The lock duration to check</param>
-    /// <param name="renewalInterval">Optional renewal interval to check</param>
-    /// <returns>True if valid, false otherwise</returns>
+    /// <param name="lockName">The lock name to check.</param>
+    /// <param name="duration">The lock duration to check.</param>
+    /// <param name="renewalInterval">Optional renewal interval to check.</param>
+    /// <returns>True if valid, false otherwise.</returns>
     public static bool IsValid(
         string? lockName,
         TimeSpan duration,
@@ -222,14 +161,14 @@ public static class ValidationHelperValidation
     /// <summary>
     /// Determines whether the specified lock configuration is valid.
     /// </summary>
-    /// <param name="lockName">The lock name to check</param>
-    /// <param name="duration">The lock duration to check</param>
-    /// <param name="renewalInterval">Optional renewal interval to check</param>
-    /// <param name="fencingToken">The fencing token to check</param>
-    /// <param name="ownerId">The owner ID to check</param>
-    /// <param name="expiresAt">The expiration date to check</param>
-    /// <param name="apiKey">The API key to check</param>
-    /// <returns>True if valid, false otherwise</returns>
+    /// <param name="lockName">The lock name to check.</param>
+    /// <param name="duration">The lock duration to check.</param>
+    /// <param name="renewalInterval">Optional renewal interval to check.</param>
+    /// <param name="fencingToken">The fencing token to check.</param>
+    /// <param name="ownerId">The owner ID to check.</param>
+    /// <param name="expiresAt">The expiration date to check.</param>
+    /// <param name="apiKey">The API key to check.</param>
+    /// <returns>True if valid, false otherwise.</returns>
     public static bool IsValid(
         string? lockName,
         TimeSpan duration,
@@ -247,10 +186,11 @@ public static class ValidationHelperValidation
     /// Ensures that the specified lock configuration is valid, throwing an
     /// ArgumentException with detailed error messages if validation fails.
     /// </summary>
-    /// <param name="lockName">The lock name to validate</param>
-    /// <param name="duration">The lock duration to validate</param>
-    /// <param name="renewalInterval">Optional renewal interval to validate</param>
-    /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+    /// <param name="lockName">The lock name to validate.</param>
+    /// <param name="duration">The lock duration to validate.</param>
+    /// <param name="renewalInterval">Optional renewal interval to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when validation fails.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockName"/> is null.</exception>
     public static void EnsureValid(
         string? lockName,
         TimeSpan duration,
@@ -260,7 +200,7 @@ public static class ValidationHelperValidation
         if (errors.Count > 0)
         {
             var message = $"Validation failed with {errors.Count} error(s):\n" +
-                         string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
+                          string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
             throw new ArgumentException(message);
         }
     }
@@ -269,14 +209,17 @@ public static class ValidationHelperValidation
     /// Ensures that the specified lock configuration is valid, throwing an
     /// ArgumentException with detailed error messages if validation fails.
     /// </summary>
-    /// <param name="lockName">The lock name to validate</param>
-    /// <param name="duration">The lock duration to validate</param>
-    /// <param name="renewalInterval">Optional renewal interval to validate</param>
-    /// <param name="fencingToken">The fencing token to validate</param>
-    /// <param name="ownerId">The owner ID to validate</param>
-    /// <param name="expiresAt">The expiration date to validate</param>
-    /// <param name="apiKey">The API key to validate</param>
-    /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+    /// <param name="lockName">The lock name to validate.</param>
+    /// <param name="duration">The lock duration to validate.</param>
+    /// <param name="renewalInterval">Optional renewal interval to validate.</param>
+    /// <param name="fencingToken">The fencing token to validate.</param>
+    /// <param name="ownerId">The owner ID to validate.</param>
+    /// <param name="expiresAt">The expiration date to validate.</param>
+    /// <param name="apiKey">The API key to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when validation fails.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if <paramref name="lockName"/>, <paramref name="ownerId"/>, or <paramref name="apiKey"/> is null.
+    /// </exception>
     public static void EnsureValid(
         string? lockName,
         TimeSpan duration,
@@ -290,7 +233,7 @@ public static class ValidationHelperValidation
         if (errors.Count > 0)
         {
             var message = $"Validation failed with {errors.Count} error(s):\n" +
-                         string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
+                          string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
             throw new ArgumentException(message);
         }
     }
@@ -298,8 +241,9 @@ public static class ValidationHelperValidation
     /// <summary>
     /// Ensures that a collection of lock configurations are all valid.
     /// </summary>
-    /// <param name="configurations">Collection of lock configurations to validate</param>
-    /// <exception cref="ArgumentException">Thrown when any configuration is invalid</exception>
+    /// <param name="configurations">Collection of lock configurations to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when any configuration is invalid.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="configurations"/> is null.</exception>
     public static void EnsureValid(
         IEnumerable<(string? LockName, TimeSpan Duration, TimeSpan? RenewalInterval)> configurations)
     {
@@ -309,7 +253,7 @@ public static class ValidationHelperValidation
         if (errors.Count > 0)
         {
             var message = $"Validation failed with {errors.Count} error(s):\n" +
-                         string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
+                          string.Join("\n", errors.Select((e, i) => $" {i + 1}. {e}"));
             throw new ArgumentException(message);
         }
     }
