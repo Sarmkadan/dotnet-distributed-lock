@@ -25,45 +25,18 @@ public static class RateLimitingMiddlewareValidation
 
         var problems = new List<string>();
 
+        var options = GetOptions(value);
+
         // Validate MaxRequestsPerWindow
-        if (value.MaxRequestsPerWindow <= 0)
+        if (options.MaxRequestsPerWindow <= 0)
         {
-            problems.Add($"MaxRequestsPerWindow must be a positive integer, but was {value.MaxRequestsPerWindow}.");
+            problems.Add($"MaxRequestsPerWindow must be a positive integer, but was {options.MaxRequestsPerWindow}.");
         }
 
         // Validate WindowSizeSeconds
-        if (value.WindowSizeSeconds <= 0)
+        if (options.WindowSizeSeconds <= 0)
         {
-            problems.Add($"WindowSizeSeconds must be a positive integer, but was {value.WindowSizeSeconds}.");
-        }
-
-        // Validate Timestamps (should not be null and should not contain default/min values)
-        if (value.Timestamps is null)
-        {
-            problems.Add("Timestamps collection cannot be null.");
-        }
-        else
-        {
-            // Check for default DateTime values in timestamps
-            foreach (var timestamp in value.Timestamps)
-            {
-                if (timestamp == default)
-                {
-                    problems.Add("Timestamps collection contains a default DateTime value (DateTime.MinValue).");
-                    break;
-                }
-            }
-
-            // Check for timestamps that are in the future (relative to now)
-            var now = DateTime.UtcNow;
-            foreach (var timestamp in value.Timestamps)
-            {
-                if (timestamp > now.AddMinutes(1))
-                {
-                    problems.Add($"Timestamps collection contains a timestamp in the future: {timestamp:O}.");
-                    break;
-                }
-            }
+            problems.Add($"WindowSizeSeconds must be a positive integer, but was {options.WindowSizeSeconds}.");
         }
 
         return problems.AsReadOnly();
@@ -74,11 +47,7 @@ public static class RateLimitingMiddlewareValidation
     /// </summary>
     /// <param name="value">The middleware instance to check.</param>
     /// <returns>True if the instance is valid; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
-    public static bool IsValid(this RateLimitingMiddleware? value)
-    {
-        return value?.Validate().Count == 0;
-    }
+    public static bool IsValid(this RateLimitingMiddleware? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that a <see cref="RateLimitingMiddleware"/> instance is valid.
@@ -98,7 +67,28 @@ public static class RateLimitingMiddlewareValidation
             throw new ArgumentException(
                 $"RateLimitingMiddleware is invalid. Problems:\n- {
                     string.Join("\n- ", problems)
-                }");
+                }",
+                nameof(value));
         }
+    }
+
+    private static RateLimitingOptions GetOptions(RateLimitingMiddleware middleware)
+    {
+        ArgumentNullException.ThrowIfNull(middleware);
+
+        const string fieldName = "_options";
+        var field = typeof(RateLimitingMiddleware).GetField(
+            fieldName,
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (field is null)
+        {
+            throw new InvalidOperationException(
+                $"Failed to find private field '{fieldName}' on type {typeof(RateLimitingMiddleware).FullName}.");
+        }
+
+        return field.GetValue(middleware) as RateLimitingOptions
+            ?? throw new InvalidOperationException(
+                $"Private field '{fieldName}' on {typeof(RateLimitingMiddleware).FullName} is null.");
     }
 }
