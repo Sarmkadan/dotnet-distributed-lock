@@ -5,6 +5,7 @@
 // =============================================================================
 
 using System.Globalization;
+using SarmKadan.DistributedLock.Utilities.Helpers;
 
 namespace SarmKadan.DistributedLock.Services;
 
@@ -13,6 +14,9 @@ namespace SarmKadan.DistributedLock.Services;
 /// </summary>
 public static class LockMonitorValidation
 {
+    private const int MaxMonitoredLocks = 1000;
+    private const int MaxLockKeyLength = 1024;
+
     /// <summary>
     /// Validates the configuration and state of a <see cref="LockMonitor"/> instance.
     /// </summary>
@@ -27,7 +31,7 @@ public static class LockMonitorValidation
 
         // Validate monitored locks collection
         var monitoredLocks = value.GetMonitoredLocks().ToList();
-        if (monitoredLocks.Count > 1000)
+        if (monitoredLocks.Count > MaxMonitoredLocks)
         {
             problems.Add("LockMonitor has too many monitored locks (maximum 1000).");
         }
@@ -40,9 +44,9 @@ public static class LockMonitorValidation
             {
                 problems.Add("Monitored lock key cannot be null or whitespace.");
             }
-            else if (lockKey.Length > 1024)
+            else if (lockKey.Length > MaxLockKeyLength)
             {
-                problems.Add("Monitored lock key cannot exceed 1024 characters.");
+                problems.Add($"Monitored lock key cannot exceed {MaxLockKeyLength} characters.");
             }
         }
 
@@ -54,10 +58,7 @@ public static class LockMonitorValidation
     /// </summary>
     /// <param name="value">The lock monitor instance to check.</param>
     /// <returns>True if the instance is valid; otherwise, false.</returns>
-    public static bool IsValid(this LockMonitor? value)
-    {
-        return value?.Validate().Count == 0;
-    }
+    public static bool IsValid(this LockMonitor? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the specified <see cref="LockMonitor"/> instance is valid.
