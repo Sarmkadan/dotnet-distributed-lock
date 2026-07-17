@@ -33,38 +33,23 @@ public static class LockServiceAdditionalTestsJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this LockServiceAdditionalTests value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_options) { WriteIndented = true }
-            : _options;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+    public static string ToJson(this LockServiceAdditionalTests value, bool indented = false) =>
+        JsonSerializer.Serialize(value, indented ? new JsonSerializerOptions(_options) { WriteIndented = true } : _options);
 
     /// <summary>
     /// Deserializes a JSON string to a <see cref="LockServiceAdditionalTests"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A deserialized <see cref="LockServiceAdditionalTests"/> instance, or null if the JSON is null or whitespace.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is malformed.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized to <see cref="LockServiceAdditionalTests"/>.</exception>
     public static LockServiceAdditionalTests? FromJson(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(json);
 
-        try
-        {
-            return JsonSerializer.Deserialize<LockServiceAdditionalTests>(json, _options);
-        }
-        catch (JsonException ex)
-        {
-            throw new JsonException("Failed to deserialize LockServiceAdditionalTests from JSON", ex);
-        }
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<LockServiceAdditionalTests>(json, _options);
     }
 
     /// <summary>
@@ -73,23 +58,15 @@ public static class LockServiceAdditionalTestsJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized instance if successful, otherwise null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out LockServiceAdditionalTests? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return false;
-        }
-
-        try
-        {
-            value = JsonSerializer.Deserialize<LockServiceAdditionalTests>(json, _options);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return !string.IsNullOrWhiteSpace(json) &&
+               JsonSerializer.Deserialize<LockServiceAdditionalTests>(json, _options) is { } result &&
+               (value = result) is not null;
     }
 }
