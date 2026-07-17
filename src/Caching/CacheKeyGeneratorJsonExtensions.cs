@@ -50,15 +50,9 @@ public static class CacheKeyGeneratorJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A cache key string deserialized from the JSON, or null if the JSON is null or empty.</returns>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static string? FromJson(string json)
-    {
-        if (string.IsNullOrEmpty(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<string>(json, _jsonSerializerOptions);
-    }
+    public static string? FromJson(string json) => string.IsNullOrEmpty(json)
+        ? null
+        : JsonSerializer.Deserialize<string>(json, _jsonSerializerOptions);
 
     /// <summary>
     /// Attempts to deserialize a JSON string to a cache key string.
@@ -68,10 +62,9 @@ public static class CacheKeyGeneratorJsonExtensions
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     public static bool TryFromJson(string json, out string? value)
     {
-        value = null;
-
         if (string.IsNullOrEmpty(json))
         {
+            value = null;
             return false;
         }
 
@@ -82,6 +75,7 @@ public static class CacheKeyGeneratorJsonExtensions
         }
         catch (JsonException)
         {
+            value = null;
             return false;
         }
     }
