@@ -63,13 +63,16 @@ public static class StringExtensionsJsonExtensions
 
     /// <summary>
     /// Deserializes a JSON string to a lock name.
-    /// Returns null if the JSON is null or empty.
+    /// Returns null if the JSON is null, empty, or whitespace.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized lock name string, or null if JSON is invalid.</returns>
+    /// <returns>The deserialized lock name string, or null if JSON is null, empty, whitespace, or invalid.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed.</exception>
-    public static string? FromLockNameJson(string json)
+    public static string? FromLockNameJson(string? json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
         {
             return null;
@@ -92,13 +95,16 @@ public static class StringExtensionsJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="lockName">Receives the deserialized lock name if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    public static bool TryFromLockNameJson(string json, out string? lockName)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+    public static bool TryFromLockNameJson(string? json, out string? lockName)
     {
         lockName = null;
 
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
         {
-            return true;
+            return false;
         }
 
         try
