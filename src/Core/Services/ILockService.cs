@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using SarmKadan.DistributedLock.Models;
 
@@ -56,6 +56,22 @@ public interface ILockService
         string lockKey,
         string ownerId,
         TimeSpan? newDuration = null,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Extends the lease/expiration time of an existing lock.
+    /// Only succeeds if the current ownerId holds the lock.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="extension">The duration to extend the lock by.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the extension was successful; otherwise, false.</returns>
+    Task<bool> TryExtendAsync(
+        string lockKey,
+        string ownerId,
+        TimeSpan extension,
         CancellationToken cancellationToken = default
     );
 

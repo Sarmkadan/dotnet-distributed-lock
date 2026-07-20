@@ -150,6 +150,46 @@ public sealed class DistributedLockController : ControllerBase
     }
 
     /// <summary>
+    /// Extends the lease/expiration time of an existing lock.
+    /// Only succeeds if the current ownerId holds the lock.
+    /// </summary>
+    /// <param name="lockId">The unique identifier of the lock</param>
+    /// <param name="ownerId">The owner ID to validate ownership</param>
+    /// <param name="extensionSeconds">Seconds to extend the lock by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Operation result</returns>
+    [HttpPost("extend/{lockId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<OperationResponse>> ExtendLock(
+        [FromRoute] string lockId,
+        [FromQuery] string ownerId,
+        [FromQuery] int extensionSeconds = 30,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Extending lock: {LockId} for {Seconds} seconds by owner {OwnerId}", lockId, extensionSeconds, ownerId);
+
+        try
+        {
+            var extension = TimeSpan.FromSeconds(extensionSeconds);
+            var success = await _lockService.TryExtendAsync(lockId, ownerId, extension, cancellationToken);
+
+            if (success)
+            {
+                return Ok(new OperationResponse { Success = true, Message = "Lock extended successfully" });
+            }
+
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse { Message = "Failed to extend lock - either lock doesn't exist or owner mismatch" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to extend lock: {LockId}", lockId);
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Gets the current status of a lock.
     /// </summary>
     /// <param name="lockId">The unique identifier of the lock</param>

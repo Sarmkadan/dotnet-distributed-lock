@@ -139,6 +139,37 @@ public sealed class LockService : ILockService
         }
     }
 
+    public async Task<bool> TryExtendAsync(
+        string lockKey,
+        string ownerId,
+        TimeSpan extension,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var extended = await _repository.RenewAsync(lockKey, ownerId, extension, cancellationToken);
+
+            if (extended)
+            {
+                _metrics.RecordSuccessfulRenewal();
+                _logger.LogInformation("Lock extended: {LockKey} by {OwnerId} for {Extension}", lockKey, ownerId, extension);
+            }
+            else
+            {
+                _metrics.RecordFailedRenewal();
+                _logger.LogWarning("Failed to extend lock: {LockKey} - either lock doesn't exist or owner mismatch", lockKey);
+            }
+
+            return extended;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error extending lock {LockKey}", lockKey);
+            _metrics.RecordFailedRenewal();
+            return false;
+        }
+    }
+
     public async Task<Lock> RenewLockAsync(
         string lockKey,
         ulong fencingToken,
