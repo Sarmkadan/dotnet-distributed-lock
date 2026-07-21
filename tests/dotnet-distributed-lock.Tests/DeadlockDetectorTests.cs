@@ -360,4 +360,179 @@ public class DeadlockDetectorTests
         var allMetrics = _detector.GetAllMetrics();
         allMetrics.Should().NotBeEmpty();
     }
+
+        // -------------------------------------------------------------------------
+        // Edge Cases: Self-wait, 3-node cycle, diamond shape, cycle broken
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Tests that WouldDeadlock returns true when an owner tries to wait for a lock they already hold.
+        /// Self-wait scenario: A holds lock:1 and tries to wait for lock:1.
+        /// </summary>
+        [Fact]
+        public void WouldDeadlock_SelfWait_ReturnsTrue()
+        {
+        // Arrange - owner-A holds lock:1
+        _detector.RecordAcquired("owner-A", "lock:1");
+
+        // Act - owner-A tries to wait for lock:1 (which they already hold)
+        var isDeadlock = _detector.WouldDeadlock("owner-A", "lock:1");
+
+        // Assert - self-wait should be detected as a deadlock
+        isDeadlock.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// Tests that WouldDeadlock detects a 3-node cycle: A->B->C->A.
+        /// </summary>
+        [Fact]
+        public async Task WouldDeadlock_ThreeNodeCycle_DetectsDeadlock()
+        {
+        // Arrange - create a 3-node cycle:
+        // owner-A holds lock:1
+        // owner-B holds lock:2
+        // owner-C holds lock:3
+        // owner-A waits for lock:2 (held by owner-B)
+        // owner-B waits for lock:3 (held by owner-C)
+        // owner-C waits for lock:1 (held by owner-A) -> cycle A->B->C->A
+
+        _detector.RecordAcquired("owner-A", "lock:1");
+        _detector.RecordAcquired("owner-B", "lock:2");
+        _detector.RecordAcquired("owner-C", "lock:3");
+
+        await _detector.RecordWaitingAsync("owner-A", "lock:2");
+        await _detector.RecordWaitingAsync("owner-B", "lock:3");
+
+        // Act - owner-C tries to wait for lock:1
+        var isDeadlock = _detector.WouldDeadlock("owner-C", "lock:1");
+
+        // Assert - 3-node cycle should be detected
+        isDeadlock.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// Tests that WouldDeadlock returns false for a diamond wait shape with no cycle.
+        /// Diamond shape: A holds lock:1, B holds lock:2, C waits for lock:1, D waits for lock:2
+        /// D tries to wait for lock:1 (held by A) - this creates a diamond but no cycle.
+        /// </summary>
+        [Fact]
+        public async Task WouldDeadlock_DiamondShape_NoCycle_ReturnsFalse()
+        {
+        // Arrange - create diamond shape with no cycle:
+        // owner-A holds lock:1
+        // owner-B holds lock:2
+        // owner-C waits for lock:1 (held by owner-A)
+        // owner-D waits for lock:2 (held by owner-B)
+        // owner-D tries to wait for lock:1 (held by owner-A) - no cycle formed
+
+        _detector.RecordAcquired("owner-A", "lock:1");
+        _detector.RecordAcquired("owner-B", "lock:2");
+
+        await _detector.RecordWaitingAsync("owner-C", "lock:1");
+        await _detector.RecordWaitingAsync("owner-D", "lock:2");
+
+        // Act - owner-D tries to wait for lock:1 (held by owner-A)
+        var isDeadlock = _detector.WouldDeadlock("owner-D", "lock:1");
+
+        // Assert - diamond shape with no cycle should NOT be detected as deadlock
+        isDeadlock.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Tests that WouldDeadlock returns false after a waiter is removed, breaking the cycle.
+        /// </summary>
+        [Fact]
+        public async Task WouldDeadlock_AfterWaiterRemoved_CycleBroken_ReturnsFalse()
+        {
+        // Arrange - create a cycle A->B->A
+        // owner-A holds lock:1
+        // owner-B holds lock:2
+        // owner-A waits for lock:2
+        // owner-B waits for lock:1 -> cycle A->B->A
+
+        _detector.RecordAcquired("owner-A", "lock:1");
+        _detector.RecordAcquired("owner-B", "lock:2");
+
+        await _detector.RecordWaitingAsync("owner-A", "lock:2");
+        await _detector.RecordWaitingAsync("owner-B", "lock:1");
+
+        // Verify deadlock is detected initially
+        var initialDeadlock = _detector.WouldDeadlock("owner-B", "lock:1");
+        initialDeadlock.Should().BeTrue();
+
+        // Act - owner-A acquires lock:2, breaking the cycle
+        _detector.RecordAcquired("owner-A", "lock:2");
+
+        // Assert - cycle is broken, no deadlock should be detected
+        var isDeadlock = _detector.WouldDeadlock("owner-B", "lock:1");
+        isDeadlock.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Tests that WouldDeadlock correctly handles complex wait chains with multiple branches.
+        /// </summary>
+        [Fact]
+        public async Task WouldDeadlock_ComplexWaitChain_DetectsDeadlock()
+        {
+        // Arrange - create complex wait chain with cycle:
+        // owner-A holds lock:1
+        // owner-B holds lock:2
+        // owner-C holds lock:3
+        // owner-D holds lock:4
+        // owner-A waits for lock:2
+        // owner-B waits for lock:3
+        // owner-C waits for lock:4
+        // owner-D waits for lock:1 -> cycle A->B->C->D->A
+
+        _detector.RecordAcquired("owner-A", "lock:1");
+        _detector.RecordAcquired("owner-B", "lock:2");
+        _detector.RecordAcquired("owner-C", "lock:3");
+        _detector.RecordAcquired("owner-D", "lock:4");
+
+        await _detector.RecordWaitingAsync("owner-A", "lock:2");
+        await _detector.RecordWaitingAsync("owner-B", "lock:3");
+        await _detector.RecordWaitingAsync("owner-C", "lock:4");
+
+        // Act - owner-D tries to wait for lock:1
+        var isDeadlock = _detector.WouldDeadlock("owner-D", "lock:1");
+
+        // Assert - complex 4-node cycle should be detected
+        isDeadlock.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// Tests that RecordWaitEndedAsync removes a waiter and breaks any potential deadlock chains.
+        /// </summary>
+        [Fact]
+        public async Task RecordWaitEndedAsync_RemovesWaiter_BreaksDeadlockChain()
+        {
+        // Arrange - create cycle A->B->A
+        _detector.RecordAcquired("owner-A", "lock:1");
+        _detector.RecordAcquired("owner-B", "lock:2");
+        await _detector.RecordWaitingAsync("owner-A", "lock:2");
+        await _detector.RecordWaitingAsync("owner-B", "lock:1");
+
+        // Verify deadlock exists
+        _detector.WouldDeadlock("owner-B", "lock:1").Should().BeTrue();
+
+        // Act - owner-A ends wait for lock:2
+        await _detector.RecordWaitEndedAsync("owner-A", "lock:2", 500);
+
+        // Assert - cycle is broken, no deadlock
+        var isDeadlock = _detector.WouldDeadlock("owner-B", "lock:1");
+        isDeadlock.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Tests that WouldDeadlock handles empty wait chains correctly.
+        /// </summary>
+        [Fact]
+        public void WouldDeadlock_EmptyWaitChain_ReturnsFalse()
+        {
+        // Act - no locks held, no waiters
+        var isDeadlock = _detector.WouldDeadlock("owner-A", "lock:1");
+
+        // Assert - empty chain should not be a deadlock
+        isDeadlock.Should().BeFalse();
+        }
 }
