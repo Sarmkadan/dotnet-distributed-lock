@@ -7,6 +7,7 @@
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Exceptions;
 using SarmKadan.DistributedLock.Models;
+using System.Collections.Concurrent;
 
 namespace SarmKadan.DistributedLock.Services;
 
@@ -15,10 +16,9 @@ namespace SarmKadan.DistributedLock.Services;
 /// </summary>
 public sealed class FencingTokenService
 {
-    private readonly Dictionary<string, FencingToken> _tokens = new();
-    private readonly ReaderWriterLockSlim _lockSlim = new();
+    private readonly ConcurrentDictionary<string, FencingToken> _tokens = new();
+    private readonly ConcurrentDictionary<string, long> _sequenceCounters = new();
     private readonly ILogger<FencingTokenService> _logger;
-    private long _sequenceCounter = 0;
 
     public FencingTokenService(ILogger<FencingTokenService> logger)
     {
@@ -28,102 +28,77 @@ public sealed class FencingTokenService
     // Issues a new fencing token for a lock
     public FencingToken IssueToken(string lockKey)
     {
-        _lockSlim.EnterWriteLock();
-        try
-        {
-            var sequenceNumber = Interlocked.Increment(ref _sequenceCounter);
-            var token = new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
-
-            _tokens[lockKey] = token;
-            _logger.LogDebug("Issued fencing token for {LockKey}: {Token}", lockKey, token);
-            return token;
-        }
-        finally
-        {
-            _lockSlim.ExitWriteLock();
-        }
+        var sequenceNumber = _sequenceCounters.AddOrUpdate(
+            lockKey,
+            key => 1L,
+            (key, current) => current + 1
+        );
+        var token = new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
+        _tokens[lockKey] = token;
+        _logger.LogDebug("Issued fencing token for {LockKey}: {Token}", lockKey, token);
+        return token;
     }
 
     // Validates a fencing token against the current token for a lock
     public bool ValidateToken(string lockKey, FencingToken providedToken)
     {
-        _lockSlim.EnterReadLock();
-        try
-        {
-            if (!_tokens.TryGetValue(lockKey, out var currentToken))
-                return false;
+        if (!_tokens.TryGetValue(lockKey, out var currentToken))
+            return false;
 
-            var isValid = providedToken.IsGreaterThan(currentToken) || providedToken.Equals(currentToken);
-            if (!isValid)
-            {
-                _logger.LogWarning(
-                    "Fencing token validation failed for {LockKey}. Provided: {ProvidedToken}, Current: {CurrentToken}",
-                    lockKey, providedToken, currentToken
-                );
-            }
-            return isValid;
-        }
-        finally
+        var isValid = providedToken.IsGreaterThan(currentToken) || providedToken.Equals(currentToken);
+        if (!isValid)
         {
-            _lockSlim.ExitReadLock();
+            _logger.LogWarning(
+                "Fencing token validation failed for {LockKey}. Provided: {ProvidedToken}, Current: {CurrentToken}",
+                lockKey, providedToken, currentToken
+            );
         }
+        return isValid;
     }
 
     // Gets the current fencing token for a lock
     public FencingToken? GetToken(string lockKey)
     {
-        _lockSlim.EnterReadLock();
-        try
-        {
-            _tokens.TryGetValue(lockKey, out var token);
-            return token;
-        }
-        finally
-        {
-            _lockSlim.ExitReadLock();
-        }
+        _tokens.TryGetValue(lockKey, out var token);
+        return token;
     }
 
     // Revokes a fencing token (typically when lock is released)
     public void RevokeToken(string lockKey)
     {
-        _lockSlim.EnterWriteLock();
-        try
-        {
-            if (_tokens.Remove(lockKey))
-            {
-                _logger.LogDebug("Revoked fencing token for {LockKey}", lockKey);
-            }
-        }
-        finally
-        {
-            _lockSlim.ExitWriteLock();
-        }
+        _tokens.TryRemove(lockKey, out _);
+        _logger.LogDebug("Revoked fencing token for {LockKey}", lockKey);
     }
 
     // Increments the token sequence (creates a new token generation)
     public FencingToken IncrementToken(string lockKey)
     {
-        _lockSlim.EnterWriteLock();
-        try
-        {
-            if (_tokens.TryGetValue(lockKey, out var currentToken))
+        // Use AddOrUpdate to atomically get or create the token and update the sequence counter
+        var newToken = _tokens.AddOrUpdate(
+            lockKey,
+            key =>
             {
-                var newToken = currentToken.IncrementSequence();
-                _tokens[lockKey] = newToken;
-                _logger.LogDebug("Incremented fencing token for {LockKey}", lockKey);
-                return newToken;
+                // Key doesn't exist - create initial token with sequence number 1
+                var sequenceNumber = _sequenceCounters.AddOrUpdate(
+                    key,
+                    _ => 1L,
+                    (_, current) => current + 1
+                );
+                return new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
+            },
+            (key, existingToken) =>
+            {
+                // Key exists - increment the sequence number atomically
+                var newSequenceNumber = _sequenceCounters.AddOrUpdate(
+                    key,
+                    _ => existingToken.SequenceNumber + 1,
+                    (_, current) => current + 1
+                );
+                return new FencingToken(Guid.NewGuid().ToString("N")[..16], newSequenceNumber);
             }
-
-            var sequenceNumber = Interlocked.Increment(ref _sequenceCounter);
-            var token = new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
-            _tokens[lockKey] = token;
-            return token;
-        }
-        finally
-        {
-            _lockSlim.ExitWriteLock();
-        }
+        );
+        _logger.LogDebug("Incremented fencing token for {LockKey}", lockKey);
+        return newToken;
     }
 
     // Validates a token and throws an exception if invalid
@@ -142,29 +117,13 @@ public sealed class FencingTokenService
     // Checks whether a fencing token has been issued (and not yet revoked) for a resource
     public bool IsResourceLocked(string lockKey)
     {
-        _lockSlim.EnterReadLock();
-        try
-        {
-            return _tokens.ContainsKey(lockKey);
-        }
-        finally
-        {
-            _lockSlim.ExitReadLock();
-        }
+        return _tokens.ContainsKey(lockKey);
     }
 
     // Clears all tokens (typically for testing)
     public void ClearAllTokens()
     {
-        _lockSlim.EnterWriteLock();
-        try
-        {
-            _tokens.Clear();
-            _logger.LogInformation("Cleared all fencing tokens");
-        }
-        finally
-        {
-            _lockSlim.ExitWriteLock();
-        }
+        _tokens.Clear();
+        _logger.LogInformation("Cleared all fencing tokens");
     }
 }
