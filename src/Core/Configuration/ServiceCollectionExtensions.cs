@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,7 +55,8 @@ public static class ServiceCollectionExtensions
             options.RetryPolicyMaxRetries,
             TimeSpan.FromMilliseconds(options.RetryPolicyInitialDelayMs),
             TimeSpan.FromMilliseconds(options.RetryPolicyMaxDelayMs),
-            options.RetryPolicyJitterFactor);
+            options.RetryPolicyJitterFactor
+        );
 
         return services.AddDistributedLocking(retryPolicy, options);
     }
@@ -75,8 +76,7 @@ public static class ServiceCollectionExtensions
     /// <example>
     /// <code>
     /// // Plug in a custom Polly-based retry policy:
-    /// services.AddDistributedLocking(new PollyLockRetryPolicy(), options =>
-    /// {
+    /// services.AddDistributedLocking(new PollyLockRetryPolicy(), options => {
     ///     options.BackendType = BackendType.Redis;
     ///     options.ConnectionString = "localhost:6379";
     /// });

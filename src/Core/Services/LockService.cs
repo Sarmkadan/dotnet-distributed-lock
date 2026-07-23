@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Enums;
@@ -270,6 +270,25 @@ public sealed class LockService : ILockService
             _logger.LogError(ex, "Error retrieving all active locks");
             return Enumerable.Empty<Lock>();
         }
+    }
+
+    public async Task<LockHandle> AcquireWithRenewalAsync(
+        string lockKey,
+        string ownerId,
+        LockAcquisitionOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var effectiveOptions = options ?? new LockAcquisitionOptions();
+        effectiveOptions.Validate();
+
+        // Acquire the lock first
+        var @lock = await AcquireAsync(lockKey, ownerId, null, cancellationToken);
+
+        // Calculate renewal interval based on lock duration
+        var renewalInterval = TimeSpan.FromTicks(@lock.Duration.Ticks * (long)effectiveOptions.RenewalFraction);
+
+        // Create the handle with auto-renewal
+        return new LockHandle(this, @lock, renewalInterval, @lock.Duration);
     }
 
     public LockMetrics GetMetrics() => _metrics;

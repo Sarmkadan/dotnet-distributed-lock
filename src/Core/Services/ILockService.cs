@@ -44,6 +44,22 @@ public interface ILockService
         CancellationToken cancellationToken = default
     );
 
+/// <summary>
+/// Acquires a lock with automatic renewal support.
+/// </summary>
+/// <param name="lockKey">The unique identifier for the resource.</param>
+/// <param name="ownerId">The unique identifier for the lock owner.</param>
+/// <param name="options">The acquisition options including renewal settings.</param>
+/// <param name="cancellationToken">The cancellation token.</param>
+/// <returns>A handle that provides access to the lock and renewal monitoring.</returns>
+/// <exception cref="LockAcquisitionException">Thrown if the lock cannot be acquired.</exception>
+Task<LockHandle> AcquireWithRenewalAsync(
+    string lockKey,
+    string ownerId,
+    LockAcquisitionOptions? options = null,
+    CancellationToken cancellationToken = default
+);
+
     /// <summary>
     /// Renews an existing lock.
     /// </summary>

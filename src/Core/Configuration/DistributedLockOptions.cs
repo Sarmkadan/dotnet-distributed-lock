@@ -2,7 +2,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using SarmKadan.DistributedLock.Enums;
 
@@ -33,6 +33,10 @@ public class DistributedLockOptions
     public int RetryPolicyInitialDelayMs { get; set; } = Constants.LockConstants.DefaultRetryDelayMilliseconds;
     public int RetryPolicyMaxDelayMs { get; set; } = Constants.LockConstants.MaximumRetryDelayMilliseconds;
     public double RetryPolicyJitterFactor { get; set; } = 0.1;
+
+    // Renewal policy settings
+    public double DefaultRenewalFraction { get; set; } = 0.33;
+    public int DefaultMaxRenewals { get; set; } = 3;
 
     /// <summary>
     /// Validates the configuration options.
@@ -67,6 +71,12 @@ public class DistributedLockOptions
 
         if (MaxConcurrentLocks <= 0)
             errors.Add("Max concurrent locks must be greater than zero.");
+
+        if (DefaultRenewalFraction <= 0.01 || DefaultRenewalFraction >= 0.99)
+            errors.Add("Default renewal fraction must be between 0.01 and 0.99.");
+
+        if (DefaultMaxRenewals < 0)
+            errors.Add("Default max renewals must be non-negative.");
 
         return errors;
     }
