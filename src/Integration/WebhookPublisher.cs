@@ -42,7 +42,11 @@ internal sealed class EndpointCircuitState
     }
 
     /// <summary>
-    /// Records a failed delivery, tripping the circuit once the given threshold is reached.
+    /// Records a failed delivery, tripping (or re-tripping) the circuit once the given
+    /// threshold is reached. Every qualifying failure - including one that occurs during
+    /// a half-open trial call after the previous reset window has already elapsed - moves
+    /// the open timestamp forward, so a still-unhealthy endpoint keeps the circuit open
+    /// instead of silently falling back to always-closed after the first trip.
     /// </summary>
     /// <param name="failureThreshold">Number of consecutive failures required to open the circuit.</param>
     public void RecordFailure(int failureThreshold)
@@ -50,7 +54,7 @@ internal sealed class EndpointCircuitState
         var failures = Interlocked.Increment(ref _consecutiveFailures);
         if (failures >= failureThreshold)
         {
-            Interlocked.CompareExchange(ref _openedAtTicks, DateTime.UtcNow.Ticks, 0);
+            Interlocked.Exchange(ref _openedAtTicks, DateTime.UtcNow.Ticks);
         }
     }
 
