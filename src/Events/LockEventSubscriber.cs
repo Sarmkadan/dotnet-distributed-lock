@@ -8,6 +8,7 @@ namespace SarmKadan.DistributedLock.Events;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Services;
 
 /// <summary>
 /// Base class for subscribing to lock events.
@@ -144,13 +145,24 @@ public sealed class LoggingLockEventSubscriber : LockEventSubscriber
 /// </summary>
 public sealed class MetricsTrackingEventSubscriber : LockEventSubscriber
 {
+    private readonly IMetricsStore _metricsStore;
     private long _acquisitions;
     private long _releases;
     private long _failures;
     private long _contentionEvents;
 
-    public MetricsTrackingEventSubscriber(ILogger<MetricsTrackingEventSubscriber> logger) : base(logger)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsTrackingEventSubscriber"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used for diagnostic output.</param>
+    /// <param name="metricsStore">
+    /// The store that per-lock metrics are written to as events are observed. When omitted, a private
+    /// <see cref="InMemoryMetricsStore"/> is used, matching the previous self-contained behavior.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null.</exception>
+    public MetricsTrackingEventSubscriber(ILogger<MetricsTrackingEventSubscriber> logger, IMetricsStore? metricsStore = null) : base(logger)
     {
+        _metricsStore = metricsStore ?? new InMemoryMetricsStore();
     }
 
     public override async Task RegisterAsync(ILockEventPublisher publisher)
@@ -166,27 +178,35 @@ public sealed class MetricsTrackingEventSubscriber : LockEventSubscriber
     private async Task OnLockAcquired(LockAcquiredEvent @event)
     {
         Interlocked.Increment(ref _acquisitions);
+        _metricsStore.RecordAcquisitionAttempt(@event.LockName, successful: true, holdTimeMs: 0, contentionDetected: false);
         await Task.CompletedTask;
     }
 
     private async Task OnLockReleased(LockReleasedEvent @event)
     {
         Interlocked.Increment(ref _releases);
+        _metricsStore.RecordAcquisitionAttempt(@event.LockName, successful: true, holdTimeMs: (long)@event.HeldDuration.TotalMilliseconds, contentionDetected: false);
         await Task.CompletedTask;
     }
 
     private async Task OnAcquisitionFailed(LockAcquisitionFailedEvent @event)
     {
         Interlocked.Increment(ref _failures);
+        _metricsStore.RecordAcquisitionAttempt(@event.LockName, successful: false, holdTimeMs: 0, contentionDetected: false);
         await Task.CompletedTask;
     }
 
     private async Task OnContention(LockContentionEvent @event)
     {
         Interlocked.Increment(ref _contentionEvents);
+        _metricsStore.RecordAcquisitionAttempt(@event.LockName, successful: false, holdTimeMs: 0, contentionDetected: true);
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Gets a snapshot of the global, in-process event counters tracked by this subscriber.
+    /// </summary>
+    /// <returns>An <see cref="EventMetrics"/> snapshot of acquisitions, releases, failures and contention events.</returns>
     public EventMetrics GetMetrics()
     {
         return new EventMetrics

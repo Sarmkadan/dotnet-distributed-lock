@@ -27,11 +27,9 @@ Returns performance-related telemetry across all locks, such as throughput and l
 - **Returns**: `ActionResult<PerformanceMetricsResponse>` – A response containing performance indicators such as operations per second, latency percentiles, and resource utilization.
 - **Throws**: May throw under high contention or if performance counters are unavailable.
 
-### `ActionResult RecordMetrics()`
-Records current system state into metrics storage. Typically called periodically by a background service.
-
-- **Returns**: `ActionResult` – HTTP 200 on success; 500 if recording fails.
-- **Throws**: No expected exceptions under normal operation.
+Metrics are written exclusively by `MetricsTrackingEventSubscriber` as lock events occur, through the
+shared `IMetricsStore`. There is no HTTP endpoint for submitting metrics; the controller only reads
+from the store, so it cannot be used to inject arbitrary figures.
 
 ### `ActionResult ResetMetrics()`
 Resets all tracked metrics to zero, clearing historical data.

@@ -7,26 +7,39 @@
 namespace SarmKadan.DistributedLock.Api.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
-using SarmKadan.DistributedLock.Core.Models;
-using SarmKadan.DistributedLock.Core.Services;
+using SarmKadan.DistributedLock.Services;
 
 /// <summary>
 /// Metrics and monitoring endpoints for distributed lock operations.
 /// Provides insights into lock usage patterns, contention, and performance.
 /// </summary>
+/// <remarks>
+/// This controller is read-only: metrics are written exclusively by
+/// <see cref="SarmKadan.DistributedLock.Events.MetricsTrackingEventSubscriber"/> as lock events occur,
+/// via the shared <see cref="IMetricsStore"/>. There is no HTTP endpoint for submitting metrics,
+/// so an unauthenticated client cannot poison the reported figures.
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public sealed class MetricsController : ControllerBase
 {
-    private readonly ILockService _lockService;
+    private readonly IMetricsStore _metricsStore;
     private readonly ILogger<MetricsController> _logger;
-    private static readonly Dictionary<string, LockMetrics> _metricsCache = new();
 
-    public MetricsController(ILockService lockService, ILogger<MetricsController> logger)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsController"/> class.
+    /// </summary>
+    /// <param name="metricsStore">The store metrics are read from.</param>
+    /// <param name="logger">The logger used for diagnostic output.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metricsStore"/> or <paramref name="logger"/> is null.</exception>
+    public MetricsController(IMetricsStore metricsStore, ILogger<MetricsController> logger)
     {
-        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(metricsStore);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _metricsStore = metricsStore;
+        _logger = logger;
     }
 
     /// <summary>
@@ -39,11 +52,13 @@ public sealed class MetricsController : ControllerBase
     {
         _logger.LogInformation("Retrieving system-wide lock metrics");
 
-        var totalAttempts = _metricsCache.Values.Sum(m => m.AcquisitionAttempts);
-        var totalSuccesses = _metricsCache.Values.Sum(m => m.SuccessfulAcquisitions);
-        var totalFailures = _metricsCache.Values.Sum(m => m.FailedAcquisitions);
-        var avgHoldTime = _metricsCache.Values.Any()
-            ? _metricsCache.Values.Average(m => m.AverageHoldTimeMs)
+        var allMetrics = _metricsStore.GetAllLockMetrics().Values;
+
+        var totalAttempts = allMetrics.Sum(m => m.AcquisitionAttempts);
+        var totalSuccesses = allMetrics.Sum(m => m.SuccessfulAcquisitions);
+        var totalFailures = allMetrics.Sum(m => m.FailedAcquisitions);
+        var avgHoldTime = allMetrics.Any()
+            ? allMetrics.Average(m => m.AverageHoldTimeMs)
             : 0;
 
         return Ok(new SystemMetricsResponse
@@ -53,7 +68,7 @@ public sealed class MetricsController : ControllerBase
             FailedAcquisitions = totalFailures,
             SuccessRate = totalAttempts > 0 ? (double)totalSuccesses / totalAttempts * 100 : 0,
             AverageHoldTimeMs = avgHoldTime,
-            ActiveLocks = _metricsCache.Count,
+            ActiveLocks = allMetrics.Count,
             Timestamp = DateTime.UtcNow
         });
     }
@@ -67,9 +82,11 @@ public sealed class MetricsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult<LockMetricsResponse> GetLockMetrics([FromRoute] string lockName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(lockName);
+
         _logger.LogInformation("Retrieving metrics for lock: {LockName}", lockName);
 
-        if (!_metricsCache.TryGetValue(lockName, out var metrics))
+        if (!_metricsStore.TryGetLockMetrics(lockName, out var metrics) || metrics is null)
             return NotFound($"No metrics found for lock: {lockName}");
 
         return Ok(new LockMetricsResponse
@@ -98,7 +115,10 @@ public sealed class MetricsController : ControllerBase
     {
         _logger.LogInformation("Retrieving performance metrics");
 
-        var holdTimes = _metricsCache.Values.Select(m => m.AverageHoldTimeMs).OrderBy(x => x).ToList();
+        var holdTimes = _metricsStore.GetAllLockMetrics().Values
+            .Select(m => m.AverageHoldTimeMs)
+            .OrderBy(x => x)
+            .ToList();
 
         return Ok(new PerformanceMetricsResponse
         {
@@ -116,43 +136,6 @@ public sealed class MetricsController : ControllerBase
     }
 
     /// <summary>
-    /// Records metrics for a lock operation.
-    /// Called internally by the lock service to track statistics.
-    /// </summary>
-    [HttpPost("record")]
-    [ApiExplorerSettings(IgnoreApi = true)]
-    public ActionResult RecordMetrics([FromBody] RecordMetricsRequest request)
-    {
-        if (string.IsNullOrEmpty(request.LockName))
-            return BadRequest("Lock name is required");
-
-        if (!_metricsCache.TryGetValue(request.LockName, out var metrics))
-        {
-            metrics = new LockMetrics();
-            _metricsCache[request.LockName] = metrics;
-        }
-
-        metrics.AcquisitionAttempts++;
-        if (request.Successful)
-        {
-            metrics.SuccessfulAcquisitions++;
-        }
-        else
-        {
-            metrics.FailedAcquisitions++;
-        }
-
-        metrics.AverageHoldTimeMs = (metrics.AverageHoldTimeMs + request.HoldTimeMs) / 2;
-        metrics.MaxHoldTimeMs = Math.Max(metrics.MaxHoldTimeMs, request.HoldTimeMs);
-        metrics.LastAcquisitionTime = DateTime.UtcNow;
-
-        if (request.ContentionDetected)
-            metrics.ContentionCount++;
-
-        return Ok();
-    }
-
-    /// <summary>
     /// Resets all collected metrics.
     /// Useful for starting fresh observations in testing or debugging scenarios.
     /// </summary>
@@ -161,50 +144,94 @@ public sealed class MetricsController : ControllerBase
     public ActionResult ResetMetrics()
     {
         _logger.LogWarning("Metrics reset triggered");
-        _metricsCache.Clear();
+        _metricsStore.Reset();
         return Ok(new { Message = "All metrics have been reset" });
     }
 }
 
+/// <summary>
+/// Response payload describing system-wide lock metrics.
+/// </summary>
 public record SystemMetricsResponse
 {
+    /// <summary>Gets the total number of lock operations recorded across all locks.</summary>
     public long TotalLockOperations { get; init; }
+
+    /// <summary>Gets the total number of successful acquisitions across all locks.</summary>
     public long SuccessfulAcquisitions { get; init; }
+
+    /// <summary>Gets the total number of failed acquisitions across all locks.</summary>
     public long FailedAcquisitions { get; init; }
+
+    /// <summary>Gets the overall acquisition success rate, as a percentage.</summary>
     public double SuccessRate { get; init; }
+
+    /// <summary>Gets the average hold time, in milliseconds, across all locks.</summary>
     public double AverageHoldTimeMs { get; init; }
+
+    /// <summary>Gets the number of distinct locks currently tracked.</summary>
     public int ActiveLocks { get; init; }
+
+    /// <summary>Gets the timestamp at which this response was generated.</summary>
     public DateTime Timestamp { get; init; }
 }
 
+/// <summary>
+/// Response payload describing metrics for a single named lock.
+/// </summary>
 public record LockMetricsResponse
 {
+    /// <summary>Gets the name of the lock these metrics describe.</summary>
     public required string LockName { get; init; }
+
+    /// <summary>Gets the total number of acquisition attempts recorded for the lock.</summary>
     public long AcquisitionAttempts { get; init; }
+
+    /// <summary>Gets the number of successful acquisition attempts recorded for the lock.</summary>
     public long SuccessfulAcquisitions { get; init; }
+
+    /// <summary>Gets the number of failed acquisition attempts recorded for the lock.</summary>
     public long FailedAcquisitions { get; init; }
+
+    /// <summary>Gets the acquisition success rate for the lock, as a percentage.</summary>
     public double SuccessRate { get; init; }
+
+    /// <summary>Gets the running average hold time, in milliseconds, for the lock.</summary>
     public double AverageHoldTimeMs { get; init; }
+
+    /// <summary>Gets the maximum observed hold time, in milliseconds, for the lock.</summary>
     public long MaxHoldTimeMs { get; init; }
+
+    /// <summary>Gets the total number of contention events recorded for the lock.</summary>
     public long TotalContentionEvents { get; init; }
+
+    /// <summary>Gets the timestamp of the most recent acquisition, if any.</summary>
     public DateTime? LastAcquiredAt { get; init; }
+
+    /// <summary>Gets the timestamp at which this response was generated.</summary>
     public DateTime Timestamp { get; init; }
 }
 
+/// <summary>
+/// Response payload describing performance-related latency metrics.
+/// </summary>
 public record PerformanceMetricsResponse
 {
+    /// <summary>Gets the average acquisition-related time, in milliseconds, across all locks.</summary>
     public double AverageAcquisitionTimeMs { get; init; }
-    public double MedianAcquisitionTimeMs { get; init; }
-    public double P95AcquisitionTimeMs { get; init; }
-    public double P99AcquisitionTimeMs { get; init; }
-    public double MaxAcquisitionTimeMs { get; init; }
-    public DateTime Timestamp { get; init; }
-}
 
-public record RecordMetricsRequest
-{
-    public required string LockName { get; init; }
-    public bool Successful { get; init; }
-    public long HoldTimeMs { get; init; }
-    public bool ContentionDetected { get; init; }
+    /// <summary>Gets the median acquisition-related time, in milliseconds, across all locks.</summary>
+    public double MedianAcquisitionTimeMs { get; init; }
+
+    /// <summary>Gets the 95th percentile acquisition-related time, in milliseconds.</summary>
+    public double P95AcquisitionTimeMs { get; init; }
+
+    /// <summary>Gets the 99th percentile acquisition-related time, in milliseconds.</summary>
+    public double P99AcquisitionTimeMs { get; init; }
+
+    /// <summary>Gets the maximum observed acquisition-related time, in milliseconds.</summary>
+    public double MaxAcquisitionTimeMs { get; init; }
+
+    /// <summary>Gets the timestamp at which this response was generated.</summary>
+    public DateTime Timestamp { get; init; }
 }

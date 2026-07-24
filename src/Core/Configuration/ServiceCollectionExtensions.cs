@@ -117,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LockMonitor>();
         services.AddSingleton<Events.ILockEventBus, Events.InMemoryLockEventBus>();
         services.AddSingleton<IDeadlockDetector, DeadlockDetector>();
+        services.AddSingleton<IMetricsStore, InMemoryMetricsStore>();
 
         return services;
     }
