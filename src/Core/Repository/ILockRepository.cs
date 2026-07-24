@@ -110,4 +110,26 @@ public interface ILockRepository
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the token is valid; otherwise, false.</returns>
     Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves a point-in-time snapshot of locks that are currently expired.
+    /// Intended for callers that need to inspect an expired lock's state (e.g. its
+    /// <c>ExpiresAt</c> version) before deleting it, to avoid deleting a lock that
+    /// gets renewed concurrently after the snapshot is taken.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of expired locks as observed at the time of the call.</returns>
+    Task<IEnumerable<Lock>> GetExpiredLocksAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a lock only if its current expiration timestamp still matches
+    /// <paramref name="expectedExpiresAt"/>, acting as a compare-and-delete guard.
+    /// If the lock was renewed (or otherwise updated) after being observed, the
+    /// expiration timestamp will no longer match and the delete is skipped.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="expectedExpiresAt">The expiration timestamp observed when the lock was read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock still matched and was deleted; otherwise, false.</returns>
+    Task<bool> DeleteLockIfExpirationMatchesAsync(string key, DateTime expectedExpiresAt, CancellationToken cancellationToken = default);
 }

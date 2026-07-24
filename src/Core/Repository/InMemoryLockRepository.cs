@@ -197,6 +197,44 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <inheritdoc/>
+    public Task<IEnumerable<Lock>> GetExpiredLocksAsync(CancellationToken cancellationToken = default)
+    {
+        _lockSlim.EnterReadLock();
+        try
+        {
+            var expiredLocks = _locks.Values.Where(l => l.IsExpired).ToList();
+            return Task.FromResult(expiredLocks.AsEnumerable());
+        }
+        finally
+        {
+            _lockSlim.ExitReadLock();
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is null or empty.</exception>
+    public Task<bool> DeleteLockIfExpirationMatchesAsync(string key, DateTime expectedExpiresAt, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        _lockSlim.EnterWriteLock();
+        try
+        {
+            if (_locks.TryGetValue(key, out var current) && current.ExpiresAt == expectedExpiresAt)
+            {
+                _locks.Remove(key);
+                return Task.FromResult(true);
+            }
+
+            return Task.FromResult(false);
+        }
+        finally
+        {
+            _lockSlim.ExitWriteLock();
+        }
+    }
+
     public Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         _lockSlim.EnterWriteLock();

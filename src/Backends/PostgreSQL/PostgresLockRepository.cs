@@ -384,6 +384,73 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Lock>> GetExpiredLocksAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await EnsureInitializedAsync();
+            var locks = new List<Lock>();
+
+            await using (var connection = new NpgsqlConnection(_connectionString))
+            {
+                await connection.OpenAsync(cancellationToken);
+                await using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at <= now()";
+
+                    await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        while (await reader.ReadAsync(cancellationToken))
+                        {
+                            var json = reader.GetString(0);
+                            if (JsonSerializer.Deserialize<Lock>(json) is Lock @lock)
+                                locks.Add(@lock);
+                        }
+                    }
+                }
+            }
+
+            return locks;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving expired locks from PostgreSQL");
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is null or empty.</exception>
+    public async Task<bool> DeleteLockIfExpirationMatchesAsync(string key, DateTime expectedExpiresAt, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        try
+        {
+            await EnsureInitializedAsync();
+
+            await using (var connection = new NpgsqlConnection(_connectionString))
+            {
+                await connection.OpenAsync(cancellationToken);
+                await using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND expires_at = @expected";
+                    command.Parameters.AddWithValue("@key", key);
+                    command.Parameters.AddWithValue("@expected", expectedExpiresAt);
+
+                    var result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    return result > 0;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting lock with compare-and-delete guard from PostgreSQL: {LockKey}", key);
+            throw;
+        }
+    }
+
     public async Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         try

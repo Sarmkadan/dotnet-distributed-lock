@@ -8,6 +8,7 @@ namespace SarmKadan.DistributedLock.Workers;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Exceptions;
 using SarmKadan.DistributedLock.Repository;
 
 /// <summary>
@@ -51,15 +52,35 @@ public class LockCleanupWorker : BackgroundService
             try
             {
                 await PerformCleanupAsync(stoppingToken);
-                await Task.Delay(_options.CleanupIntervalMs, stoppingToken);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
+            catch (LockExpiredException ex)
+            {
+                // Benign: a lock expired again between being read and being deleted
+                // (e.g. lost the compare-and-delete race to another sweep). Not a
+                // backend failure, so log at a lower level and keep the schedule.
+                _logger.LogDebug(ex, "Lock expired concurrently during cleanup sweep for {LockKey}", ex.LockKey);
+            }
             catch (Exception ex)
             {
+                // Transient backend error (connection drop, timeout, etc). Log and
+                // keep the loop alive - a single failed sweep must not crash the worker.
                 _logger.LogError(ex, "Error during lock cleanup");
+            }
+
+            // Always wait out the configured interval between sweeps, whether the
+            // previous sweep succeeded or failed, so a failing backend doesn't turn
+            // this into a tight retry loop.
+            try
+            {
+                await Task.Delay(_options.CleanupIntervalMs, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
         }
 
@@ -68,23 +89,49 @@ public class LockCleanupWorker : BackgroundService
 
     /// <summary>
     /// Performs the cleanup operation by deleting expired locks from the repository.
+    /// Uses a read-then-compare-and-delete sequence per lock: the current expired
+    /// locks are snapshotted first, then each one is deleted only if its expiration
+    /// timestamp still matches what was observed. This closes the race where a
+    /// holder renews a lock between the sweep reading it as expired and the sweep
+    /// deleting it, which would otherwise delete a now-live lock out from under its owner.
     /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     private async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Starting lock cleanup sweep");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var cleaned = await _repository.DeleteExpiredLockAsync(cancellationToken);
+        var expiredLocks = await _repository.GetExpiredLocksAsync(cancellationToken);
+
+        var cleaned = 0;
+        var skipped = 0;
+
+        foreach (var expiredLock in expiredLocks)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var deleted = await _repository.DeleteLockIfExpirationMatchesAsync(
+                expiredLock.Key,
+                expiredLock.ExpiresAt,
+                cancellationToken);
+
+            if (deleted)
+                cleaned++;
+            else
+                skipped++;
+        }
+
         stopwatch.Stop();
 
         Interlocked.Add(ref _cleanedCount, cleaned);
 
-        if (cleaned > 0 || _options.VerboseLogging)
+        if (cleaned > 0 || skipped > 0 || _options.VerboseLogging)
         {
             _logger.LogInformation(
-                "Lock cleanup completed: cleaned {Count} locks in {ElapsedMs}ms",
+                "Lock cleanup completed: cleaned {Count} locks, skipped {SkippedCount} renewed-in-flight locks, in {ElapsedMs}ms",
                 cleaned,
+                skipped,
                 stopwatch.Elapsed.TotalMilliseconds);
         }
     }

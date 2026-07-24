@@ -256,6 +256,67 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Lock>> GetExpiredLocksAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var server = _redis.GetServer(_redis.GetEndPoints().First());
+            var keys = server.Keys(pattern: $"{_keyPrefix}*");
+            var expiredLocks = new List<Lock>();
+
+            foreach (var key in keys)
+            {
+                var value = await _database.StringGetAsync(key);
+                if (!value.IsNull)
+                {
+                    var @lock = DeserializeLock(value.ToString());
+                    if (@lock is not null && @lock.IsExpired)
+                        expiredLocks.Add(@lock);
+                }
+            }
+
+            return expiredLocks;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving expired locks from Redis");
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is null or empty.</exception>
+    public async Task<bool> DeleteLockIfExpirationMatchesAsync(string key, DateTime expectedExpiresAt, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        try
+        {
+            var redisKey = GetRedisKey(key);
+            var value = await _database.StringGetAsync(redisKey);
+            if (value.IsNull)
+                return false;
+
+            var current = DeserializeLock(value.ToString());
+            if (current is null || current.ExpiresAt != expectedExpiresAt)
+                return false;
+
+            // Compare-and-delete: only commit the delete if the value in Redis is still
+            // exactly what we just read. If the holder renewed the lock in between
+            // (changing its serialized value), the condition fails and nothing is deleted.
+            var transaction = _database.CreateTransaction();
+            transaction.AddCondition(Condition.StringEqual(redisKey, value));
+            _ = transaction.KeyDeleteAsync(redisKey);
+            return await transaction.ExecuteAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting lock with compare-and-delete guard from Redis: {LockKey}", key);
+            throw;
+        }
+    }
+
     public async Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         try
