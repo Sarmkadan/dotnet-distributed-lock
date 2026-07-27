@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# This wrapper script exists to satisfy the build command used by the
-# task-factory tooling, which expects a build.sh at the path:
-#   /home/redrocket/task-factory/workdir/sql-index-advisor/build.sh
-#
-# The actual build logic for the dotnet-distributed-lock project lives in
-# the repository root's build.sh. We simply delegate to that script.
+# Root build script for the dotnet-distributed-lock repository.
+# It restores NuGet packages, builds the solution, and runs all tests.
 
-# Resolve the repository root (the directory containing this wrapper).
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+set -e
 
-# Path to the real build script.
-REAL_BUILD_SCRIPT="${REPO_ROOT}/build.sh"
-
-if [[ ! -x "${REAL_BUILD_SCRIPT}" ]]; then
-    echo "Error: Real build script not found or not executable at ${REAL_BUILD_SCRIPT}"
+# Verify that the dotnet SDK is available.
+if ! command -v dotnet >/dev/null 2>&1; then
+    echo "Error: dotnet SDK is not installed or not in PATH."
     exit 1
 fi
 
-# Execute the real build script with the same arguments.
-exec "${REAL_BUILD_SCRIPT}" "$@"
+# Restore packages
+dotnet restore
+
+# Build the solution in Release configuration
+dotnet build --configuration Release
+
+# Run all tests without rebuilding
+dotnet test --no-build --configuration Release
+
+# If we reach this point, everything succeeded.
+exit 0
