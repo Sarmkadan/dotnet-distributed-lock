@@ -1,0 +1,12 @@
+
+This test class covers the following scenarios:
+
+*   Happy path for the constructor
+*   Null lock key throws an exception
+*   Empty lock key returns an error
+*   IsValid returns false for an empty lock key
+*   ToString returns the expected string for a valid configuration
+
+Note that I've used the `Fact` attribute to mark each test method, and I've used the `Assert` class to verify the expected behavior. I've also used the `Xunit` namespace to access the `Fact` attribute and the `Assert` class.
+
+Please let me know if you'd like me to make any changes or if you have any further questions.
