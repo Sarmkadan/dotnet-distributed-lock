@@ -34,12 +34,7 @@ public sealed class HealthCheckController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult<HealthCheckResponse> Liveness()
     {
-        return Ok(new HealthCheckResponse
-        {
-            Status = "healthy",
-            Timestamp = DateTime.UtcNow,
-            Version = GetAssemblyVersion()
-        });
+        return Ok("healthy".ToHealthCheckResponse());
     }
 
     /// <summary>
@@ -56,31 +51,21 @@ public sealed class HealthCheckController : ControllerBase
             // Test repository connectivity by attempting a lightweight operation
             var testLock = await _repository.GetLockAsync("__health_check__");
 
-            return Ok(new HealthCheckResponse
-            {
-                Status = "ready",
-                Timestamp = DateTime.UtcNow,
-                Version = GetAssemblyVersion(),
-                Details = new HealthDetails { BackendConnected = true }
-            });
+            var details = new HealthDetails { BackendConnected = true };
+            return Ok("ready".ToHealthCheckResponse(details));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Readiness check failed - backend connectivity issue");
 
+            var details = new HealthDetails
+            {
+                BackendConnected = false,
+                ErrorMessage = ex.Message
+            };
             return StatusCode(
                 StatusCodes.Status503ServiceUnavailable,
-                new HealthCheckResponse
-                {
-                    Status = "not_ready",
-                    Timestamp = DateTime.UtcNow,
-                    Version = GetAssemblyVersion(),
-                    Details = new HealthDetails
-                    {
-                        BackendConnected = false,
-                        ErrorMessage = ex.Message
-                    }
-                });
+                "not_ready".ToHealthCheckResponse(details));
         }
     }
 
@@ -98,18 +83,7 @@ public sealed class HealthCheckController : ControllerBase
             var backendHealthy = await VerifyBackendConnectivity();
             var responseTime = DateTime.UtcNow.Subtract(startTime);
 
-            return Ok(new DetailedHealthResponse
-            {
-                Status = backendHealthy ? "healthy" : "degraded",
-                Timestamp = DateTime.UtcNow,
-                Version = GetAssemblyVersion(),
-                ResponseTimeMs = (long)responseTime.TotalMilliseconds,
-                Runtime = new RuntimeInfo
-                {
-                    Framework = ".NET 10.0",
-                    Uptime = TimeSpan.FromMilliseconds(Environment.TickCount64)
-                }
-            });
+            return Ok(backendHealthy.ToDetailedHealthResponse((long)responseTime.TotalMilliseconds));
         }
         catch (Exception ex)
         {
