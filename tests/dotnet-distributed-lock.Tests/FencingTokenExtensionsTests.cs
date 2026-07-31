@@ -176,16 +176,44 @@ public class FencingTokenExtensionsTests
     }
 
     [Fact]
-    public void IsAdjacentTo_HappyPath_ReturnsFalse()
+    public void IsNewerThan_HappyPath_ReturnsTrue()
     {
         // Arrange
-        var token1 = new FencingToken("token1", 1);
-        var token2 = new FencingToken("token2", 3);
+        var token1 = new FencingToken("token1", 1, DateTime.UtcNow.AddMinutes(-1));
+        var token2 = new FencingToken("token2", 2, DateTime.UtcNow);
 
         // Act
-        var result = FencingTokenExtensions.IsAdjacentTo(token1, token2);
+        var result = FencingTokenExtensions.IsNewerThan(token2, token1);
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsExpired_HappyPath_ReturnsTrue()
+    {
+        // Arrange
+        var token = new FencingToken("token", 1, DateTime.UtcNow.AddMinutes(-1));
+        var now = DateTimeOffset.UtcNow;
+
+        // Act
+        var result = FencingTokenExtensions.IsExpired(token, now);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToDisplayString_HappyPath_ReturnsFormattedString()
+    {
+        // Arrange
+        var issuedAt = new DateTime(2026, 7, 31, 12, 0, 0, DateTimeKind.Utc);
+        var token = new FencingToken("token", 1, issuedAt);
+
+        // Act
+        var displayString = FencingTokenExtensions.ToDisplayString(token);
+
+        // Assert
+        displayString.Should().Be("Token: token, Sequence: 1, Issued: 2026-07-31T12:00:00.0000000Z");
     }
 }
