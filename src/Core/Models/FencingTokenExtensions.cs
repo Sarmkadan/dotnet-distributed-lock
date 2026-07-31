@@ -202,5 +202,44 @@ public static class FencingTokenExtensions
         return token.SequenceNumber - other.SequenceNumber;
     }
 
+    /// <summary>
+    /// Determines whether this token was issued after another token.
+    /// </summary>
+    /// <param name="a">The current token.</param>
+    /// <param name="b">The other token to compare with.</param>
+    /// <returns>True if this token's issuance time is after the other; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="a"/> or <paramref name="b"/> is null.</exception>
+    public static bool IsNewerThan(this FencingToken a, FencingToken b)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        ArgumentNullException.ThrowIfNull(b);
+        return a.IssuedAt > b.IssuedAt;
+    }
+
+    /// <summary>
+    /// Determines whether this token is expired relative to the specified time.
+    /// </summary>
+    /// <param name="t">The fencing token.</param>
+    /// <param name="now">The current time to check against.</param>
+    /// <returns>True if the token was issued before the specified time; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="t"/> is null.</exception>
+    public static bool IsExpired(this FencingToken t, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(t);
+        return t.IssuedAt < now.UtcDateTime;
+    }
+
+    /// <summary>
+    /// Gets a display string for the token.
+    /// </summary>
+    /// <param name="t">The fencing token.</param>
+    /// <returns>A formatted display string.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="t"/> is null.</exception>
+    public static string ToDisplayString(this FencingToken t)
+    {
+        ArgumentNullException.ThrowIfNull(t);
+        return $"Token: {t.Token}, Sequence: {t.SequenceNumber}, Issued: {t.IssuedAt:O}";
+    }
+
     private static string GenerateNewToken() => Guid.NewGuid().ToString("N")[..16];
 }
