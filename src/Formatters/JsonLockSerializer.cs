@@ -34,7 +34,8 @@ public class JsonLockSerializer
     /// </summary>
     public static string SerializeLock(Lock @lock)
     {
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Serialize(@lock, _options);
         }
@@ -49,7 +50,8 @@ public class JsonLockSerializer
     /// </summary>
     public static string SerializeLocks(IEnumerable<Lock> locks)
     {
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Serialize(locks.ToList(), _options);
         }
@@ -64,10 +66,12 @@ public class JsonLockSerializer
     /// </summary>
     public static Lock? DeserializeLock(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
+            ArgumentException.ThrowIfNullOrEmpty(json);
+
             return null;
 
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Deserialize<Lock>(json, _options);
         }
@@ -82,10 +86,12 @@ public class JsonLockSerializer
     /// </summary>
     public static List<Lock> DeserializeLocks(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
+            ArgumentException.ThrowIfNullOrEmpty(json);
+
             return new List<Lock>();
 
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Deserialize<List<Lock>>(json, _options) ?? new List<Lock>();
         }
@@ -100,7 +106,8 @@ public class JsonLockSerializer
     /// </summary>
     public static string SerializeMetrics(LockMetrics metrics)
     {
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Serialize(metrics, _options);
         }
@@ -121,7 +128,8 @@ public class JsonLockSerializer
             WriteIndented = true
         };
 
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Serialize(@lock, prettyOptions);
         }
@@ -174,7 +182,8 @@ public class JsonLockSerializer<T> : ILockSerializer<T> where T : class
         if (data is null)
             return string.Empty;
 
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Serialize(data, _options);
         }
@@ -189,7 +198,8 @@ public class JsonLockSerializer<T> : ILockSerializer<T> where T : class
         if (string.IsNullOrWhiteSpace(data))
             return null;
 
-        try
+            ArgumentNullException.ThrowIfNull(lock);
+
         {
             return JsonSerializer.Deserialize<T>(data, _options);
         }
