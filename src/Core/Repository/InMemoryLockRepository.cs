@@ -19,6 +19,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
         _lockSlim.EnterWriteLock();
         try
         {
@@ -41,6 +42,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         _lockSlim.EnterReadLock();
         try
         {
@@ -72,6 +74,8 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
         _lockSlim.EnterReadLock();
         try
         {
@@ -87,6 +91,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@lock);
         _lockSlim.EnterWriteLock();
         try
         {
@@ -105,6 +110,8 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
         _lockSlim.EnterWriteLock();
         try
         {
@@ -123,6 +130,8 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
         _lockSlim.EnterWriteLock();
         try
         {
@@ -142,6 +151,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         _lockSlim.EnterReadLock();
         try
         {
@@ -169,6 +179,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
         _lockSlim.EnterReadLock();
         try
         {
@@ -252,6 +263,7 @@ public sealed class InMemoryLockRepository : ILockRepository
 
     public Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         _lockSlim.EnterReadLock();
         try
         {
