@@ -57,6 +57,7 @@ public class LockAcquisitionTests
     [InlineData("   ")]
     public void Constructor_WithNullOrWhiteSpaceLockKey_ThrowsArgumentException(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         // Act
         var act = () => new LockAcquisition(key, "worker-1", AcquisitionMode.Blocking, TimeSpan.FromSeconds(5));
 
@@ -74,6 +75,7 @@ public class LockAcquisitionTests
     [InlineData("   ")]
     public void Constructor_WithNullOrWhiteSpaceRequesterId_ThrowsArgumentException(string requesterId)
     {
+        ArgumentException.ThrowIfNullOrEmpty(requesterId);
         // Act
         var act = () => new LockAcquisition("resource:db", requesterId, AcquisitionMode.Blocking, TimeSpan.FromSeconds(5));
 
