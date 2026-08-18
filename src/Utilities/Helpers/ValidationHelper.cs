@@ -20,6 +20,7 @@ public static class ValidationHelper
     /// </summary>
     public static void ValidateLockName(string? lockName)
     {
+        ArgumentException.ThrowIfNullOrEmpty("lockName");
         if (string.IsNullOrWhiteSpace(lockName))
             throw new InvalidOperationException("Lock name cannot be null or empty");
 
@@ -69,6 +70,7 @@ public static class ValidationHelper
     /// </summary>
     public static void ValidateOwnerId(string? ownerId)
     {
+        ArgumentException.ThrowIfNullOrEmpty("ownerId");
         if (string.IsNullOrWhiteSpace(ownerId))
             throw new InvalidOperationException("Owner ID cannot be null or empty");
 
@@ -90,6 +92,7 @@ public static class ValidationHelper
     /// </summary>
     public static void ValidateApiKey(string? apiKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty("apiKey");
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("API key is required");
 
@@ -105,6 +108,7 @@ public static class ValidationHelper
     /// </summary>
     public static void ThrowIfAnyErrors(List<string> errors)
     {
+        ArgumentNullException.ThrowIfNull("errors");
         if (errors.Count > 0)
         {
             var message = "Validation failed with " + errors.Count + " error(s):\n" +
@@ -118,6 +122,8 @@ public static class ValidationHelper
     /// </summary>
     public static void ValidateHeaders(IDictionary<string, string> headers, params string[] requiredHeaders)
     {
+        ArgumentNullException.ThrowIfNull("headers");
+        ArgumentNullException.ThrowIfNull("requiredHeaders");
         var missing = requiredHeaders.Where(h => !headers.ContainsKey(h)).ToList();
 
         if (missing.Count > 0)
