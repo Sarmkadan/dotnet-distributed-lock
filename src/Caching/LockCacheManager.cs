@@ -45,8 +45,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
 
     public async Task<Lock?> GetAsync(string lockId)
     {
-        if (string.IsNullOrEmpty(lockId))
-            return null;
+        ArgumentException.ThrowIfNullOrEmpty(lockId);
 
         if (_cache.TryGetValue(lockId, out var cachedLock))
         {
@@ -69,8 +68,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
 
     public async Task SetAsync(Lock @lock)
     {
-        if (@lock is null)
-            return;
+        ArgumentNullException.ThrowIfNull(@lock);
 
         // Enforce size limit by removing least recently used entries
         if (_cache.Count >= _config.MaxCacheSize)
@@ -90,10 +88,9 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
 
     public async Task RemoveAsync(string lockId)
     {
-        if (!string.IsNullOrEmpty(lockId))
-        {
-            _cache.TryRemove(lockId, out _);
-        }
+        ArgumentException.ThrowIfNullOrEmpty(lockId);
+
+        _cache.TryRemove(lockId, out _);
     }
 
     public async Task<List<Lock>> GetAllAsync()
