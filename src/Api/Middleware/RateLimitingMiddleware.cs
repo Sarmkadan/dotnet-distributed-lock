@@ -32,10 +32,11 @@ public sealed class RateLimitingMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var clientIp = GetClientIp(context);
+        _logger.LogInformation("Rate limiting middleware processing request for client {ClientIp}", clientIp);
 
         if (IsRateLimited(clientIp))
         {
-            _logger.LogWarning("Rate limit exceeded for client: {ClientIp}", clientIp);
+            _logger.LogWarning("Rate limit exceeded for client {ClientIp}, returning 429", clientIp);
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new
@@ -46,7 +47,17 @@ public sealed class RateLimitingMiddleware
             return;
         }
 
-        await _next(context);
+        try
+        {
+            await _next(context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred while processing request for client {ClientIp}", clientIp);
+            throw;
+        }
+
+        _logger.LogInformation("Request for client {ClientIp} completed", clientIp);
     }
 
     /// <summary>
@@ -88,6 +99,8 @@ public sealed class RateLimitingMiddleware
 
                 foreach (var key in oldEntries)
                     _requestWindows.Remove(key);
+
+                _logger.LogWarning("Rate limiting window grew large, cleaned up {RemovedCount} stale entries", oldEntries.Count);
             }
 
             return false;
