@@ -27,9 +27,11 @@ public sealed class ExceptionHandlingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation("ExceptionHandlingMiddleware InvokeAsync started with {Path}", context.Request.Path);
         try
         {
             await _next(context);
+            _logger.LogInformation("ExceptionHandlingMiddleware InvokeAsync completed for {Path}", context.Request.Path);
         }
         catch (Exception ex)
         {
@@ -87,6 +89,7 @@ public sealed class ExceptionHandlingMiddleware
                 break;
 
             default:
+                _logger.LogWarning(exception, "Unhandled exception type {ExceptionType} fell back to INTERNAL_ERROR", exception.GetType().Name);
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 response.Message = "An unexpected error occurred";
                 response.ErrorCode = "INTERNAL_ERROR";
