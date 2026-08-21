@@ -59,6 +59,7 @@ public class LockRequestContext
     // Marks the request as completed
     public void MarkCompleted(bool successful, string? failureReason = null)
     {
+        ArgumentNullException.ThrowIfNull(nameof(successful));
         CompletedAt = DateTime.UtcNow;
         Successful = successful;
         FailureReason = failureReason;
@@ -73,12 +74,14 @@ public class LockRequestContext
     // Adds custom property for tracking
     public void AddProperty(string key, object value)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(key));
         CustomProperties[key] = value;
     }
 
     // Retrieves a custom property
     public object? GetProperty(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(key));
         return CustomProperties.TryGetValue(key, out var value) ? value : null;
     }
 
@@ -98,6 +101,7 @@ public class LockRequestContext
     // Increments retry count
     public void IncrementRetryCount()
     {
+        ArgumentNullException.ThrowIfNull(nameof(RetryCount));
         RetryCount++;
     }
 
