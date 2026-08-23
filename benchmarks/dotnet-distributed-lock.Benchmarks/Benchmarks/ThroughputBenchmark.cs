@@ -23,6 +23,8 @@ public class ThroughputBenchmark
     [Params("redis://localhost:6379,allowAdmin=true")]
     public string ConnectionString { get; set; } = "redis://localhost:6379,allowAdmin=true";
 
+    public override string ToString() => $"ThroughputBenchmark {{ BackendType = {BackendType}, ConnectionString = {ConnectionString} }}";
+
     private IServiceProvider? _serviceProvider;
     private ILockService? _lockService;
 
