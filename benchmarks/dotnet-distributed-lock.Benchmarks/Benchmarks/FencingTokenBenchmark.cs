@@ -106,4 +106,5 @@ public class FencingTokenBenchmark
             bool isLocked = tokenService.IsResourceLocked("fencing-resource");
         }
     }
+    public override string ToString() => $"FencingTokenBenchmark {{ BackendType = {BackendType}, ConnectionString = {ConnectionString} }}";
 }
