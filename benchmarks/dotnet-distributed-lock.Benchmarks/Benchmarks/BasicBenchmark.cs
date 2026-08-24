@@ -17,6 +17,8 @@ namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
 [Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
 public class BasicBenchmark
 {
+    public override string ToString() => $"BasicBenchmark {{ BackendType = {BackendType}, ConnectionString = {ConnectionString} }}";
+
     [Params(BackendType.InMemory, BackendType.Redis, BackendType.SQLite, BackendType.PostgreSQL)]
     public BackendType BackendType { get; set; }
 
