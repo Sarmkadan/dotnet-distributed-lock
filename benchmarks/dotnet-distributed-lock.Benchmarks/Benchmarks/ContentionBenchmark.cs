@@ -26,6 +26,8 @@ public class ContentionBenchmark
     private IServiceProvider? _serviceProvider;
     private ILockService? _lockService;
 
+    public override string ToString() => $"ContentionBenchmark {{ BackendType = {BackendType}, ConnectionString = {ConnectionString} }}";
+
     [GlobalSetup]
     public void GlobalSetup()
     {
