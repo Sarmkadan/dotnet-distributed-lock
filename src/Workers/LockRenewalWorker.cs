@@ -190,6 +190,22 @@ public class LockRenewalWorker : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Returns a concise, informative representation of the worker's current state.
+    /// </summary>
+    public override string ToString()
+    {
+        DateTime? nextRenewalTime = _renewalSchedules.IsEmpty
+            ? null
+            : _renewalSchedules.Values.Min(s => s.NextRenewalTime);
+
+        return
+            $"LockRenewalWorker {{ NextRenewalTime = {(nextRenewalTime.HasValue ? nextRenewalTime.Value.ToString("O") : "None")}, " +
+            $"CheckIntervalMs = {_options.CheckIntervalMs}, " +
+            $"RetryDelaySeconds = {_options.RetryDelaySeconds}, " +
+            $"JitterPercentage = {_options.JitterPercentage} }}";
+    }
+
     public sealed class RenewalSchedule
     {
         public required string LockId { get; init; }
