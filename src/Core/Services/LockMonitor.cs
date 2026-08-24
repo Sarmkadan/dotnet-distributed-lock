@@ -204,5 +204,7 @@ public sealed class LockMonitor : IDisposable
         public TimeSpan LockDuration { get; set; }
         public DateTime LastRenewalAttempt { get; set; }
         public int RenewalCount { get; set; }
+
+        public override string ToString() => $"LockMonitor {{ LockKey = {LockKey}, OwnerId = {OwnerId}, RenewalInterval = {RenewalInterval}, LockDuration = {LockDuration}, LastRenewalAttempt = {LastRenewalAttempt}, RenewalCount = {RenewalCount} }}";
     }
 }
