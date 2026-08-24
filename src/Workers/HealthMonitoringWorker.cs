@@ -32,6 +32,9 @@ public class HealthMonitoringWorker : BackgroundService
         _options = options ?? new HealthMonitoringWorkerOptions();
     }
 
+    public override string ToString() =>
+        $"HealthMonitoringWorker {{ IsHealthy = {_healthStatus.IsHealthy}, BackendConnected = {_healthStatus.BackendConnected}, LastCheckTime = {_healthStatus.LastCheckTime}, CheckDurationMs = {_healthStatus.CheckDurationMs}, ConsecutiveFailures = {_healthStatus.ConsecutiveFailures}, LastErrorMessage = {_healthStatus.LastErrorMessage} }}";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Health monitoring worker started");
