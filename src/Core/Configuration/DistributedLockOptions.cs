@@ -38,6 +38,8 @@ public class DistributedLockOptions
     public double DefaultRenewalFraction { get; set; } = 0.33;
     public int DefaultMaxRenewals { get; set; } = 3;
 
+    public override string ToString() => $"DistributedLockOptions {{ BackendType = {BackendType}, ConnectionString = {ConnectionString}, DefaultLockDuration = {DefaultLockDuration}, DefaultAcquisitionTimeout = {DefaultAcquisitionTimeout}, DefaultRenewalInterval = {DefaultRenewalInterval}, DefaultMaxRetries = {DefaultMaxRetries} }}";
+
     /// <summary>
     /// Validates the configuration options.
     /// </summary>
