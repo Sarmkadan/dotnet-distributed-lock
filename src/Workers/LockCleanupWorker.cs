@@ -33,6 +33,10 @@ public class LockCleanupWorker : BackgroundService
         _options = options ?? new LockCleanupWorkerOptions();
     }
 
+    public override string ToString() =>
+        $"LockCleanupWorker {{ InitialDelayMs = {_options.InitialDelayMs}, CleanupIntervalMs = {_options.CleanupIntervalMs}, " +
+        $"BatchSize = {_options.BatchSize}, VerboseLogging = {_options.VerboseLogging}, MinimumExpiredDuration = {_options.MinimumExpiredDuration} }}";
+
     /// <summary>
     /// Performs a single cleanup sweep on demand, outside of the periodic background schedule.
     /// Useful for manual triggering, testing, and benchmarking.
