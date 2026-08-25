@@ -145,6 +145,22 @@ public class MetricsCollectionWorker : BackgroundService
         _logger.LogInformation("Stopping metrics collection worker");
         await base.StopAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Returns a concise, informative representation of this worker,
+    /// including its configuration and the latest metrics snapshot.
+    /// </summary>
+    public override string ToString()
+    {
+        var snapshot = GetCurrentSnapshot();
+
+        return $"MetricsCollectionWorker {{ Timestamp = {snapshot?.Timestamp}, " +
+               $"CacheStatistics = {snapshot?.CacheStatistics}, " +
+               $"CustomMetrics = {snapshot?.CustomMetrics.Count ?? 0}, " +
+               $"InitialDelayMs = {_options.InitialDelayMs}, " +
+               $"CollectionIntervalMs = {_options.CollectionIntervalMs}, " +
+               $"SnapshotRetentionSeconds = {_options.SnapshotRetentionSeconds} }}";
+    }
 }
 
 /// <summary>
