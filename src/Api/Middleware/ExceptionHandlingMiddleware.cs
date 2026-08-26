@@ -25,6 +25,8 @@ public sealed class ExceptionHandlingMiddleware
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    public override string ToString() => $"ExceptionHandlingMiddleware {{ Message = {Message}, ErrorCode = {ErrorCode}, Timestamp = {Timestamp} }}";
+
     public async Task InvokeAsync(HttpContext context)
     {
         _logger.LogInformation("ExceptionHandlingMiddleware InvokeAsync started with {Path}", context.Request.Path);
