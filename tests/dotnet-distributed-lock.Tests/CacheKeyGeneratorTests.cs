@@ -12,8 +12,14 @@ using SarmKadan.DistributedLock.Caching;
 using FluentAssertions;
 using Xunit;
 
+/// <summary>
+/// Tests for the <see cref="CacheKeyGenerator"/> class.
+/// </summary>
 public class CacheKeyGeneratorTests
 {
+    /// <summary>
+    /// Tests that GenerateLockKey returns the correct key format for a valid lock ID.
+    /// </summary>
     [Fact]
     public void GenerateLockKey_WithValidLockId_ReturnsCorrectKey()
     {
@@ -28,6 +34,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateLockKey throws ArgumentException when lockId is empty.
+    /// </summary>
     [Fact]
     public void GenerateLockKey_WithEmptyLockId_ThrowsArgumentException()
     {
@@ -38,6 +47,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateLockKey(lockId));
     }
 
+    /// <summary>
+    /// Tests that GenerateLockKey throws ArgumentException when lockId is null.
+    /// </summary>
     [Fact]
     public void GenerateLockKey_WithNullLockId_ThrowsArgumentException()
     {
@@ -48,6 +60,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateLockKey(lockId));
     }
 
+    /// <summary>
+    /// Tests that GenerateLockKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateLockKey_Deterministic()
     {
@@ -62,6 +77,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateLockNameKey returns the correct key format for a valid lock name.
+    /// </summary>
     [Fact]
     public void GenerateLockNameKey_WithValidLockName_ReturnsCorrectKey()
     {
@@ -76,6 +94,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateLockNameKey throws ArgumentException when lockName is empty.
+    /// </summary>
     [Fact]
     public void GenerateLockNameKey_WithEmptyLockName_ThrowsArgumentException()
     {
@@ -86,6 +107,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateLockNameKey(lockName));
     }
 
+    /// <summary>
+    /// Tests that GenerateLockNameKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateLockNameKey_Deterministic()
     {
@@ -100,6 +124,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateMetricsKey returns the correct key format for a valid lock ID.
+    /// </summary>
     [Fact]
     public void GenerateMetricsKey_WithValidLockId_ReturnsCorrectKey()
     {
@@ -114,6 +141,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateMetricsKey throws ArgumentException when lockId is empty.
+    /// </summary>
     [Fact]
     public void GenerateMetricsKey_WithEmptyLockId_ThrowsArgumentException()
     {
@@ -124,6 +154,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateMetricsKey(lockId));
     }
 
+    /// <summary>
+    /// Tests that GenerateMetricsKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateMetricsKey_Deterministic()
     {
@@ -138,6 +171,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateSystemMetricsKey returns the correct key for system metrics.
+    /// </summary>
     [Fact]
     public void GenerateSystemMetricsKey_ReturnsCorrectKey()
     {
@@ -151,6 +187,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateStatusKey returns the correct key format for a valid lock ID.
+    /// </summary>
     [Fact]
     public void GenerateStatusKey_WithValidLockId_ReturnsCorrectKey()
     {
@@ -165,6 +204,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateStatusKey throws ArgumentException when lockId is empty.
+    /// </summary>
     [Fact]
     public void GenerateStatusKey_WithEmptyLockId_ThrowsArgumentException()
     {
@@ -175,6 +217,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateStatusKey(lockId));
     }
 
+    /// <summary>
+    /// Tests that GenerateStatusKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateStatusKey_Deterministic()
     {
@@ -189,6 +234,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateOwnerLocksKey returns the correct key format for a valid owner ID.
+    /// </summary>
     [Fact]
     public void GenerateOwnerLocksKey_WithValidOwnerId_ReturnsCorrectKey()
     {
@@ -203,6 +251,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateOwnerLocksKey throws ArgumentException when ownerId is empty.
+    /// </summary>
     [Fact]
     public void GenerateOwnerLocksKey_WithEmptyOwnerId_ThrowsArgumentException()
     {
@@ -213,6 +264,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateOwnerLocksKey(ownerId));
     }
 
+    /// <summary>
+    /// Tests that GenerateOwnerLocksKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateOwnerLocksKey_Deterministic()
     {
@@ -227,6 +281,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateActiveLockKeysPattern returns the correct pattern for active lock keys.
+    /// </summary>
     [Fact]
     public void GenerateActiveLockKeysPattern_ReturnsCorrectPattern()
     {
@@ -240,6 +297,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateQueryKey returns a hashed key with the correct prefix and length when given parameters.
+    /// </summary>
     [Fact]
     public void GenerateQueryKey_WithParameters_ReturnsHashedKey()
     {
@@ -255,6 +315,9 @@ public class CacheKeyGeneratorTests
         result.Should().HaveLength(22); // "query:" + 16 char hash
     }
 
+    /// <summary>
+    /// Tests that GenerateQueryKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateQueryKey_Deterministic()
     {
@@ -270,6 +333,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateQueryKey produces different keys for different parameter values.
+    /// </summary>
     [Fact]
     public void GenerateQueryKey_WithDifferentParameters_ProducesDifferentKeys()
     {
@@ -286,6 +352,9 @@ public class CacheKeyGeneratorTests
         result1.Should().NotBe(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateConfigurationKey returns the correct key format for a valid configuration name.
+    /// </summary>
     [Fact]
     public void GenerateConfigurationKey_WithValidConfigName_ReturnsCorrectKey()
     {
@@ -300,6 +369,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateConfigurationKey throws ArgumentException when configName is empty.
+    /// </summary>
     [Fact]
     public void GenerateConfigurationKey_WithEmptyConfigName_ThrowsArgumentException()
     {
@@ -310,6 +382,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateConfigurationKey(configName));
     }
 
+    /// <summary>
+    /// Tests that GenerateConfigurationKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateConfigurationKey_Deterministic()
     {
@@ -324,6 +399,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey returns the correct key format for valid tags.
+    /// </summary>
     [Fact]
     public void GenerateTagKey_WithValidTags_ReturnsCorrectKey()
     {
@@ -338,6 +416,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey returns the correct key format for a single tag.
+    /// </summary>
     [Fact]
     public void GenerateTagKey_WithSingleTag_ReturnsCorrectKey()
     {
@@ -352,6 +433,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey throws ArgumentException when tags array is empty.
+    /// </summary>
     [Fact]
     public void GenerateTagKey_WithEmptyTags_ThrowsArgumentException()
     {
@@ -362,6 +446,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateTagKey(tags));
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey throws ArgumentException when tags is null.
+    /// </summary>
     [Fact]
     public void GenerateTagKey_WithNullTags_ThrowsArgumentException()
     {
@@ -372,6 +459,9 @@ public class CacheKeyGeneratorTests
         Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateTagKey(tags));
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey produces the same output for the same input (deterministic).
+    /// </summary>
     [Fact]
     public void GenerateTagKey_Deterministic()
     {
@@ -386,6 +476,9 @@ public class CacheKeyGeneratorTests
         result1.Should().Be(result2);
     }
 
+    /// <summary>
+    /// Tests that GenerateTagKey produces different keys for different tag sets.
+    /// </summary>
     [Fact]
     public void GenerateTagKey_DistinctResourcesProduceDistinctKeys()
     {
@@ -401,6 +494,9 @@ public class CacheKeyGeneratorTests
         result1.Should().NotBe(result2);
     }
 
+    /// <summary>
+    /// Tests that ExtractLockIdFromKey returns the lock ID when given a valid lock key.
+    /// </summary>
     [Fact]
     public void ExtractLockIdFromKey_WithLockKey_ReturnsLockId()
     {
@@ -415,6 +511,9 @@ public class CacheKeyGeneratorTests
         result.Should().Be(expected);
     }
 
+    /// <summary>
+    /// Tests that ExtractLockIdFromKey returns null when given a non-lock key.
+    /// </summary>
     [Fact]
     public void ExtractLockIdFromKey_WithNonLockKey_ReturnsNull()
     {
@@ -428,6 +527,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that ExtractLockIdFromKey returns null when given an empty string.
+    /// </summary>
     [Fact]
     public void ExtractLockIdFromKey_WithEmptyString_ReturnsNull()
     {
@@ -441,6 +543,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that IsLockKey returns true when given a valid lock key.
+    /// </summary>
     [Fact]
     public void IsLockKey_WithLockKey_ReturnsTrue()
     {
@@ -454,6 +559,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsLockKey returns false when given a metrics key.
+    /// </summary>
     [Fact]
     public void IsLockKey_WithMetricsKey_ReturnsFalse()
     {
@@ -467,6 +575,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsLockKey returns false when given a name pattern key.
+    /// </summary>
     [Fact]
     public void IsLockKey_WithNamePatternKey_ReturnsFalse()
     {
@@ -480,6 +591,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsLockKey returns false when given an owner key.
+    /// </summary>
     [Fact]
     public void IsLockKey_WithOwnerKey_ReturnsFalse()
     {
@@ -493,6 +607,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsMetricsKey returns true when given a valid metrics key.
+    /// </summary>
     [Fact]
     public void IsMetricsKey_WithMetricsKey_ReturnsTrue()
     {
@@ -506,6 +623,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsMetricsKey returns true when given the system metrics key.
+    /// </summary>
     [Fact]
     public void IsMetricsKey_WithSystemMetricsKey_ReturnsTrue()
     {
@@ -519,6 +639,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsMetricsKey returns false when given a non-metrics key.
+    /// </summary>
     [Fact]
     public void IsMetricsKey_WithNonMetricsKey_ReturnsFalse()
     {
@@ -532,6 +655,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that all cache key pattern constants have the correct values.
+    /// </summary>
     [Fact]
     public void CacheKeyPatterns_AllConstants_AreCorrect()
     {
@@ -543,6 +669,9 @@ public class CacheKeyGeneratorTests
         CacheKeyPatterns.StatusPattern.Should().Be("status:*");
     }
 
+    /// <summary>
+    /// Tests that special characters in resource names are handled correctly when generating keys.
+    /// </summary>
     [Fact]
     public void SpecialCharacters_InResourceNames_AreHandledCorrectly()
     {
@@ -584,6 +713,9 @@ public class CacheKeyGeneratorTests
         }
     }
 
+    /// <summary>
+    /// Tests that distinct resources produce distinct keys.
+    /// </summary>
     [Fact]
     public void DistinctResources_ProduceDistinctKeys()
     {
@@ -613,6 +745,9 @@ public class CacheKeyGeneratorTests
         keys.Should().OnlyHaveUniqueItems();
     }
 
+    /// <summary>
+    /// Tests that CacheKeySets.GetKeysByAcquisition returns the expected keys for a lock acquisition.
+    /// </summary>
     [Fact]
     public void CacheKeySets_GetKeysByAcquisition_ReturnsExpectedKeys()
     {
@@ -634,6 +769,9 @@ public class CacheKeyGeneratorTests
         result.Should().BeEquivalentTo(expectedKeys);
     }
 
+    /// <summary>
+    /// Tests that CacheKeySets.GetKeysByRelease returns the expected keys for a lock release.
+    /// </summary>
     [Fact]
     public void CacheKeySets_GetKeysByRelease_ReturnsExpectedKeys()
     {
