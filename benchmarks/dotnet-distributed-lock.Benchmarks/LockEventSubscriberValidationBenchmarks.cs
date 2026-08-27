@@ -3,78 +3,70 @@ using BenchmarkDotNet.Diagnosers;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Events;
 
-namespace SarmKadan.DistributedLock.Benchmarks.Benchmarks;
+namespace SarmKadan.DistributedLock.Benchmarks;
 
-/// <summary>
-/// Benchmarks for LockEventSubscriberValidation validation methods
-/// </summary>
 [MemoryDiagnoser]
 public class LockEventSubscriberValidationBenchmarks
 {
-    private MetricsTrackingEventSubscriber _metricsSubscriber = null!;
-    private EventMetrics _validMetrics = null!;
-    private EventMetrics _invalidMetrics = null!;
+    private LockEventSubscriber _validLockSubscriber = null!;
+    private MetricsTrackingEventSubscriber _validMetricsSubscriber = null!;
+    private EventMetrics _validEventMetrics = null!;
+    private EventMetrics _invalidEventMetrics = null!;
 
     [GlobalSetup]
-    public void GlobalSetup()
+    public void Setup()
     {
-        // Create mock loggers
+        var lockLogger = new MockLogger<LoggingLockEventSubscriber>();
         var metricsLogger = new MockLogger<MetricsTrackingEventSubscriber>();
-        var loggingLogger = new MockLogger<LoggingLockEventSubscriber>();
-
-        // Create metrics subscriber
-        _metricsSubscriber = new MetricsTrackingEventSubscriber(metricsLogger);
-
-        // Create valid metrics
-        _validMetrics = new EventMetrics
+        _validLockSubscriber = new LoggingLockEventSubscriber(lockLogger);
+        _validMetricsSubscriber = new MetricsTrackingEventSubscriber(metricsLogger);
+        _validEventMetrics = new EventMetrics
         {
-            Acquisitions = 100,
-            Releases = 95,
-            Failures = 5,
-            ContentionEvents = 10,
+            Acquisitions = 1,
+            Releases = 1,
+            Failures = 0,
+            ContentionEvents = 0,
             Timestamp = DateTime.UtcNow
         };
-
-        // Create invalid metrics (negative values)
-        _invalidMetrics = new EventMetrics
+        _invalidEventMetrics = new EventMetrics
         {
-            Acquisitions = -1,
-            Releases = -2,
-            Failures = -3,
-            ContentionEvents = -4,
+            Acquisitions = -1, // invalid: negative
+            Releases = 1,
+            Failures = 0,
+            ContentionEvents = 0,
             Timestamp = DateTime.UtcNow
         };
     }
 
     [Benchmark]
-    public IReadOnlyList<string> ValidateMetricsTrackingEventSubscriber_Valid()
-    {
-        return LockEventSubscriberValidation.Validate(_metricsSubscriber);
-    }
+    public IReadOnlyList<string> Validate_LockEventSubscriber() => LockEventSubscriberValidation.Validate(_validLockSubscriber);
 
     [Benchmark]
-    public IReadOnlyList<string> ValidateMetricsTrackingEventSubscriber_Invalid()
-    {
-        return LockEventSubscriberValidation.Validate(_invalidMetrics);
-    }
+    public IReadOnlyList<string> Validate_MetricsTrackingEventSubscriber() => LockEventSubscriberValidation.Validate(_validMetricsSubscriber);
 
     [Benchmark]
-    public IReadOnlyList<string> ValidateEventMetrics_Valid()
-    {
-        return LockEventSubscriberValidation.Validate(_validMetrics);
-    }
+    public IReadOnlyList<string> Validate_EventMetrics_Valid() => LockEventSubscriberValidation.Validate(_validEventMetrics);
 
     [Benchmark]
-    public IReadOnlyList<string> ValidateEventMetrics_Invalid()
-    {
-        return LockEventSubscriberValidation.Validate(_invalidMetrics);
-    }
+    public IReadOnlyList<string> Validate_EventMetrics_Invalid() => LockEventSubscriberValidation.Validate(_invalidEventMetrics);
 
     [Benchmark]
-    public bool IsValid_MetricsTrackingEventSubscriber_Valid()
-    {
-        return LockEventSubscriberValidation.IsValid(_metricsSubscriber);
-    }
+    public bool IsValid_LockEventSubscriber() => LockEventSubscriberValidation.IsValid(_validLockSubscriber);
+
+    [Benchmark]
+    public bool IsValid_MetricsTrackingEventSubscriber() => LockEventSubscriberValidation.IsValid(_validMetricsSubscriber);
+
+    [Benchmark]
+    public bool IsValid_EventMetrics() => LockEventSubscriberValidation.IsValid(_validEventMetrics);
+
+    [Benchmark]
+    public void EnsureValid_LockEventSubscriber() => LockEventSubscriberValidation.EnsureValid(_validLockSubscriber);
+
+    [Benchmark]
+    public void EnsureValid_MetricsTrackingEventSubscriber() => LockEventSubscriberValidation.EnsureValid(_validMetricsSubscriber);
+
+    [Benchmark]
+    public void EnsureValid_EventMetrics_Valid() => LockEventSubscriberValidation.EnsureValid(_validEventMetrics);
 
     // Simple mock logger for benchmarking
     private class MockLogger<T> : ILogger<T>
