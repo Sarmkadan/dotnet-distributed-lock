@@ -47,27 +47,6 @@ public class LockEventSubscriberValidationBenchmarks
     }
 
     [Benchmark]
-    public IReadOnlyList<string> ValidateLockEventSubscriber_Null()
-    {
-        LockEventSubscriber? subscriber = null;
-        return LockEventSubscriberValidation.Validate(subscriber);
-    }
-
-    [Benchmark]
-    public IReadOnlyList<string> ValidateLockEventSubscriber_Valid()
-    {
-        var subscriber = new LoggingLockEventSubscriber(new MockLogger<LoggingLockEventSubscriber>());
-        return LockEventSubscriberValidation.Validate(subscriber);
-    }
-
-    [Benchmark]
-    public IReadOnlyList<string> ValidateMetricsTrackingEventSubscriber_Null()
-    {
-        MetricsTrackingEventSubscriber? subscriber = null;
-        return LockEventSubscriberValidation.Validate(subscriber);
-    }
-
-    [Benchmark]
     public IReadOnlyList<string> ValidateMetricsTrackingEventSubscriber_Valid()
     {
         return LockEventSubscriberValidation.Validate(_metricsSubscriber);
@@ -77,13 +56,6 @@ public class LockEventSubscriberValidationBenchmarks
     public IReadOnlyList<string> ValidateMetricsTrackingEventSubscriber_Invalid()
     {
         return LockEventSubscriberValidation.Validate(_invalidMetrics);
-    }
-
-    [Benchmark]
-    public IReadOnlyList<string> ValidateEventMetrics_Null()
-    {
-        EventMetrics? metrics = null;
-        return LockEventSubscriberValidation.Validate(metrics);
     }
 
     [Benchmark]
@@ -99,83 +71,9 @@ public class LockEventSubscriberValidationBenchmarks
     }
 
     [Benchmark]
-    public bool IsValid_LockEventSubscriber_Null()
-    {
-        LockEventSubscriber? subscriber = null;
-        return LockEventSubscriberValidation.IsValid(subscriber);
-    }
-
-    [Benchmark]
-    public bool IsValid_LockEventSubscriber_Valid()
-    {
-        var subscriber = new LoggingLockEventSubscriber(new MockLogger<LoggingLockEventSubscriber>());
-        return LockEventSubscriberValidation.IsValid(subscriber);
-    }
-
-    [Benchmark]
-    public bool IsValid_MetricsTrackingEventSubscriber_Null()
-    {
-        MetricsTrackingEventSubscriber? subscriber = null;
-        return LockEventSubscriberValidation.IsValid(subscriber);
-    }
-
-    [Benchmark]
     public bool IsValid_MetricsTrackingEventSubscriber_Valid()
     {
         return LockEventSubscriberValidation.IsValid(_metricsSubscriber);
-    }
-
-    [Benchmark]
-    public bool IsValid_EventMetrics_Null()
-    {
-        EventMetrics? metrics = null;
-        return LockEventSubscriberValidation.IsValid(metrics);
-    }
-
-    [Benchmark]
-    public bool IsValid_EventMetrics_Valid()
-    {
-        return LockEventSubscriberValidation.IsValid(_validMetrics);
-    }
-
-    [Benchmark]
-    public void EnsureValid_LockEventSubscriber_Null()
-    {
-        LockEventSubscriber? subscriber = null;
-        LockEventSubscriberValidation.EnsureValid(subscriber);
-    }
-
-    [Benchmark]
-    public void EnsureValid_LockEventSubscriber_Valid()
-    {
-        var subscriber = new LoggingLockEventSubscriber(new MockLogger<LoggingLockEventSubscriber>());
-        LockEventSubscriberValidation.EnsureValid(subscriber);
-    }
-
-    [Benchmark]
-    public void EnsureValid_MetricsTrackingEventSubscriber_Null()
-    {
-        MetricsTrackingEventSubscriber? subscriber = null;
-        LockEventSubscriberValidation.EnsureValid(subscriber);
-    }
-
-    [Benchmark]
-    public void EnsureValid_MetricsTrackingEventSubscriber_Valid()
-    {
-        LockEventSubscriberValidation.EnsureValid(_metricsSubscriber);
-    }
-
-    [Benchmark]
-    public void EnsureValid_EventMetrics_Null()
-    {
-        EventMetrics? metrics = null;
-        LockEventSubscriberValidation.EnsureValid(metrics);
-    }
-
-    [Benchmark]
-    public void EnsureValid_EventMetrics_Valid()
-    {
-        LockEventSubscriberValidation.EnsureValid(_validMetrics);
     }
 
     // Simple mock logger for benchmarking
