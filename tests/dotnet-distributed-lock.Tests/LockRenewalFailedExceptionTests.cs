@@ -5,8 +5,14 @@ using Xunit;
 
 namespace SarmKadan.DistributedLock.Tests;
 
+/// <summary>
+/// Test class for <see cref="LockRenewalFailedException"/>.
+/// </summary>
 public class LockRenewalFailedExceptionTests
 {
+    /// <summary>
+    /// Verifies that the constructor initializes the LockId and sets a default message when only lockId is provided.
+    /// </summary>
     [Fact]
     public void Constructor_WithLockIdOnly_SetsLockIdAndDefaultMessage()
     {
@@ -22,6 +28,9 @@ public class LockRenewalFailedExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the constructor initializes the LockId and Message properties and sets InnerException to null when lockId and message are provided.
+    /// </summary>
     [Fact]
     public void Constructor_WithLockIdAndMessage_SetsLockIdMessageAndNoInnerException()
     {
@@ -38,6 +47,9 @@ public class LockRenewalFailedExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the constructor initializes all properties (LockId, Message, InnerException) correctly when all parameters are provided.
+    /// </summary>
     [Fact]
     public void Constructor_WithAllParameters_SetsAllPropertiesCorrectly()
     {
@@ -55,6 +67,9 @@ public class LockRenewalFailedExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Verifies that the constructor handles various lockId values (null, empty, whitespace) correctly.
+    /// </summary>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -73,6 +88,9 @@ public class LockRenewalFailedExceptionTests
         exception.Message.Should().NotBeNullOrEmpty();
     }
 
+    /// <summary>
+    /// Verifies that the LockId property is read-only and is set correctly by the constructor.
+    /// </summary>
     [Fact]
     public void LockIdProperty_IsReadOnlyAndSetCorrectly()
     {
@@ -89,6 +107,9 @@ public class LockRenewalFailedExceptionTests
         propertyInfo?.GetSetMethod(true).Should().BeNull("LockId property should be read-only");
     }
 
+    /// <summary>
+    /// Verifies that the constructor creates a valid exception when an empty lockId is provided.
+    /// </summary>
     [Fact]
     public void Constructor_WithEmptyLockId_CreatesValidException()
     {
@@ -103,6 +124,9 @@ public class LockRenewalFailedExceptionTests
         exception.Message.Should().NotBeNullOrEmpty();
     }
 
+    /// <summary>
+    /// Verifies that the constructor handles very long lockId strings correctly.
+    /// </summary>
     [Fact]
     public void Constructor_WithLongLockId_HandlesLongStrings()
     {
@@ -117,6 +141,9 @@ public class LockRenewalFailedExceptionTests
         exception.Message.Should().Contain(longLockId);
     }
 
+    /// <summary>
+    /// Verifies that LockRenewalFailedException inherits from DistributedLockException and Exception.
+    /// </summary>
     [Fact]
     public void Inheritance_HasCorrectBaseType()
     {
@@ -128,6 +155,9 @@ public class LockRenewalFailedExceptionTests
         exception.Should().BeAssignableTo<Exception>();
     }
 
+    /// <summary>
+    /// Verifies that the ToString method includes the exception type and message.
+    /// </summary>
     [Fact]
     public void ToString_IncludesExceptionTypeAndMessage()
     {
