@@ -526,3 +526,52 @@ public class ExampleUsage
     }
 }
 ```
+
+## LockEventExtensionsTests
+
+The `LockEventExtensionsTests` class contains unit tests for the `LockEventExtensions` utility class, verifying methods for checking event success/failure status, extracting lock and owner identifiers from various event types, and formatting events for logging. It ensures correct behavior across lock acquisition, release, failure, and contention scenarios, while also validating proper null argument handling.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public void DemonstrateLockEventExtensionsTests()
+    {
+        var tests = new LockEventExtensionsTests();
+        
+        // Verify acquisition success checks
+        tests.IsAcquisitionSuccessful_ReturnsTrue_ForAcquiredLock();
+        tests.IsAcquisitionSuccessful_ReturnsFalse_ForHeldLock();
+        tests.IsAcquisitionSuccessful_ReturnsFalse_ForNonAcquisitionEvents();
+        tests.IsAcquisitionSuccessful_ThrowsArgumentNullException_ForNullEvent();
+        
+        // Verify failure checks
+        tests.IsFailure_ReturnsTrue_ForLockFailedEvent();
+        tests.IsFailure_ReturnsTrue_ForLockAcquisitionFailedEvent();
+        tests.IsFailure_ReturnsFalse_ForSuccessfulEvents();
+        tests.IsFailure_ThrowsArgumentNullException_ForNullEvent();
+        
+        // Verify lock ID extraction
+        tests.GetLockId_ReturnsLockId_ForLockAcquiredEvent();
+        tests.GetLockId_ReturnsLockId_ForLockReleasedEvent();
+        tests.GetLockId_ReturnsLockName_ForLockAcquisitionFailedEvent();
+        tests.GetLockId_ReturnsNull_ForUnsupportedEventTypes();
+        tests.GetLockId_ThrowsArgumentNullException_ForNullEvent();
+        
+        // Verify owner ID extraction
+        tests.GetOwnerId_ReturnsOwnerId_ForLockAcquiredEvent();
+        tests.GetOwnerId_ReturnsOwnerId_ForLockReleasedEvent();
+        tests.GetOwnerId_ReturnsRequesterId_ForLockAcquisitionFailedEvent();
+        tests.GetOwnerId_ReturnsFirstCompetingParty_ForLockContentionEvent();
+        tests.GetOwnerId_ReturnsNull_ForEmptyCompetingParties_List();
+        tests.GetOwnerId_ThrowsArgumentNullException_ForNullEvent();
+        
+        // Verify logging format
+        tests.ToLogString_IncludesTimestamp_ByDefault();
+    }
+}
+```
