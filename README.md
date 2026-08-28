@@ -47,6 +47,29 @@ Console.WriteLine($"Tag key: {tagKey}"); // Output: tag:session-management:user-
 The `LockEventExtensions` class provides extension methods for `LockEvent` types to enable common operations such as formatting, validation, and conversion between event types. These utilities simplify working with lock events by providing a consistent API for extracting information, checking event properties, and converting events to other types.
 
 
+## CacheKeyGeneratorTests
+
+The `CacheKeyGeneratorTests` class contains unit tests for the `CacheKeyGenerator` utility class, covering key generation methods for locks, metrics, status, owners, queries, configurations, and tags. It verifies correct key formatting, proper exception handling for invalid inputs, and deterministic output generation.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public async Task DemonstrateCacheKeyGeneratorTests()
+    {
+        var tests = new CacheKeyGeneratorTests();
+        tests.GenerateLockKey_WithValidLockId_ReturnsCorrectKey();
+        tests.GenerateLockKey_WithEmptyLockId_ThrowsArgumentException();
+        tests.GenerateLockKey_WithNullLockId_ThrowsArgumentException();
+        tests.GenerateLockKey_Deterministic();
+    }
+}
+```
+
 ## InvalidFencingTokenExceptionExtensions
 
 The `InvalidFencingTokenExceptionExtensions` class provides utility methods for analyzing and working with `InvalidFencingTokenException` instances. These extensions help determine the relationship between provided and current fencing tokens, create new exception instances with updated tokens, and extract detailed token information for logging and debugging purposes.
