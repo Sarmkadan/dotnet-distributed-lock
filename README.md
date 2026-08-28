@@ -478,3 +478,24 @@ public class ExampleUsage
     }
 }
 ```
+
+## LockEventSubscriberTests
+
+The `LockEventSubscriberTests` class contains unit tests for `LockEventSubscriber` implementations, covering both `LoggingLockEventSubscriber` and `MetricsTrackingEventSubscriber` classes. It verifies proper constructor validation, event handler registration, and correct handling of various lock events including acquisition, release, expiration, renewal, failures, contention, and errors.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public async Task DemonstrateLockEventSubscriberTests()
+    {
+        var tests = new LockEventSubscriberTests();
+        await tests.LoggingLockEventSubscriber_RegisterAsync_RegistersAllHandlers();
+        await tests.MetricsTrackingEventSubscriber_TracksAcquisitions();
+    }
+}
+```
