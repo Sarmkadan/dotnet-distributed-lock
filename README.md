@@ -39,8 +39,9 @@ Console.WriteLine($"Status key: {statusKey}"); // Output: status:user-session-lo
 string configurationKey = CacheKeyGenerator.GenerateConfigurationKey("default-lock-timeout");
 Console.WriteLine($"Configuration key: {configurationKey}"); // Output: config:default-lock-timeout
 
-string tagKey = CacheKeyGenerator.GenerateTagKey("session-management", "user-locks");
+string tagKey = CacheKayan.DistributedLock.Caching.CacheKeyGenerator.GenerateTagKey("session-management", "user-locks");
 Console.WriteLine($"Tag key: {tagKey}"); // Output: tag:session-management:user-locks
+```
 
 ## LockEventExtensions
 
@@ -496,6 +497,32 @@ public class ExampleUsage
         var tests = new LockEventSubscriberTests();
         await tests.LoggingLockEventSubscriber_RegisterAsync_RegistersAllHandlers();
         await tests.MetricsTrackingEventSubscriber_TracksAcquisitions();
+    }
+}
+```
+
+## LockAcquisitionExceptionTests
+
+The `LockAcquisitionExceptionTests` class contains unit tests for the `LockAcquisitionException` class, covering constructor scenarios with various parameters (lock key, timeout, retry count, inner exception) and the `ToString` method. It verifies that properties are set correctly, messages are formatted as expected, and edge cases like null/empty lock keys and zero timeouts are handled.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public async Task DemonstrateLockAcquisitionExceptionTests()
+    {
+        var tests = new LockAcquisitionExceptionTests();
+        tests.Constructor_WithLockKeyTimeoutAndDefaultRetryCount_SetsPropertiesCorrectly();
+        tests.Constructor_WithAllParameters_IncludesInnerExceptionAndSetsAllProperties();
+        tests.Constructor_WithVariousLockKey_HandlesNullOrEmptyValues(null);
+        tests.Constructor_WithVariousLockKey_HandlesNullOrEmptyValues("");
+        tests.Constructor_WithVariousLockKey_HandlesNullOrEmptyValues(" ");
+        tests.Constructor_WithZeroTimeout_ProducesCorrectMessage();
+        tests.ToString_IncludesExceptionTypeAndMessage();
     }
 }
 ```
