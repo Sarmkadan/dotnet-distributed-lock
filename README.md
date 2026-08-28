@@ -434,3 +434,24 @@ if (deserializedLock?.FencingToken is not null)
     Console.WriteLine($"FencingToken validation errors: {tokenErrors.Count}");
 }
 ```
+
+## LockServiceTryExtendTests
+
+The `LockServiceTryExtendTests` class contains unit tests for the `LockService.TryExtendAsync` method, which extends the lease of a distributed lock. It covers successful extensions, failed extensions due to a missing lock or owner mismatch, and graceful handling of repository errors.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public async Task DemonstrateLockServiceTryExtendTests()
+    {
+        var tests = new LockServiceTryExtendTests();
+        await tests.TryExtendAsync_WhenRepositoryExtendsLock_ReturnsTrue();
+        tests.Dispose();
+    }
+}
+```
