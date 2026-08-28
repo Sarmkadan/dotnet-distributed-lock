@@ -575,3 +575,31 @@ public class ExampleUsage
     }
 }
 ```
+
+## LockRenewalFailedExceptionTests
+
+The `LockRenewalFailedExceptionTests` class contains unit tests for the `LockRenewalFailedException` class, covering constructor scenarios with various parameters (lock ID only, lock ID and message, all parameters) and validation of properties like LockId immutability, inheritance, and ToString behavior. It verifies that properties are set correctly, messages are formatted as expected, and edge cases like empty/long lock IDs and various lock ID values are handled.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Tests;
+using System.Threading.Tasks;
+
+public class ExampleUsage
+{
+    public void DemonstrateLockRenewalFailedExceptionTests()
+    {
+        var tests = new LockRenewalFailedExceptionTests();
+        tests.Constructor_WithLockIdOnly_SetsLockIdAndDefaultMessage();
+        tests.Constructor_WithLockIdAndMessage_SetsLockIdMessageAndNoInnerException();
+        tests.Constructor_WithAllParameters_SetsAllPropertiesCorrectly();
+        tests.Constructor_WithVariousLockIds_HandlesAllValidStrings("test-id");
+        tests.LockIdProperty_IsReadOnlyAndSetCorrectly();
+        tests.Constructor_WithEmptyLockId_CreatesValidException();
+        tests.Constructor_WithLongLockId_HandlesLongStrings();
+        tests.Inheritance_HasCorrectBaseType();
+        tests.ToString_IncludesExceptionTypeAndMessage();
+    }
+}
+```
