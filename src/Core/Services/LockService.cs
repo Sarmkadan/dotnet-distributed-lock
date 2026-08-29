@@ -54,17 +54,18 @@ public sealed class LockService : ILockService
             {
                 @lock.Status = LockStatus.Held;
                 _metrics.RecordSuccessfulAcquisition(stopwatch.Elapsed.TotalMilliseconds);
-                _logger.LogInformation("Lock acquired: {LockKey} by {OwnerId}", lockKey, ownerId);
+                _logger.LogInformation("Lock acquired: {LockKey} by {OwnerId} in {ElapsedMs}ms",
+                    lockKey, ownerId, stopwatch.Elapsed.TotalMilliseconds);
                 return (true, @lock, null);
             }
 
             _metrics.RecordFailedAcquisition();
-            _logger.LogWarning("Failed to acquire lock: {LockKey}", lockKey);
+            _logger.LogWarning("Failed to acquire lock: {LockKey} by {OwnerId}", lockKey, ownerId);
             return (false, null, "Lock is currently held by another owner");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error acquiring lock {LockKey}", lockKey);
+            _logger.LogError(ex, "Error acquiring lock {LockKey} by {OwnerId}", lockKey, ownerId);
             return (false, null, ex.Message);
         }
     }
@@ -85,7 +86,7 @@ public sealed class LockService : ILockService
         {
             if (acquisitionTimeout.TotalSeconds > 0 && (DateTime.UtcNow - startTime) > acquisitionTimeout)
             {
-                _logger.LogError("Lock acquisition timeout for {LockKey}", lockKey);
+                _logger.LogError("Lock acquisition timeout for {LockKey} by {OwnerId}", lockKey, ownerId);
                 throw new LockAcquisitionException(lockKey, acquisitionTimeout, attempt);
             }
 
@@ -100,7 +101,11 @@ public sealed class LockService : ILockService
 
             if (attempt < maxRetries - 1)
             {
-                await Task.Delay(_retryPolicy.GetDelay(attempt), cancellationToken);
+                var delay = _retryPolicy.GetDelay(attempt);
+                _logger.LogDebug(
+                    "Lock acquisition attempt {Attempt} of {MaxRetries} failed for {LockKey} by {OwnerId}; retrying after {Delay}",
+                    attempt + 1, maxRetries, lockKey, ownerId, delay);
+                await Task.Delay(delay, cancellationToken);
             }
         }
 
@@ -126,14 +131,14 @@ public sealed class LockService : ILockService
             else
             {
                 _metrics.RecordFailedRenewal();
-                _logger.LogWarning("Failed to renew lock: {LockKey}", lockKey);
+                _logger.LogWarning("Failed to renew lock: {LockKey} by {OwnerId}", lockKey, ownerId);
             }
 
             return renewed;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error renewing lock {LockKey}", lockKey);
+            _logger.LogError(ex, "Error renewing lock {LockKey} by {OwnerId}", lockKey, ownerId);
             _metrics.RecordFailedRenewal();
             return false;
         }
@@ -157,14 +162,16 @@ public sealed class LockService : ILockService
             else
             {
                 _metrics.RecordFailedRenewal();
-                _logger.LogWarning("Failed to extend lock: {LockKey} - either lock doesn't exist or owner mismatch", lockKey);
+                _logger.LogWarning(
+                    "Failed to extend lock: {LockKey} by {OwnerId} - either lock doesn't exist or owner mismatch",
+                    lockKey, ownerId);
             }
 
             return extended;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extending lock {LockKey}", lockKey);
+            _logger.LogError(ex, "Error extending lock {LockKey} by {OwnerId}", lockKey, ownerId);
             _metrics.RecordFailedRenewal();
             return false;
         }
@@ -210,7 +217,7 @@ public sealed class LockService : ILockService
             var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken);
             if (@lock is null)
             {
-                _logger.LogWarning("Lock not found for release: {LockKey}", lockKey);
+                _logger.LogWarning("Lock not found for release: {LockKey} by {OwnerId}", lockKey, ownerId);
                 return false;
             }
 
@@ -228,7 +235,7 @@ public sealed class LockService : ILockService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error releasing lock {LockKey}", lockKey);
+            _logger.LogError(ex, "Error releasing lock {LockKey} by {OwnerId}", lockKey, ownerId);
             return false;
         }
     }
