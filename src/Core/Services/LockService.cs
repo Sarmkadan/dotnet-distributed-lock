@@ -41,6 +41,8 @@ public sealed class LockService : ILockService
         TimeSpan? duration = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         try
         {
             var lockDuration = duration ?? Constants.LockConstants.DefaultLockTimeout;
@@ -76,6 +78,8 @@ public sealed class LockService : ILockService
         TimeSpan? duration = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         var maxRetries = _retryPolicy.MaxRetries;
         var acquisitionTimeout = Constants.LockConstants.DefaultAcquisitionTimeout;
 
@@ -118,6 +122,8 @@ public sealed class LockService : ILockService
         TimeSpan? newDuration = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         try
         {
             var duration = newDuration ?? Constants.LockConstants.DefaultLockTimeout;
@@ -150,6 +156,13 @@ public sealed class LockService : ILockService
         TimeSpan extension,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        if (extension <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(extension), "Extension must be positive.");
+        }
+
         try
         {
             var extended = await _repository.RenewAsync(lockKey, ownerId, extension, cancellationToken);
@@ -183,6 +196,7 @@ public sealed class LockService : ILockService
         TimeSpan newDuration,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
         var isValid = await _repository.ValidateFencingTokenAsync(lockKey, fencingToken, cancellationToken);
         if (!isValid)
         {
@@ -212,6 +226,8 @@ public sealed class LockService : ILockService
         string ownerId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         try
         {
             var @lock = await _repository.GetByKeyAsync(lockKey, cancellationToken);
@@ -242,6 +258,7 @@ public sealed class LockService : ILockService
 
     public async Task<Lock?> GetLockAsync(string lockKey, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
         try
         {
             return await _repository.GetByKeyAsync(lockKey, cancellationToken);
@@ -255,6 +272,7 @@ public sealed class LockService : ILockService
 
     public async Task<bool> IsLockedAsync(string lockKey, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
         try
         {
             return await _repository.ExistsAsync(lockKey, cancellationToken);
