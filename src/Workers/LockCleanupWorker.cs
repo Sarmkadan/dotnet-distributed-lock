@@ -93,6 +93,10 @@ public class LockCleanupWorker : BackgroundService
 
     /// <summary>
     /// Performs the cleanup operation by deleting expired locks from the repository.
+    /// Locks that have not been expired for at least the configured minimum duration
+    /// are skipped, and no more than the configured batch size are submitted for
+    /// deletion in a single sweep. Any remaining eligible locks are deferred to the
+    /// next sweep.
     /// Uses a read-then-compare-and-delete sequence per lock: the current expired
     /// locks are snapshotted first, then each one is deleted only if its expiration
     /// timestamp still matches what was observed. This closes the race where a
@@ -107,14 +111,30 @@ public class LockCleanupWorker : BackgroundService
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var expiredLocks = await _repository.GetExpiredLocksAsync(cancellationToken);
+        var expirationCutoff = DateTime.UtcNow - _options.MinimumExpiredDuration;
 
         var cleaned = 0;
         var skipped = 0;
+        var deletionAttempts = 0;
+        var deferred = 0;
 
         foreach (var expiredLock in expiredLocks)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (expiredLock.ExpiresAt > expirationCutoff)
+            {
+                skipped++;
+                continue;
+            }
+
+            if (deletionAttempts >= _options.BatchSize)
+            {
+                deferred++;
+                continue;
+            }
+
+            deletionAttempts++;
             var deleted = await _repository.DeleteLockIfExpirationMatchesAsync(
                 expiredLock.Key,
                 expiredLock.ExpiresAt,
@@ -137,6 +157,13 @@ public class LockCleanupWorker : BackgroundService
                 cleaned,
                 skipped,
                 stopwatch.Elapsed.TotalMilliseconds);
+        }
+
+        if (deferred > 0)
+        {
+            _logger.LogDebug(
+                "Lock cleanup batch limit reached; deferred {DeferredCount} expired locks to the next sweep",
+                deferred);
         }
     }
 
