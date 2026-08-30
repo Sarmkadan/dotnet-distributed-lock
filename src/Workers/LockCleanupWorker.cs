@@ -152,23 +152,28 @@ public class LockCleanupWorker : BackgroundService
 /// </summary>
 public class LockCleanupWorkerOptions
 {
+    public const int DefaultInitialDelayMs = 30_000;
+    public const int DefaultCleanupIntervalMs = 3_600_000;
+    public const int DefaultBatchSize = 1000;
+    public static readonly TimeSpan DefaultMinimumExpiredDuration = TimeSpan.FromMinutes(5);
+
     /// <summary>
     /// Initial delay before first cleanup (milliseconds).
     /// Allows system to stabilize before starting cleanup operations.
     /// </summary>
-    public int InitialDelayMs { get; set; } = 30000; // 30 seconds
+    public int InitialDelayMs { get; set; } = DefaultInitialDelayMs;
 
     /// <summary>
     /// Interval between cleanup runs (milliseconds).
     /// Default: run every hour.
     /// </summary>
-    public int CleanupIntervalMs { get; set; } = 3600000; // 1 hour
+    public int CleanupIntervalMs { get; set; } = DefaultCleanupIntervalMs;
 
     /// <summary>
     /// Batch size for cleanup operations.
     /// Prevents overwhelming the backend with single large operation.
     /// </summary>
-    public int BatchSize { get; set; } = 1000;
+    public int BatchSize { get; set; } = DefaultBatchSize;
 
     /// <summary>
     /// Whether to log detailed cleanup statistics.
@@ -179,5 +184,5 @@ public class LockCleanupWorkerOptions
     /// Only clean up locks expired for at least this duration.
     /// Prevents over-aggressive cleanup of locks that just expired.
     /// </summary>
-    public TimeSpan MinimumExpiredDuration { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan MinimumExpiredDuration { get; set; } = DefaultMinimumExpiredDuration;
 }
