@@ -297,6 +297,13 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Acquires a lock and creates a handle that automatically renews it.
+    /// </summary>
+    /// <remarks>
+    /// The renewal interval is calculated from the lock duration and renewal fraction.
+    /// If that calculation produces a non-positive interval, a one-second interval is used.
+    /// </remarks>
     public async Task<LockHandle> AcquireWithRenewalAsync(
         string lockKey,
         string ownerId,
@@ -310,7 +317,10 @@ public sealed class LockService : ILockService
         var @lock = await AcquireAsync(lockKey, ownerId, null, cancellationToken);
 
         // Calculate renewal interval based on lock duration
-        var renewalInterval = TimeSpan.FromTicks(@lock.Duration.Ticks * (long)effectiveOptions.RenewalFraction);
+        var renewalTicks = (long)(@lock.Duration.Ticks * effectiveOptions.RenewalFraction);
+        var renewalInterval = renewalTicks > 0
+            ? TimeSpan.FromTicks(renewalTicks)
+            : TimeSpan.FromSeconds(1);
 
         // Create the handle with auto-renewal
         return new LockHandle(this, @lock, renewalInterval, @lock.Duration);
