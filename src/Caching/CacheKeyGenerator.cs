@@ -27,14 +27,14 @@ public static class CacheKeyGenerator
     private const string ActivePrefix = "active:";
     private const string SystemSuffix = "system";
 
-    private const int LockPrefixLength = 5; // "lock:".Length
-    private const int MetricsPrefixLength = 7; // "metrics:".Length
-    private const int StatusPrefixLength = 7; // "status:".Length
-    private const int QueryPrefixLength = 6; // "query:".Length
-    private const int ConfigPrefixLength = 6; // "config:".Length
-    private const int TagPrefixLength = 4; // "tag:".Length
-    private const int NamePrefixLength = 5; // "name:".Length
-    private const int OwnerPrefixLength = 6; // "owner:".Length
+    private static readonly int LockPrefixLength = Prefix.Length;
+    private static readonly int MetricsPrefixLength = MetricsPrefix.Length;
+    private static readonly int StatusPrefixLength = StatusPrefix.Length;
+    private static readonly int QueryPrefixLength = QueryPrefix.Length;
+    private static readonly int ConfigPrefixLength = ConfigPrefix.Length;
+    private static readonly int TagPrefixLength = TagPrefix.Length;
+    private static readonly int NamePrefixLength = NamePrefix.Length;
+    private static readonly int OwnerPrefixLength = OwnerPrefix.Length;
 
     /// <summary>
     /// Generates a cache key for a single lock by ID.
