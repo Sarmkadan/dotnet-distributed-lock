@@ -19,6 +19,7 @@ public interface ILockRepository
     /// <param name="lock">The lock to acquire.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the lock was acquired successfully; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
     Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -27,6 +28,7 @@ public interface ILockRepository
     /// <param name="key">The lock key.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lock if found; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -36,6 +38,7 @@ public interface ILockRepository
     /// <param name="ownerId">The lock owner identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lock if found; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
     Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -44,6 +47,7 @@ public interface ILockRepository
     /// <param name="lock">The lock to update.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the update was successful; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
     Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -54,6 +58,7 @@ public interface ILockRepository
     /// <param name="newDuration">The new duration for the lock.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the renewal was successful; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
     Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -63,6 +68,7 @@ public interface ILockRepository
     /// <param name="ownerId">The lock owner identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the release was successful; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
     Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -71,6 +77,7 @@ public interface ILockRepository
     /// <param name="key">The lock key.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the lock exists; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -86,6 +93,7 @@ public interface ILockRepository
     /// <param name="ownerId">The lock owner identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A collection of locks owned by the specified owner.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="ownerId"/> is <see langword="null"/>.</exception>
     Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -109,6 +117,7 @@ public interface ILockRepository
     /// <param name="fencingToken">The fencing token to validate.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the token is valid; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -131,5 +140,6 @@ public interface ILockRepository
     /// <param name="expectedExpiresAt">The expiration timestamp observed when the lock was read.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the lock still matched and was deleted; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     Task<bool> DeleteLockIfExpirationMatchesAsync(string key, DateTime expectedExpiresAt, CancellationToken cancellationToken = default);
 }
