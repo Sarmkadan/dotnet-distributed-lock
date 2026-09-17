@@ -21,6 +21,7 @@ public interface ILockService
     /// <param name="duration">The optional duration to hold the lock.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A tuple indicating success, the lock instance (if successful), and an error message (if failed).</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
     Task<(bool Success, Lock? Lock, string? ErrorMessage)> TryAcquireAsync(
         string lockKey,
         string ownerId,
@@ -37,6 +38,7 @@ public interface ILockService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The acquired lock.</returns>
     /// <exception cref="LockAcquisitionException">Thrown if the lock cannot be acquired.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
     Task<Lock> AcquireAsync(
         string lockKey,
         string ownerId,
@@ -53,6 +55,7 @@ public interface ILockService
 /// <param name="cancellationToken">The cancellation token.</param>
 /// <returns>A handle that provides access to the lock and renewal monitoring.</returns>
 /// <exception cref="LockAcquisitionException">Thrown if the lock cannot be acquired.</exception>
+/// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
 Task<LockHandle> AcquireWithRenewalAsync(
     string lockKey,
     string ownerId,
@@ -68,6 +71,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="newDuration">The optional new duration to hold the lock.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the renewal was successful; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
     Task<bool> RenewAsync(
         string lockKey,
         string ownerId,
@@ -84,6 +88,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="extension">The duration to extend the lock by.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the extension was successful; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
     Task<bool> TryExtendAsync(
         string lockKey,
         string ownerId,
@@ -101,6 +106,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The renewed lock.</returns>
     /// <exception cref="SarmKadan.DistributedLock.Exceptions.InvalidFencingTokenException">Thrown if the fencing token is no longer valid.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> is null.</exception>
     Task<Lock> RenewLockAsync(
         string lockKey,
         ulong fencingToken,
@@ -115,6 +121,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="ownerId">The unique identifier for the lock owner.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the lock was successfully released; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null.</exception>
     Task<bool> ReleaseAsync(
         string lockKey,
         string ownerId,
@@ -127,6 +134,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="lockKey">The unique identifier for the resource.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The lock information, or null if the lock does not exist.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> is null.</exception>
     Task<Lock?> GetLockAsync(string lockKey, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -135,6 +143,7 @@ Task<LockHandle> AcquireWithRenewalAsync(
     /// <param name="lockKey">The unique identifier for the resource.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True if the lock is currently held; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="lockKey"/> is null.</exception>
     Task<bool> IsLockedAsync(string lockKey, CancellationToken cancellationToken = default);
 
     /// <summary>
