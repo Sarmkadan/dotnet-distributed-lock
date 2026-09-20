@@ -27,6 +27,11 @@ public class DistributedLockOptions
     public int MaxConcurrentLocks { get; set; } = Constants.LockConstants.DefaultMaxConcurrentLocks;
     public bool EnableMetrics { get; set; } = true;
     public bool EnableLogging { get; set; } = true;
+    /// <summary>
+    /// Gets or sets a value indicating whether the metrics reset endpoint is enabled.
+    /// Defaults to <see langword="true"/> for backward compatibility.
+    /// </summary>
+    public bool EnableMetricsResetEndpoint { get; set; } = true;
 
     // Retry policy tuning — used by DefaultLockRetryPolicy
     public int RetryPolicyMaxRetries { get; set; } = Constants.LockConstants.DefaultMaxRetries;
