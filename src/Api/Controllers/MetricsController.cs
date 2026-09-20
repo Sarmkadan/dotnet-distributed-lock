@@ -139,6 +139,10 @@ public sealed class MetricsController : ControllerBase
     /// Resets all collected metrics.
     /// Useful for starting fresh observations in testing or debugging scenarios.
     /// </summary>
+    /// <remarks>
+    /// This endpoint requires no authentication in the current implementation.
+    /// Consider securing it in production environments if metrics reset should be restricted.
+    /// </remarks>
     [HttpPost("reset")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult ResetMetrics()
