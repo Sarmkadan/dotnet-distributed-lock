@@ -7,6 +7,7 @@
 namespace SarmKadan.DistributedLock.Api.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
+using SarmKadan.DistributedLock.Configuration;
 using SarmKadan.DistributedLock.Services;
 
 /// <summary>
@@ -16,8 +17,8 @@ using SarmKadan.DistributedLock.Services;
 /// <remarks>
 /// This controller is read-only: metrics are written exclusively by
 /// <see cref="SarmKadan.DistributedLock.Events.MetricsTrackingEventSubscriber"/> as lock events occur,
-/// via the shared <see cref="IMetricsStore"/>. There is no HTTP endpoint for submitting metrics,
-/// so an unauthenticated client cannot poison the reported figures.
+/// via the shared <see cref="IMetricsStore"/>. The <see cref="ResetMetrics"/> endpoint can be
+/// enabled or disabled via the <see cref="DistributedLockOptions.EnableMetricsResetEndpoint"/> option.
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
@@ -26,20 +27,24 @@ public sealed class MetricsController : ControllerBase
 {
     private readonly IMetricsStore _metricsStore;
     private readonly ILogger<MetricsController> _logger;
+    private readonly DistributedLockOptions _options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetricsController"/> class.
     /// </summary>
     /// <param name="metricsStore">The store metrics are read from.</param>
     /// <param name="logger">The logger used for diagnostic output.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metricsStore"/> or <paramref name="logger"/> is null.</exception>
-    public MetricsController(IMetricsStore metricsStore, ILogger<MetricsController> logger)
+    /// <param name="options">The distributed lock configuration options.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metricsStore"/>, <paramref name="logger"/>, or <paramref name="options"/> is null.</exception>
+    public MetricsController(IMetricsStore metricsStore, ILogger<MetricsController> logger, DistributedLockOptions options)
     {
         ArgumentNullException.ThrowIfNull(metricsStore);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         _metricsStore = metricsStore;
         _logger = logger;
+        _options = options;
     }
 
     /// <summary>
@@ -145,8 +150,15 @@ public sealed class MetricsController : ControllerBase
     /// </remarks>
     [HttpPost("reset")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public ActionResult ResetMetrics()
     {
+        if (!_options.EnableMetricsResetEndpoint)
+        {
+            _logger.LogWarning("Metrics reset attempted but endpoint is disabled via configuration");
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Metrics reset endpoint is disabled" });
+        }
+
         _logger.LogWarning("Metrics reset triggered");
         _metricsStore.Reset();
         return Ok(new { Message = "All metrics have been reset" });
