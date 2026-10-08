@@ -4,9 +4,9 @@
 // CTO & Software Architect
 // =============================================================================
 
-namespace SarmKadan.DistributedLock.Integration;
-
 using System.Text.Json;
+
+namespace SarmKadan.DistributedLock.Integration;
 
 /// <summary>
 /// High-level API client for consuming the distributed lock service.
