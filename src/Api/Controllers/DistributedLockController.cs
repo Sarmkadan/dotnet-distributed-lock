@@ -168,7 +168,11 @@ public sealed class DistributedLockController : ControllerBase
         [FromQuery] int extensionSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Extending lock: {LockId} for {Seconds} seconds by owner {OwnerId}", lockId, extensionSeconds, ownerId);
+        _logger.LogInformation(
+            "Extending lock: {LockId} for {Seconds} seconds by owner {OwnerId}",
+            lockId,
+            extensionSeconds,
+            ownerId);
 
         try
         {
@@ -180,7 +184,9 @@ public sealed class DistributedLockController : ControllerBase
                 return Ok(new OperationResponse { Success = true, Message = "Lock extended successfully" });
             }
 
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse { Message = "Failed to extend lock - either lock doesn't exist or owner mismatch" });
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new ErrorResponse { Message = "Failed to extend lock - either lock doesn't exist or owner mismatch" });
         }
         catch (Exception ex)
         {
