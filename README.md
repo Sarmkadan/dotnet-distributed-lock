@@ -6,6 +6,13 @@ acquire, DI wiring, extension points and known limitations - see
 lock semantics (retry with backoff, fencing tokens, metrics) on top of a single
 `ILockRepository` seam with Redis, PostgreSQL, SQLite and in-memory implementations.
 
+## Supported Backends
+
+- **Redis** - `RedisLockRepository` in `src/Backends/Redis`; for multi-node deployments with a shared, low-latency store.
+- **PostgreSQL** - `PostgresLockRepository` in `src/Backends/PostgreSQL`; for deployments that already run Postgres and want locks in the same database.
+- **SQLite** - `SqliteLockRepository` in `src/Backends/SQLite`; for single-host or embedded setups without an external server.
+- **InMemory** - `InMemoryLockRepository` in `src/Core/Repository`; for tests and single-process use, with no persistence across restarts.
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
