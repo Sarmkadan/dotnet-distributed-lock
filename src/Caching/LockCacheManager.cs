@@ -166,15 +166,27 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
     private void IncrementHit()
     {
         _statsLock.EnterWriteLock();
-        try { _hits++; }
-        finally { _statsLock.ExitWriteLock(); }
+        try
+        {
+            _hits++;
+        }
+        finally
+        {
+            _statsLock.ExitWriteLock();
+        }
     }
 
     private void IncrementMiss()
     {
         _statsLock.EnterWriteLock();
-        try { _misses++; }
-        finally { _statsLock.ExitWriteLock(); }
+        try
+        {
+            _misses++;
+        }
+        finally
+        {
+            _statsLock.ExitWriteLock();
+        }
     }
 
     private void ResetStatistics()
