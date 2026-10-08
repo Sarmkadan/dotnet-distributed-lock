@@ -119,8 +119,8 @@ Both overloads throw `ArgumentNullException` for a null `services` (and `retryPo
 - `ILockService` (`LockService`) as scoped, plus singletons for `FencingTokenService`, `LockMonitor`,
   `ILockEventBus`, `IDeadlockDetector` and `IMetricsStore`
 
-Note that the `ConnectionString` requirement applies to every backend except `InMemory`. The
-repository factory is only invoked for non-`InMemory` backends with a non-empty connection string.
+Note that the repository registration step (`AddRepository`) rejects an empty `ConnectionString` for
+every backend, including `InMemory`, so pass a non-empty value even when using the in-memory backend.
 
 ### DistributedLockOptions
 
@@ -148,8 +148,8 @@ Defaults are shown where they are set in code. Constants come from `Constants.Lo
 | `RetryPolicyInitialDelayMs` | `int` | `LockConstants.DefaultRetryDelayMilliseconds` | Initial backoff delay, in ms |
 | `RetryPolicyMaxDelayMs` | `int` | `LockConstants.MaximumRetryDelayMilliseconds` | Backoff ceiling, in ms |
 | `RetryPolicyJitterFactor` | `double` | `0.1` | Jitter applied to backoff delays |
-| `DefaultRenewalFraction` | `double` | `0.33` | Renewal point as a fraction of the lock lease |
-| `DefaultMaxRenewals` | `int` | `3` | Max automatic renewals per lock |
+| `DefaultRenewalFraction` | `double` | `0.33` | Renewal-policy fraction (valid range `0.01`-`0.99`) |
+| `DefaultMaxRenewals` | `int` | `3` | Default renewal-policy cap (must be non-negative) |
 
 `DistributedLockOptions` also provides:
 
