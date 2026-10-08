@@ -7,8 +7,8 @@
 namespace SarmKadan.DistributedLock.Events;
 
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Central event bus for distributed lock events.
