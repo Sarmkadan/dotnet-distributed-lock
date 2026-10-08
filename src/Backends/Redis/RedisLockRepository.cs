@@ -4,10 +4,10 @@
 // CTO & Software Architect
 // =============================================================================
 
-using StackExchange.Redis;
 using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Models;
 using SarmKadan.DistributedLock.Repository;
+using StackExchange.Redis;
 using System.Text.Json;
 
 namespace SarmKadan.DistributedLock.Backends.Redis;
