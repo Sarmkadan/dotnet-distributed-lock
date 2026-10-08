@@ -4,10 +4,10 @@
 // CTO & Software Architect
 // =============================================================================
 
-namespace SarmKadan.DistributedLock.Api.Middleware;
-
 using System.Text.Json;
 using SarmKadan.DistributedLock.Core.Exceptions;
+
+namespace SarmKadan.DistributedLock.Api.Middleware;
 
 /// <summary>
 /// Global exception handling middleware that catches all unhandled exceptions
