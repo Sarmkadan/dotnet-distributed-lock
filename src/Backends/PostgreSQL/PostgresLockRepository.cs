@@ -4,8 +4,8 @@
 // CTO & Software Architect
 // =============================================================================
 
-using Npgsql;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using SarmKadan.DistributedLock.Models;
 using SarmKadan.DistributedLock.Repository;
 using System.Text.Json;
