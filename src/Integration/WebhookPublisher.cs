@@ -324,7 +324,11 @@ public class HttpWebhookPublisher : IWebhookPublisher
             {
                 if (attempt == maxAttempts)
                 {
-                    _logger.LogError(ex, "Failed to publish webhook to {Endpoint} after {Attempt} attempts", endpoint, attempt);
+                    _logger.LogError(
+                        ex,
+                        "Failed to publish webhook to {Endpoint} after {Attempt} attempts",
+                        endpoint,
+                        attempt);
                     Interlocked.Increment(ref _failureCount);
                     circuit.RecordFailure(_config.CircuitBreakerFailureThreshold);
                     return;
