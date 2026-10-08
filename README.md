@@ -269,6 +269,76 @@ Controllers live in `src/Api/Controllers/`. All of them are `[ApiController]` wi
 
 `DistributedLockControllerValidation` and `HealthCheckControllerExtensions` are static helper classes in the same folder. They define no routes.
 
+## Background Workers
+
+Hosted services (`BackgroundService`) in `src/Workers/` that run alongside the lock service. Each one has a matching `*Options` class with defaults that can be overridden at registration. None of them are required for basic lock acquire/release.
+
+| Worker | Purpose | Key options (defaults) |
+|---|---|---|
+| `LockRenewalWorker` | Renews registered locks before they expire, with jitter to avoid renewal bursts. Locks are registered via `RegisterForRenewal` / `TryRegisterForRenewal`. | `CheckIntervalMs` (5000), `RetryDelaySeconds` (10), `JitterPercentage` (10) |
+| `LockCleanupWorker` | Periodically sweeps and deletes expired locks in batches. A failed sweep is logged and the loop continues after the interval. | `InitialDelayMs` (30000), `CleanupIntervalMs` (3600000), `BatchSize` (1000), `MinimumExpiredDuration` (5 min), `VerboseLogging` (false) |
+| `HealthMonitoringWorker` | Checks backend connectivity on an interval, bounded by a timeout. Tracks consecutive failures and alerts once `FailureThreshold` is reached. `GetStatus()` returns the current `HealthStatus`. | `CheckIntervalMs` (30000), `CheckTimeout` (10 s), `FailureThreshold` (3), `AlertOnUnhealthy` (true) |
+| `MetricsCollectionWorker` | Takes periodic metrics snapshots and keeps them for a retention window. `GetCurrentSnapshot`, `GetSnapshots(window)` and `GetAverageMetrics(window)` read them back. | `InitialDelayMs` (5000), `CollectionIntervalMs` (60000), `SnapshotRetentionSeconds` (3600), `VerboseLogging` (false) |
+
+### Behavior notes
+
+- Every worker runs a loop with `Task.Delay` between iterations and exits cleanly on cancellation. Errors inside an iteration are logged and do not stop the worker.
+- `LockCleanupWorker` and `MetricsCollectionWorker` wait an initial delay before the first run.
+- `LockCleanupWorker.RunCleanupOnceAsync` (and the `RunCleanupOnceAsyncWithTimeout` / `RunCleanupOnceAsyncWithStats` extensions) run one sweep on demand, outside the loop.
+- `LockCleanupWorkerValidation` and `LockCleanupWorkerExtensions` provide validation (`Validate`, `IsValid`, `EnsureValid`) and logging helpers for the cleanup worker's options.
+- `LockRenewalWorkerExtensions` provides safe wrappers around registration (`TryRegisterForRenewal`, `SafeUnregisterFromRenewal`) and `TryUpdateRenewalInterval`.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Workers;
+
+builder.Services.AddSingleton(new LockCleanupWorkerOptions
+{
+    CleanupIntervalMs = 15 * 60 * 1000, // every 15 minutes
+    BatchSize = 500
+});
+builder.Services.AddHostedService<LockCleanupWorker>();
+builder.Services.AddHostedService<HealthMonitoringWorker>();
+
+// Read the latest health status elsewhere in the app
+var health = healthWorker.GetStatus();
+Console.WriteLine($"Healthy: {health.IsHealthy}, failures: {health.ConsecutiveFailures}");
+```
+
+## API Endpoints
+
+Controllers live in `src/Api/Controllers/`. All of them are `[ApiController]` with `application/json` responses. Routes are case-insensitive in ASP.NET.
+
+### DistributedLockController (`api/DistributedLock`)
+
+| Method | Route | Purpose | Status codes |
+|--------|-------|---------|--------------|
+| POST | `/api/DistributedLock/acquire` | Acquire a lock | 200, 400, 409 |
+| POST | `/api/DistributedLock/release/{lockId}` | Release a lock | 200, 403, 404 |
+| POST | `/api/DistributedLock/renew/{lockId}` | Renew a lock's lease | 200, 403, 404 |
+| POST | `/api/DistributedLock/extend/{lockId}` | Extend a lock's duration | 200, 403, 404 |
+| GET | `/api/DistributedLock/status/{lockId}` | Get lock status | 200, 404 |
+
+### MetricsController (`api/Metrics`)
+
+| Method | Route | Purpose | Status codes |
+|--------|-------|---------|--------------|
+| GET | `/api/Metrics/system` | System-wide metrics | 200 |
+| GET | `/api/Metrics/lock/{lockName}` | Metrics for one lock | 200, 404 |
+| GET | `/api/Metrics/performance` | Performance metrics | 200 |
+| POST | `/api/Metrics/reset` | Reset collected metrics | 200, 403 |
+
+### HealthCheckController (`api/health`)
+
+| Method | Route | Purpose | Status codes |
+|--------|-------|---------|--------------|
+| GET | `/api/health/live` | Liveness probe | 200 |
+| GET | `/api/health/ready` | Readiness probe (checks the lock backend) | 200, 503 |
+| GET | `/api/health/detailed` | Detailed health with backend response time | 200 |
+
+`DistributedLockControllerValidation` and `HealthCheckControllerExtensions` are static helper classes in the same folder. They define no routes.
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
