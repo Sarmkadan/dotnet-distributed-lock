@@ -6,12 +6,198 @@ acquire, DI wiring, extension points and known limitations - see
 lock semantics (retry with backoff, fencing tokens, metrics) on top of a single
 `ILockRepository` seam with Redis, PostgreSQL, SQLite and in-memory implementations.
 
+## LockService (main entry point)
+
+`LockService` (implements `ILockService`, `src/Core/Services/LockService.cs`) is the main entry point for application code. Inject `ILockService` and call it; you do not need to talk to `ILockRepository` directly. It handles:
+
+- `TryAcquireAsync` - a single non-blocking attempt, returns `(Success, Lock, ErrorMessage)`.
+- `AcquireAsync` - retry loop with backoff; throws `LockAcquisitionException` when the lock cannot be obtained.
+- `RenewAsync`, `TryExtendAsync`, `ReleaseAsync` - lease management guarded by the owner id.
+- `GetLockAsync`, `IsLockedAsync`, `GetAllActiveLockAsync` - read-only inspection.
+- `AcquireWithRenewalAsync` - acquires a lock with automatic renewal and returns a `LockHandle`.
+- `GetMetrics()` - in-process counters from `LockMetrics`.
+
+Registration goes through `AddDistributedLocking`, which registers `ILockService` as `LockService` with scoped lifetime.
+
+### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Services;
+
+// Program.cs
+builder.Services.AddDistributedLocking(options =>
+{
+    // configure backend and options here (see DistributedLockOptions)
+});
+
+// Any scoped consumer, e.g. an ASP.NET Core controller or a background job
+public class InvoiceJob(ILockService locks, ILogger<InvoiceJob> logger)
+{
+    public async Task RunAsync(string invoiceId, CancellationToken cancellationToken)
+    {
+        // Single attempt: skip the work if another node already holds the lock
+        var (acquired, _, error) = await locks.TryAcquireAsync(
+            $"invoice:{invoiceId}", "node-1", TimeSpan.FromSeconds(30), cancellationToken);
+
+        if (!acquired)
+        {
+            logger.LogInformation("Skipping invoice {InvoiceId}: {Reason}", invoiceId, error);
+            return;
+        }
+
+        try
+        {
+            // ... protected work ...
+        }
+        finally
+        {
+            await locks.ReleaseAsync($"invoice:{invoiceId}", "node-1", cancellationToken);
+        }
+    }
+}
+```
+
+Use `AcquireAsync` instead of `TryAcquireAsync` when the work must run and waiting with backoff is acceptable; catch `LockAcquisitionException` if the lock still cannot be obtained.
+
 ## Supported Backends
 
 - **Redis** - `RedisLockRepository` in `src/Backends/Redis`; for multi-node deployments with a shared, low-latency store.
 - **PostgreSQL** - `PostgresLockRepository` in `src/Backends/PostgreSQL`; for deployments that already run Postgres and want locks in the same database.
 - **SQLite** - `SqliteLockRepository` in `src/Backends/SQLite`; for single-host or embedded setups without an external server.
 - **InMemory** - `InMemoryLockRepository` in `src/Core/Repository`; for tests and single-process use, with no persistence across restarts.
+
+## Fencing Tokens
+
+A lock alone does not protect a resource from a client that still believes it holds the lock. A client can pause (GC, network partition, slow I/O), its lease can expire, another client can acquire the lock and write, and then the paused client resumes and writes stale data. A **fencing token** closes this gap: every grant of the lock carries a number that increases monotonically per resource, and the protected resource rejects any write whose token is older than the newest one it has seen.
+
+- The token is issued together with the lock. Each new grant for the same lock key gets a higher sequence number than the previous one.
+- The client sends the token along with each write to the protected resource.
+- The resource (or a repository check via `ILockRepository.ValidateFencingTokenAsync`) compares the token with the latest one and rejects stale tokens.
+- Without a monotonic check on the resource side, fencing tokens provide no protection.
+
+In this library:
+
+- [`FencingToken`](src/Core/Models/FencingToken.cs) (`SarmKadan.DistributedLock.Models`) is the token value: an opaque token string, a `SequenceNumber`, and `IssuedAt`. It supports comparison (`IsGreaterThan`, `CompareTo`) and validity checks against a lifetime.
+- [`FencingTokenService`](src/Core/Services/FencingTokenService.cs) (`SarmKadan.DistributedLock.Services`) keeps the current token per lock key. `IssueToken` creates a new token with the next sequence number, `ValidateToken` accepts a token that is equal to or newer than the current one, `ValidateTokenOrThrow` throws `InvalidFencingTokenException` otherwise, and `RevokeToken` drops the current token when the lock is released.
+- `UseFencingTokens` in `DistributedLockOptions` turns token issuing on for lock acquisition.
+
+See also [docs/FencingTokenService.md](docs/FencingTokenService.md), [docs/FencingToken.md](docs/FencingToken.md), [docs/InvalidFencingTokenException.md](docs/InvalidFencingTokenException.md), and the runnable sample [examples/FencingTokenExample.cs](examples/FencingTokenExample.cs).
+
+## Configuration
+
+Lock services are registered through `ServiceCollectionExtensions.AddDistributedLocking`
+(namespace `SarmKadan.DistributedLock.Configuration`), which binds a `DistributedLockOptions`
+instance and validates it at startup.
+
+### Registration
+
+```csharp
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+
+builder.Services.AddDistributedLocking(options =>
+{
+    options.BackendType = BackendType.Redis;
+    options.ConnectionString = "localhost:6379";
+    options.DefaultLockDuration = TimeSpan.FromMinutes(5);
+});
+```
+
+Two overloads exist:
+
+- `AddDistributedLocking(Action<DistributedLockOptions>? configureOptions = null)` uses the built-in
+  `DefaultLockRetryPolicy` (exponential backoff with jitter, tuned via the `RetryPolicy*` options).
+- `AddDistributedLocking(ILockRetryPolicy retryPolicy, Action<DistributedLockOptions>? configureOptions = null)`
+  accepts a custom retry policy (for example, a Polly-based implementation).
+
+Both overloads throw `ArgumentNullException` for a null `services` (and `retryPolicy`), and
+`InvalidOperationException` if `Validate()` returns any errors. The overloads then register:
+
+- `DistributedLockOptions` and the retry policy as singletons
+- `ILockRepository` for the selected `BackendType` (`InMemoryLockRepository`, `RedisLockRepository`,
+  `SqliteLockRepository` or `PostgresLockRepository`)
+- `ILockService` (`LockService`) as scoped, plus singletons for `FencingTokenService`, `LockMonitor`,
+  `ILockEventBus`, `IDeadlockDetector` and `IMetricsStore`
+
+Note that the `ConnectionString` requirement applies to every backend except `InMemory`. The
+repository factory is only invoked for non-`InMemory` backends with a non-empty connection string.
+
+### DistributedLockOptions
+
+`DistributedLockOptions` (namespace `SarmKadan.DistributedLock.Configuration`) is a mutable class.
+Defaults are shown where they are set in code. Constants come from `Constants.LockConstants`.
+
+| Property | Type | Default | Purpose |
+|---|---|---|---|
+| `BackendType` | `BackendType` | `InMemory` | Storage backend for locks |
+| `ConnectionString` | `string` | `""` | Connection string for Redis, SQLite or PostgreSQL |
+| `DefaultLockDuration` | `TimeSpan` | `LockConstants.DefaultLockTimeout` | Lease length when none is given per call |
+| `DefaultAcquisitionTimeout` | `TimeSpan` | `LockConstants.DefaultAcquisitionTimeout` | Maximum wait for a blocking acquire |
+| `DefaultRenewalInterval` | `TimeSpan` | `LockConstants.DefaultRenewalInterval` | Interval between automatic renewals |
+| `DefaultMaxRetries` | `int` | `LockConstants.DefaultMaxRetries` | Default retry count for acquisition |
+| `DefaultRetryDelayMs` | `int` | `LockConstants.DefaultRetryDelayMilliseconds` | Base delay between acquisition retries, in ms |
+| `DefaultAcquisitionMode` | `AcquisitionMode` | `Blocking` | Blocking or non-blocking acquisition |
+| `EnableAutoRenewal` | `bool` | `true` | Renew locks automatically while held |
+| `UseFencingTokens` | `bool` | `true` | Issue fencing tokens with each lock |
+| `MonitoringInterval` | `TimeSpan` | `LockConstants.DefaultMonitoringIntervalMilliseconds` ms | Interval for `LockMonitor` checks |
+| `MaxConcurrentLocks` | `int` | `LockConstants.DefaultMaxConcurrentLocks` | Upper bound on concurrently held locks |
+| `EnableMetrics` | `bool` | `true` | Collect lock metrics |
+| `EnableLogging` | `bool` | `true` | Emit lock logging |
+| `EnableMetricsResetEndpoint` | `bool` | `true` | Whether the metrics reset endpoint is enabled |
+| `RetryPolicyMaxRetries` | `int` | `LockConstants.DefaultMaxRetries` | Max retries for `DefaultLockRetryPolicy` |
+| `RetryPolicyInitialDelayMs` | `int` | `LockConstants.DefaultRetryDelayMilliseconds` | Initial backoff delay, in ms |
+| `RetryPolicyMaxDelayMs` | `int` | `LockConstants.MaximumRetryDelayMilliseconds` | Backoff ceiling, in ms |
+| `RetryPolicyJitterFactor` | `double` | `0.1` | Jitter applied to backoff delays |
+| `DefaultRenewalFraction` | `double` | `0.33` | Renewal point as a fraction of the lock lease |
+| `DefaultMaxRenewals` | `int` | `3` | Max automatic renewals per lock |
+
+`DistributedLockOptions` also provides:
+
+- `IEnumerable<string> Validate()` returns the list of validation errors (empty when valid).
+- `bool IsValid` is `true` when `Validate()` returns no errors.
+- `ToString()` returns a summary of the backend, connection string and main timing settings.
+  Note that the connection string is included verbatim, so avoid logging it in production
+  when it contains credentials.
+
+### Validation rules
+
+`Validate()` reports these errors:
+
+- `ConnectionString` is required unless `BackendType` is `InMemory`.
+- `DefaultLockDuration` must be within `LockConstants.MinimumLockTimeoutSeconds` and
+  `LockConstants.MaximumLockTimeoutSeconds`.
+- `DefaultAcquisitionTimeout` and `DefaultRenewalInterval` must be greater than zero.
+- `DefaultRenewalInterval` must be less than `DefaultLockDuration`.
+- `DefaultMaxRetries` and `DefaultRetryDelayMs` must not be negative.
+- `MaxConcurrentLocks` must be greater than zero.
+- `DefaultRenewalFraction` must be strictly between `0.01` and `0.99`.
+- `DefaultMaxRenewals` must not be negative.
+
+Validation runs only at registration time (inside `AddDistributedLocking`). Call `IsValid` or
+`Validate()` yourself if you need to check options earlier.
+
+### Example: validating options before registration
+
+```csharp
+using SarmKadan.DistributedLock.Configuration;
+using SarmKadan.DistributedLock.Enums;
+
+var options = new DistributedLockOptions
+{
+    BackendType = BackendType.PostgreSQL,
+    ConnectionString = "Host=db;Database=locks;Username=app;Password=secret",
+    DefaultLockDuration = TimeSpan.FromMinutes(2),
+    DefaultRenewalInterval = TimeSpan.FromSeconds(30)
+};
+
+if (!options.IsValid)
+{
+    foreach (var error in options.Validate())
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+```
 
 ## CacheKeyGenerator
 
