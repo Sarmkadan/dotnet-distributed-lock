@@ -22,6 +22,14 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
     private readonly SemaphoreSlim _initSemaphore = new(1, 1);
     private bool _initialized = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqliteLockRepository"/> class.
+    /// The database schema is created lazily on first use.
+    /// </summary>
+    /// <param name="connectionString">The SQLite connection string pointing to the lock database.</param>
+    /// <param name="logger">The logger used to report repository operations and errors.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is null, empty, or whitespace.</exception>
     public SqliteLockRepository(string connectionString, ILogger<SqliteLockRepository> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -81,6 +89,15 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         _logger.LogInformation("SQLite schema initialized");
     }
 
+    /// <summary>
+    /// Acquires a new lock by inserting it into the database.
+    /// An insert is ignored if a row with the same key already exists.
+    /// </summary>
+    /// <param name="lock">The lock to acquire.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if a new row was inserted; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -119,6 +136,13 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves a lock by its key, regardless of owner or expiration state.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if found; otherwise, null.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
         try
@@ -154,6 +178,14 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves a lock by key only if it is owned by the specified owner and has not expired.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if found, owned by <paramref name="ownerId"/>, and not expired; otherwise, null.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -171,6 +203,14 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Persists the status, expiration, renewal data, and serialized state of an existing lock.
+    /// </summary>
+    /// <param name="lock">The lock to update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if a row with the lock's key was updated; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -208,6 +248,15 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Renews a lock owned by the specified owner, extending its expiration by <paramref name="newDuration"/>.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="newDuration">The new duration for the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was found, owned by <paramref name="ownerId"/>, not expired, and renewed; otherwise, false.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default)
     {
         try
@@ -226,6 +275,14 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Releases a lock by deleting it, provided it is owned by the specified owner.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if a matching lock was deleted; otherwise, false.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -253,12 +310,25 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Checks whether a lock with the specified key exists and has not expired.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if a non-expired lock with the key exists; otherwise, false.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var @lock = await GetByKeyAsync(key, cancellationToken);
         return @lock is not null && !@lock.IsExpired;
     }
 
+    /// <summary>
+    /// Retrieves all locks whose expiration time is later than the current UTC time.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A list of active locks; empty if none exist.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -295,6 +365,13 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves all active (non-expired) locks owned by the specified owner.
+    /// </summary>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of active locks owned by <paramref name="ownerId"/>; empty if none exist.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -309,6 +386,12 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes all locks whose expiration time is at or before the current UTC time.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of deleted locks.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<int> DeleteExpiredLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -402,6 +485,12 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes all locks from the repository, including active ones.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of deleted locks.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -425,6 +514,14 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Checks whether the given fencing token matches the current sequence number of a non-expired lock.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="fencingToken">The fencing token sequence number to validate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if a non-expired lock with the key has a matching fencing token; otherwise, false.</returns>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">A database error occurred.</exception>
     public async Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
     {
         try
@@ -439,6 +536,11 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Releases resources used by the repository.
+    /// Currently performs no cleanup, since each operation opens and disposes its own connection.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
         await Task.CompletedTask;
