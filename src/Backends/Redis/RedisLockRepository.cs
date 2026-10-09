@@ -22,6 +22,13 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     private readonly ILogger<RedisLockRepository> _logger;
     private readonly string _keyPrefix;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RedisLockRepository"/> class and opens a connection to Redis.
+    /// </summary>
+    /// <param name="connectionString">The StackExchange.Redis connection string used to connect to the server.</param>
+    /// <param name="logger">The logger used to record repository activity and errors.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is null, empty, or consists only of white-space characters.</exception>
     public RedisLockRepository(string connectionString, ILogger<RedisLockRepository> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -35,6 +42,15 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         _logger.LogInformation("Redis lock repository initialized with connection string: {ConnectionString}", connectionString);
     }
 
+    /// <summary>
+    /// Attempts to acquire the specified lock in Redis using an atomic SET NX operation.
+    /// </summary>
+    /// <param name="lock">The lock to acquire. Its <see cref="Lock.Status"/> is set to Acquired on success.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>
+    /// <c>true</c> if the lock was stored in Redis; <c>false</c> if a lock with the same key already exists.
+    /// </returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -68,6 +84,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves the active lock stored under the specified key.
+    /// Expired locks found during the lookup are deleted from Redis.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>The lock if it exists and has not expired; otherwise <c>null</c>.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
         try
@@ -94,6 +118,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves the active lock stored under the specified key, but only if it is owned by the specified owner.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="ownerId">The identifier of the expected lock owner.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>The lock if it exists, is owned by <paramref name="ownerId"/>, and has not expired; otherwise <c>null</c>.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -111,6 +143,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Overwrites the stored Redis entry for the specified lock and sets its expiry to <see cref="Lock.ExpiresAt"/>.
+    /// This method does not check ownership or existence; it always writes the value.
+    /// </summary>
+    /// <param name="lock">The lock state to persist.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns><c>true</c> when the write completes.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -130,6 +170,15 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Extends the duration of an active lock held by the specified owner.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="ownerId">The identifier of the lock owner requesting the renewal.</param>
+    /// <param name="newDuration">The new lock duration, measured from the current time.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns><c>true</c> if the lock was renewed; <c>false</c> if no active lock is owned by <paramref name="ownerId"/>.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default)
     {
         try
@@ -148,6 +197,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Releases the lock stored under the specified key if it is owned by the specified owner.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="ownerId">The identifier of the lock owner requesting the release.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns><c>true</c> if the lock was deleted; <c>false</c> if no lock exists or it is owned by a different owner.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -168,6 +225,13 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Determines whether an active (non-expired) lock exists for the specified key.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns><c>true</c> if an active lock exists; otherwise <c>false</c>.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         try
@@ -182,6 +246,12 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Scans Redis for all lock keys with the configured prefix and returns the non-expired locks.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>A list of active locks. The list is empty if none exist.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -210,6 +280,13 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves all active locks owned by the specified owner.
+    /// </summary>
+    /// <param name="ownerId">The identifier of the lock owner.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>The active locks owned by <paramref name="ownerId"/>. The sequence is empty if none exist.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -224,6 +301,12 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Scans Redis for lock keys with the configured prefix and deletes those that have expired.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>The number of expired locks that were deleted.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<int> DeleteExpiredLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -317,6 +400,12 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes all lock keys with the configured prefix from Redis, including non-expired locks.
+    /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns>The number of keys that were deleted.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -341,6 +430,14 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Checks whether the supplied fencing token matches the current fencing token of an active lock.
+    /// </summary>
+    /// <param name="key">The logical lock key (without the Redis key prefix).</param>
+    /// <param name="fencingToken">The fencing token to validate.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation (currently not used by the Redis client calls).</param>
+    /// <returns><c>true</c> if an active lock exists and its fencing sequence number equals <paramref name="fencingToken"/>; otherwise <c>false</c>.</returns>
+    /// <exception cref="Exception">Rethrown when the Redis operation fails.</exception>
     public async Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
     {
         try
@@ -375,6 +472,10 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Closes the Redis connection and releases the underlying <see cref="IConnectionMultiplexer"/>.
+    /// </summary>
+    /// <returns>A task that completes when the connection has been closed and disposed.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_redis is not null)
