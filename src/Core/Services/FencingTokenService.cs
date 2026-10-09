@@ -28,6 +28,7 @@ public sealed class FencingTokenService
     // Issues a new fencing token for a lock
     public FencingToken IssueToken(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Issuing fencing token for {LockKey}", lockKey);
         var sequenceNumber = _sequenceCounters.AddOrUpdate(
             lockKey,
@@ -44,6 +45,8 @@ public sealed class FencingTokenService
     // Validates a fencing token against the current token for a lock
     public bool ValidateToken(string lockKey, FencingToken providedToken)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(providedToken);
         _logger.LogInformation("Validating fencing token for {LockKey}", lockKey);
         if (!_tokens.TryGetValue(lockKey, out var currentToken))
         {
@@ -66,6 +69,7 @@ public sealed class FencingTokenService
     // Gets the current fencing token for a lock
     public FencingToken? GetToken(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Getting fencing token for {LockKey}", lockKey);
         _tokens.TryGetValue(lockKey, out var token);
         _logger.LogInformation("Got fencing token for {LockKey}: {Token}", lockKey, token);
@@ -75,6 +79,7 @@ public sealed class FencingTokenService
     // Revokes a fencing token (typically when lock is released)
     public void RevokeToken(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Revoking fencing token for {LockKey}", lockKey);
         _tokens.TryRemove(lockKey, out _);
         _logger.LogInformation("Revoked fencing token for {LockKey}", lockKey);
@@ -84,6 +89,7 @@ public sealed class FencingTokenService
     // Increments the token sequence (creates a new token generation)
     public FencingToken IncrementToken(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Incrementing fencing token for {LockKey}", lockKey);
         // Use AddOrUpdate to atomically get or create the token and update the sequence counter
         var newToken = _tokens.AddOrUpdate(
@@ -117,6 +123,8 @@ public sealed class FencingTokenService
     // Validates a token and throws an exception if invalid
     public void ValidateTokenOrThrow(string lockKey, FencingToken providedToken)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(providedToken);
         _logger.LogInformation("Validating token or throwing for {LockKey}", lockKey);
         if (!ValidateToken(lockKey, providedToken))
         {
@@ -133,6 +141,7 @@ public sealed class FencingTokenService
     // Checks whether a fencing token has been issued (and not yet revoked) for a resource
     public bool IsResourceLocked(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Checking if resource is locked for {LockKey}", lockKey);
         var result = _tokens.ContainsKey(lockKey);
         _logger.LogInformation("Resource {LockKey} lock status: {IsLocked}", lockKey, result);
