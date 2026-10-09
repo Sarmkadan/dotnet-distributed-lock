@@ -13,15 +13,34 @@ namespace SarmKadan.DistributedLock.Models;
 /// </summary>
 public class Lock
 {
+    private string _key = string.Empty;
+    private string _ownerId = string.Empty;
+
     /// <summary>
     /// The unique identifier for the lock key.
     /// </summary>
-    public string Key { get; set; }
-    
+    public string Key
+    {
+        get => _key;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _key = value;
+        }
+    }
+
     /// <summary>
     /// The identifier for the lock owner.
     /// </summary>
-    public string OwnerId { get; set; }
+    public string OwnerId
+    {
+        get => _ownerId;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _ownerId = value;
+        }
+    }
     
     /// <summary>
     /// The fencing token associated with the lock (optional).
@@ -85,6 +104,9 @@ public class Lock
     /// <param name="duration">The duration to hold the lock.</param>
     public Lock(string key, string ownerId, TimeSpan duration)
     {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Lock key cannot be null or empty.", nameof(key));
 
