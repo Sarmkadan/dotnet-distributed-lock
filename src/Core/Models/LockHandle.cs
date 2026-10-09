@@ -208,6 +208,13 @@ public sealed class LockHandle : IAsyncDisposable
     }
 
     /// <summary>
+    /// Returns a string representation of this handle for diagnostics.
+    /// </summary>
+    /// <returns>A string containing the lock key, owner id and current status.</returns>
+    public override string ToString()
+        => $"LockHandle {{ Key = {_lockKey}, OwnerId = {_ownerId}, Status = {Status} }}";
+
+    /// <summary>
     /// Disposes the handle and stops auto-renewal.
     /// </summary>
     public async ValueTask DisposeAsync()
