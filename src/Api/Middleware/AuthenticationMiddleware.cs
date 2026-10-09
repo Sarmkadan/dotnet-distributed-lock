@@ -19,8 +19,11 @@ public sealed class AuthenticationMiddleware
 
     public AuthenticationMiddleware(RequestDelegate next, ILogger<AuthenticationMiddleware> logger)
     {
-        _next = next ?? throw new ArgumentNullException(nameof(next));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _next = next;
+        _logger = logger;
 
         // Define endpoints that don't require authentication
         _publicEndpoints = new HashSet<string>
@@ -34,6 +37,8 @@ public sealed class AuthenticationMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var request = context.Request;
         var path = request.Path.Value ?? string.Empty;
 
