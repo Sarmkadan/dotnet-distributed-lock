@@ -18,9 +18,32 @@ using SarmKadan.DistributedLock.Core.Models;
 /// </summary>
 public interface IWebhookPublisher
 {
+    /// <summary>
+    /// Publishes a lock-acquired event to configured webhook endpoints.
+    /// </summary>
+    /// <param name="lock">The lock that was acquired.</param>
+    /// <param name="cancellationToken">Token used to cancel the publish operation.</param>
     Task PublishLockAcquiredAsync(Lock @lock, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Publishes a lock-released event to configured webhook endpoints.
+    /// </summary>
+    /// <param name="lock">The lock that was released.</param>
+    /// <param name="cancellationToken">Token used to cancel the publish operation.</param>
     Task PublishLockReleasedAsync(Lock @lock, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Publishes a lock-expired event to configured webhook endpoints.
+    /// </summary>
+    /// <param name="lock">The lock that expired.</param>
+    /// <param name="cancellationToken">Token used to cancel the publish operation.</param>
     Task PublishLockExpiredAsync(Lock @lock, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Publishes a lock-renewed event to configured webhook endpoints.
+    /// </summary>
+    /// <param name="lock">The lock that was renewed.</param>
+    /// <param name="cancellationToken">Token used to cancel the publish operation.</param>
     Task PublishLockRenewedAsync(Lock @lock, CancellationToken cancellationToken = default);
 }
 
@@ -456,8 +479,19 @@ public class WebhookConfig
 /// </summary>
 public record WebhookPayload
 {
+    /// <summary>
+    /// Name of the event, for example <c>lock.acquired</c>.
+    /// </summary>
     public required string EventType { get; init; }
+
+    /// <summary>
+    /// UTC time at which the event was published.
+    /// </summary>
     public DateTime Timestamp { get; init; }
+
+    /// <summary>
+    /// The lock the event pertains to.
+    /// </summary>
     public required Lock Data { get; init; }
 }
 
@@ -466,15 +500,35 @@ public record WebhookPayload
 /// </summary>
 public class NoOpWebhookPublisher : IWebhookPublisher
 {
+    /// <summary>
+    /// Does nothing and returns a completed task.
+    /// </summary>
+    /// <param name="lock">Ignored.</param>
+    /// <param name="cancellationToken">Ignored.</param>
     public Task PublishLockAcquiredAsync(Lock @lock, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    /// <summary>
+    /// Does nothing and returns a completed task.
+    /// </summary>
+    /// <param name="lock">Ignored.</param>
+    /// <param name="cancellationToken">Ignored.</param>
     public Task PublishLockReleasedAsync(Lock @lock, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    /// <summary>
+    /// Does nothing and returns a completed task.
+    /// </summary>
+    /// <param name="lock">Ignored.</param>
+    /// <param name="cancellationToken">Ignored.</param>
     public Task PublishLockExpiredAsync(Lock @lock, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    /// <summary>
+    /// Does nothing and returns a completed task.
+    /// </summary>
+    /// <param name="lock">Ignored.</param>
+    /// <param name="cancellationToken">Ignored.</param>
     public Task PublishLockRenewedAsync(Lock @lock, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }
