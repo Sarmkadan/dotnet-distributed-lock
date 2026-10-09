@@ -34,11 +34,14 @@ public sealed class InMemoryLockEventPublisher : ILockEventPublisher
 
     public InMemoryLockEventPublisher(ILogger<InMemoryLockEventPublisher> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : LockEvent
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         var eventType = typeof(TEvent);
 
         List<Delegate> handlers;
@@ -91,8 +94,7 @@ public sealed class InMemoryLockEventPublisher : ILockEventPublisher
 
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : LockEvent
     {
-        if (handler is null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         var eventType = typeof(TEvent);
 
@@ -171,6 +173,9 @@ public static class LockEventPublisherExtensions
         this ILockEventPublisher publisher,
         TEvent @event) where TEvent : LockEvent
     {
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(@event);
+
         publisher.PublishAsync(@event).GetAwaiter().GetResult();
     }
 
@@ -181,6 +186,9 @@ public static class LockEventPublisherExtensions
         this ILockEventPublisher publisher,
         TEvent @event) where TEvent : LockEvent
     {
+        ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(@event);
+
         _ = publisher.PublishAsync(@event);
     }
 
@@ -189,6 +197,8 @@ public static class LockEventPublisherExtensions
     /// </summary>
     public static IServiceCollection AddLockEventPublisher(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.AddSingleton<ILockEventPublisher, InMemoryLockEventPublisher>();
         return services;
     }
