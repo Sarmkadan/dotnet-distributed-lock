@@ -27,6 +27,9 @@ using SarmKadan.DistributedLock.Models;
 /// </remarks>
 public sealed class WebhookLockEventSubscriber : LockEventSubscriber
 {
+    /// <summary>
+    /// The publisher that receives the adapted webhook payloads.
+    /// </summary>
     private readonly IWebhookPublisher _webhookPublisher;
 
     /// <summary>
@@ -59,15 +62,31 @@ public sealed class WebhookLockEventSubscriber : LockEventSubscriber
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Handles a <see cref="LockAcquiredEvent"/> by publishing a lock-acquired webhook.
+    /// </summary>
+    /// <param name="event">The acquired event to adapt.</param>
     private Task OnLockAcquired(LockAcquiredEvent @event) => HandleEventAsync(@event, e =>
         _webhookPublisher.PublishLockAcquiredAsync(ToLock(e.LockId, e.LockName, e.OwnerId, e.ExpiresAt, e.Duration, e.Status)));
 
+    /// <summary>
+    /// Handles a <see cref="LockReleasedEvent"/> by publishing a lock-released webhook.
+    /// </summary>
+    /// <param name="event">The released event to adapt.</param>
     private Task OnLockReleased(LockReleasedEvent @event) => HandleEventAsync(@event, e =>
         _webhookPublisher.PublishLockReleasedAsync(ToLock(e.LockId, e.LockName, e.OwnerId, e.ReleasedAt, e.HeldDuration, LockStatus.Released, e.AcquiredAt)));
 
+    /// <summary>
+    /// Handles a <see cref="LockExpiredEvent"/> by publishing a lock-expired webhook.
+    /// </summary>
+    /// <param name="event">The expired event to adapt.</param>
     private Task OnLockExpired(LockExpiredEvent @event) => HandleEventAsync(@event, e =>
         _webhookPublisher.PublishLockExpiredAsync(ToLock(e.LockId, e.LockName, e.OwnerId, e.ExpiredAt, e.TotalDuration, LockStatus.Expired)));
 
+    /// <summary>
+    /// Handles a <see cref="LockRenewedEvent"/> by publishing a lock-renewed webhook.
+    /// </summary>
+    /// <param name="event">The renewed event to adapt.</param>
     private Task OnLockRenewed(LockRenewedEvent @event) => HandleEventAsync(@event, e =>
         _webhookPublisher.PublishLockRenewedAsync(ToLock(e.LockId, e.LockName, e.OwnerId, e.NewExpiresAt, e.RenewedDuration, LockStatus.Held)));
 
