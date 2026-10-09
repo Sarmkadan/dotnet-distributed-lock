@@ -39,8 +39,11 @@ public class LockCleanupWorker : BackgroundService
         ILogger<LockCleanupWorker> logger,
         LockCleanupWorkerOptions? options = null)
     {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _repository = repository;
+        _logger = logger;
         _options = options ?? new LockCleanupWorkerOptions();
     }
 
