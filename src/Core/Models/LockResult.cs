@@ -111,6 +111,16 @@ public readonly record struct LockResult<T>
     /// </summary>
     /// <param name="value">The value to convert.</param>
     public static implicit operator LockResult<T>(T value) => Acquired(value);
+
+    /// <summary>
+    /// Returns a human-readable representation of the result.
+    /// </summary>
+    /// <returns>The status with the value (when acquired) or the error message (otherwise).</returns>
+    public override string ToString() => Status switch
+    {
+        LockAcquisitionStatus.Acquired => $"Acquired: {Value}",
+        _ => ErrorMessage is null ? Status.ToString() : $"{Status}: {ErrorMessage}"
+    };
 }
 
 /// <summary>
@@ -180,6 +190,12 @@ public readonly record struct LockResult
     /// Gets a value indicating whether the operation failed due to an error.
     /// </summary>
     public bool IsFaulted => Status == LockAcquisitionStatus.Faulted;
+
+    /// <summary>
+    /// Returns a human-readable representation of the result.
+    /// </summary>
+    /// <returns>The status, followed by the error message when present.</returns>
+    public override string ToString() => ErrorMessage is null ? Status.ToString() : $"{Status}: {ErrorMessage}";
 }
 
 /// <summary>
