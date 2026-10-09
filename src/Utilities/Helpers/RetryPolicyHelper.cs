@@ -25,6 +25,8 @@ public static class RetryPolicyHelper
         double backoffMultiplier = 2.0,
         Func<Exception, bool>? shouldRetry = null)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+
         shouldRetry ??= _ => true;
         var currentDelayMs = initialDelayMs;
 
@@ -60,6 +62,8 @@ public static class RetryPolicyHelper
         double backoffMultiplier = 2.0,
         Func<Exception, bool>? shouldRetry = null)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+
         shouldRetry ??= _ => true;
         var currentDelayMs = initialDelayMs;
 
@@ -92,6 +96,8 @@ public static class RetryPolicyHelper
         int maxRetries = 3,
         int delayIncrementMs = 100)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+
         var currentDelayMs = delayIncrementMs;
 
         for (int attempt = 0; attempt <= maxRetries; attempt++)
