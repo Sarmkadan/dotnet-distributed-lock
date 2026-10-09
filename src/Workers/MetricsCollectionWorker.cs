@@ -27,8 +27,11 @@ public class MetricsCollectionWorker : BackgroundService
         ILogger<MetricsCollectionWorker> logger,
         MetricsCollectionWorkerOptions? options = null)
     {
-        _cacheManager = cacheManager ?? throw new ArgumentNullException(nameof(cacheManager));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(cacheManager);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _cacheManager = cacheManager;
+        _logger = logger;
         _options = options ?? new MetricsCollectionWorkerOptions();
         _snapshots = new List<MetricsSnapshot>();
     }
