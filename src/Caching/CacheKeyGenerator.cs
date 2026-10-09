@@ -26,6 +26,21 @@ public static class CacheKeyGenerator
     private const string OwnerPrefix = "owner:";
     private const string ActivePrefix = "active:";
     private const string SystemSuffix = "system";
+    private const string WildcardSuffix = "*";
+
+    private const string NullParameterText = "null";
+    private const char ParameterSeparator = '|';
+    private const char TagSeparator = ':';
+    private const char QueryNameSeparator = ':';
+    private const string BitConverterSeparator = "-";
+    private const int QueryHashLength = 16;
+
+    private const string LockIdEmptyMessage = "Lock ID cannot be empty";
+    private const string LockNameEmptyMessage = "Lock name cannot be empty";
+    private const string OwnerIdEmptyMessage = "Owner ID cannot be empty";
+    private const string QueryNameEmptyMessage = "Query name cannot be empty";
+    private const string ConfigNameEmptyMessage = "Config name cannot be empty";
+    private const string TagRequiredMessage = "At least one tag is required";
 
     private static readonly int LockPrefixLength = Prefix.Length;
     private static readonly int MetricsPrefixLength = MetricsPrefix.Length;
@@ -54,7 +69,7 @@ public static class CacheKeyGenerator
     public static string GenerateLockKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
-            throw new ArgumentException("Lock ID cannot be empty", nameof(lockId));
+            throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
 
         return string.Create(null, stackalloc char[LockPrefixLength + lockId.Length], $"{Prefix}{lockId}");
     }
@@ -79,7 +94,7 @@ public static class CacheKeyGenerator
     public static string GenerateLockNameKey(ReadOnlySpan<char> lockName)
     {
         if (lockName.IsEmpty)
-            throw new ArgumentException("Lock name cannot be empty", nameof(lockName));
+            throw new ArgumentException(LockNameEmptyMessage, nameof(lockName));
 
         return string.Create(null, stackalloc char[LockPrefixLength + NamePrefixLength + lockName.Length], $"{Prefix}{NamePrefix}{lockName}");
     }
@@ -102,7 +117,7 @@ public static class CacheKeyGenerator
     public static string GenerateMetricsKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
-            throw new ArgumentException("Lock ID cannot be empty", nameof(lockId));
+            throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
 
         return string.Create(null, stackalloc char[MetricsPrefixLength + lockId.Length], $"{MetricsPrefix}{lockId}");
     }
@@ -133,7 +148,7 @@ public static class CacheKeyGenerator
     public static string GenerateStatusKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
-            throw new ArgumentException("Lock ID cannot be empty", nameof(lockId));
+            throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
 
         return string.Create(null, stackalloc char[StatusPrefixLength + lockId.Length], $"{StatusPrefix}{lockId}");
     }
@@ -156,7 +171,7 @@ public static class CacheKeyGenerator
     public static string GenerateOwnerLocksKey(ReadOnlySpan<char> ownerId)
     {
         if (ownerId.IsEmpty)
-            throw new ArgumentException("Owner ID cannot be empty", nameof(ownerId));
+            throw new ArgumentException(OwnerIdEmptyMessage, nameof(ownerId));
 
         return string.Create(null, stackalloc char[LockPrefixLength + OwnerPrefixLength + ownerId.Length], $"{Prefix}{OwnerPrefix}{ownerId}");
     }
@@ -166,7 +181,7 @@ public static class CacheKeyGenerator
     /// </summary>
     public static string GenerateActiveLockKeysPattern()
     {
-        return Prefix + ActivePrefix + "*";
+        return Prefix + ActivePrefix + WildcardSuffix;
     }
 
     /// <summary>
@@ -184,11 +199,11 @@ public static class CacheKeyGenerator
         for (int i = 0; i < parameters.Length; i++)
         {
             if (i > 0)
-                paramBuilder.Append('|');
+                paramBuilder.Append(ParameterSeparator);
 
             var param = parameters[i];
             if (param is null)
-                paramBuilder.Append("null");
+                paramBuilder.Append(NullParameterText);
             else if (param is string str)
                 paramBuilder.Append(str);
             else
@@ -196,8 +211,8 @@ public static class CacheKeyGenerator
         }
 
         var paramStr = paramBuilder.ToString();
-        var hash = ComputeSha256Hash($"{queryName}:{paramStr}");
-        return string.Create(null, stackalloc char[QueryPrefixLength + 16], $"{QueryPrefix}{hash}");
+        var hash = ComputeSha256Hash($"{queryName}{QueryNameSeparator}{paramStr}");
+        return string.Create(null, stackalloc char[QueryPrefixLength + QueryHashLength], $"{QueryPrefix}{hash}");
     }
 
     /// <summary>
@@ -208,18 +223,18 @@ public static class CacheKeyGenerator
     public static string GenerateQueryKey(ReadOnlySpan<char> queryName, ReadOnlySpan<object?> parameters)
     {
         if (queryName.IsEmpty)
-            throw new ArgumentException("Query name cannot be empty", nameof(queryName));
+            throw new ArgumentException(QueryNameEmptyMessage, nameof(queryName));
 
         // Use StringBuilder to avoid multiple intermediate string allocations
         var paramBuilder = new StringBuilder();
         for (int i = 0; i < parameters.Length; i++)
         {
             if (i > 0)
-                paramBuilder.Append('|');
+                paramBuilder.Append(ParameterSeparator);
 
             var param = parameters[i];
             if (param is null)
-                paramBuilder.Append("null");
+                paramBuilder.Append(NullParameterText);
             else if (param is string str)
                 paramBuilder.Append(str);
             else
@@ -227,8 +242,8 @@ public static class CacheKeyGenerator
         }
 
         var paramStr = paramBuilder.ToString();
-        var hash = ComputeSha256Hash($"{queryName}:{paramStr}");
-        return string.Create(null, stackalloc char[QueryPrefixLength + 16], $"{QueryPrefix}{hash}");
+        var hash = ComputeSha256Hash($"{queryName}{QueryNameSeparator}{paramStr}");
+        return string.Create(null, stackalloc char[QueryPrefixLength + QueryHashLength], $"{QueryPrefix}{hash}");
     }
 
     /// <summary>
@@ -249,7 +264,7 @@ public static class CacheKeyGenerator
     public static string GenerateConfigurationKey(ReadOnlySpan<char> configName)
     {
         if (configName.IsEmpty)
-            throw new ArgumentException("Config name cannot be empty", nameof(configName));
+            throw new ArgumentException(ConfigNameEmptyMessage, nameof(configName));
 
         return string.Create(null, stackalloc char[ConfigPrefixLength + configName.Length], $"{ConfigPrefix}{configName}");
     }
@@ -263,14 +278,14 @@ public static class CacheKeyGenerator
     {
         ArgumentNullException.ThrowIfNull(tags);
         if (tags.Length == 0)
-            throw new ArgumentException("At least one tag is required");
+            throw new ArgumentException(TagRequiredMessage);
 
         // Use StringBuilder to avoid intermediate string allocations
         var tagBuilder = new StringBuilder();
         for (int i = 0; i < tags.Length; i++)
         {
             if (i > 0)
-                tagBuilder.Append(':');
+                tagBuilder.Append(TagSeparator);
             tagBuilder.Append(tags[i]);
         }
 
@@ -286,14 +301,14 @@ public static class CacheKeyGenerator
     public static string GenerateTagKey(ReadOnlySpan<string> tags)
     {
         if (tags.IsEmpty)
-            throw new ArgumentException("At least one tag is required", nameof(tags));
+            throw new ArgumentException(TagRequiredMessage, nameof(tags));
 
         // Use StringBuilder to avoid intermediate string allocations
         var tagBuilder = new StringBuilder();
         for (int i = 0; i < tags.Length; i++)
         {
             if (i > 0)
-                tagBuilder.Append(':');
+                tagBuilder.Append(TagSeparator);
             tagBuilder.Append(tags[i]);
         }
 
@@ -401,7 +416,7 @@ public static class CacheKeyGenerator
         using (var sha256 = SHA256.Create())
         {
             var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return BitConverter.ToString(hashedBytes).Replace("-", "").ToLowerInvariant().Substring(0, 16);
+            return BitConverter.ToString(hashedBytes).Replace(BitConverterSeparator, "").ToLowerInvariant().Substring(0, QueryHashLength);
         }
     }
 }
