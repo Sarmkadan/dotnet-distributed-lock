@@ -17,6 +17,9 @@ namespace SarmKadan.DistributedLock.Backends.Redis;
 /// </summary>
 public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
 {
+    private const string AllKeysWildcard = "*";
+    private const string ConnectionStringRequiredMessage = "Connection string cannot be null or empty.";
+
     private readonly IConnectionMultiplexer _redis;
     private readonly IDatabase _database;
     private readonly ILogger<RedisLockRepository> _logger;
@@ -33,7 +36,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new ArgumentException("Connection string cannot be null or empty.", nameof(connectionString));
+            throw new ArgumentException(ConnectionStringRequiredMessage, nameof(connectionString));
 
         _redis = ConnectionMultiplexer.Connect(connectionString);
         _database = _redis.GetDatabase();
@@ -257,7 +260,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
-            var keys = server.Keys(pattern: $"{_keyPrefix}*");
+            var keys = server.Keys(pattern: $"{_keyPrefix}{AllKeysWildcard}");
             var locks = new List<Lock>();
 
             foreach (var key in keys)
@@ -312,7 +315,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
-            var keys = server.Keys(pattern: $"{_keyPrefix}*");
+            var keys = server.Keys(pattern: $"{_keyPrefix}{AllKeysWildcard}");
             int deletedCount = 0;
 
             foreach (var key in keys)
@@ -345,7 +348,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
-            var keys = server.Keys(pattern: $"{_keyPrefix}*");
+            var keys = server.Keys(pattern: $"{_keyPrefix}{AllKeysWildcard}");
             var expiredLocks = new List<Lock>();
 
             foreach (var key in keys)
@@ -411,7 +414,7 @@ public sealed class RedisLockRepository : ILockRepository, IAsyncDisposable
         try
         {
             var server = _redis.GetServer(_redis.GetEndPoints().First());
-            var keys = server.Keys(pattern: $"{_keyPrefix}*");
+            var keys = server.Keys(pattern: $"{_keyPrefix}{AllKeysWildcard}");
             int count = 0;
 
             foreach (var key in keys)
