@@ -18,6 +18,17 @@ using SarmKadan.DistributedLock.Repository;
 /// </summary>
 public class LockCleanupWorker : BackgroundService
 {
+    private const string StartedMessage = "Lock cleanup worker started";
+    private const string StoppingMessage = "Stopping lock cleanup worker";
+    private const string StoppedMessage = "Lock cleanup worker stopped. Total cleaned: {Count}";
+    private const string SweepStartedMessage = "Starting lock cleanup sweep";
+    private const string SweepConcurrentExpiryMessage = "Lock expired concurrently during cleanup sweep for {LockKey}";
+    private const string SweepErrorMessage = "Error during lock cleanup";
+    private const string SweepCompletedMessage =
+        "Lock cleanup completed: cleaned {Count} locks, skipped {SkippedCount} renewed-in-flight locks, in {ElapsedMs}ms";
+    private const string BatchLimitReachedMessage =
+        "Lock cleanup batch limit reached; deferred {DeferredCount} expired locks to the next sweep";
+
     private readonly ILockRepository _repository;
     private readonly ILogger<LockCleanupWorker> _logger;
     private readonly LockCleanupWorkerOptions _options;
@@ -46,7 +57,7 @@ public class LockCleanupWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Lock cleanup worker started");
+        _logger.LogInformation(StartedMessage);
 
         // Initial delay before first cleanup
         await Task.Delay(_options.InitialDelayMs, stoppingToken);
@@ -66,13 +77,13 @@ public class LockCleanupWorker : BackgroundService
                 // Benign: a lock expired again between being read and being deleted
                 // (e.g. lost the compare-and-delete race to another sweep). Not a
                 // backend failure, so log at a lower level and keep the schedule.
-                _logger.LogDebug(ex, "Lock expired concurrently during cleanup sweep for {LockKey}", ex.LockKey);
+                _logger.LogDebug(ex, SweepConcurrentExpiryMessage, ex.LockKey);
             }
             catch (Exception ex)
             {
                 // Transient backend error (connection drop, timeout, etc). Log and
                 // keep the loop alive - a single failed sweep must not crash the worker.
-                _logger.LogError(ex, "Error during lock cleanup");
+                _logger.LogError(ex, SweepErrorMessage);
             }
 
             // Always wait out the configured interval between sweeps, whether the
@@ -88,7 +99,7 @@ public class LockCleanupWorker : BackgroundService
             }
         }
 
-        _logger.LogInformation("Lock cleanup worker stopped. Total cleaned: {Count}", _cleanedCount);
+        _logger.LogInformation(StoppedMessage, _cleanedCount);
     }
 
     /// <summary>
@@ -107,7 +118,7 @@ public class LockCleanupWorker : BackgroundService
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     private async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting lock cleanup sweep");
+        _logger.LogDebug(SweepStartedMessage);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var expiredLocks = await _repository.GetExpiredLocksAsync(cancellationToken);
@@ -153,7 +164,7 @@ public class LockCleanupWorker : BackgroundService
         if (cleaned > 0 || skipped > 0 || _options.VerboseLogging)
         {
             _logger.LogInformation(
-                "Lock cleanup completed: cleaned {Count} locks, skipped {SkippedCount} renewed-in-flight locks, in {ElapsedMs}ms",
+                SweepCompletedMessage,
                 cleaned,
                 skipped,
                 stopwatch.Elapsed.TotalMilliseconds);
@@ -162,14 +173,14 @@ public class LockCleanupWorker : BackgroundService
         if (deferred > 0)
         {
             _logger.LogDebug(
-                "Lock cleanup batch limit reached; deferred {DeferredCount} expired locks to the next sweep",
+                BatchLimitReachedMessage,
                 deferred);
         }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping lock cleanup worker");
+        _logger.LogInformation(StoppingMessage);
         await base.StopAsync(cancellationToken);
     }
 }
