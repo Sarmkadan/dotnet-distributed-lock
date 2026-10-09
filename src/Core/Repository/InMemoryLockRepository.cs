@@ -17,6 +17,15 @@ public sealed class InMemoryLockRepository : ILockRepository
     private readonly Dictionary<string, Lock> _locks = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();
 
+    /// <summary>
+    /// Attempts to acquire the specified lock.
+    /// Succeeds when no lock with the same key is stored or the stored lock has expired.
+    /// On success, the lock status is set to <see cref="Enums.LockStatus.Acquired"/> and the lock is stored.
+    /// </summary>
+    /// <param name="lock">The lock to acquire.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was acquired; false if an unexpired lock with the same key is held.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
     public Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(@lock);
@@ -40,6 +49,15 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Retrieves the lock stored under the specified key.
+    /// If the stored lock has expired, it is removed from storage and <see langword="null"/> is returned.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The unexpired lock if found; otherwise, <see langword="null"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is empty.</exception>
     public Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -72,6 +90,15 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Retrieves the unexpired lock stored under the specified key, but only if it is owned by the specified owner.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if found, unexpired, and owned by <paramref name="ownerId"/>; otherwise, <see langword="null"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> or <paramref name="ownerId"/> is empty.</exception>
     public Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -89,6 +116,14 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Replaces the stored lock that has the same key as the specified lock.
+    /// Does nothing if no lock with that key is stored.
+    /// </summary>
+    /// <param name="lock">The lock containing the new state.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the stored lock was replaced; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="lock"/> is <see langword="null"/>.</exception>
     public Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(@lock);
@@ -108,6 +143,17 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Extends the duration of the lock stored under the specified key, if it is owned by the specified owner.
+    /// The stored lock is renewed whenever the owner matches, regardless of whether it has already expired.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="newDuration">The new duration for the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was renewed; false if no lock with the key is owned by <paramref name="ownerId"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> or <paramref name="ownerId"/> is empty.</exception>
     public Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -128,6 +174,16 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Releases the lock stored under the specified key, if it is owned by the specified owner.
+    /// The lock is removed from storage.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was released; false if no lock with the key is owned by <paramref name="ownerId"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="ownerId"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> or <paramref name="ownerId"/> is empty.</exception>
     public Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -149,6 +205,14 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Determines whether an unexpired lock is stored under the specified key.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if an unexpired lock with the key exists; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is empty.</exception>
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
@@ -163,6 +227,11 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Retrieves a snapshot of all unexpired locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of all active locks at the time of the call.</returns>
     public Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
     {
         _lockSlim.EnterReadLock();
@@ -177,6 +246,14 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Retrieves a snapshot of all unexpired locks owned by the specified owner.
+    /// </summary>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of unexpired locks owned by <paramref name="ownerId"/> at the time of the call.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="ownerId"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="ownerId"/> is empty.</exception>
     public Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(ownerId);
@@ -192,6 +269,11 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Removes all expired locks from storage.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of expired locks that were removed.</returns>
     public Task<int> DeleteExpiredLockAsync(CancellationToken cancellationToken = default)
     {
         _lockSlim.EnterWriteLock();
@@ -246,6 +328,11 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Removes all locks from storage, including unexpired ones.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of locks that were removed.</returns>
     public Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         _lockSlim.EnterWriteLock();
@@ -261,6 +348,15 @@ public sealed class InMemoryLockRepository : ILockRepository
         }
     }
 
+    /// <summary>
+    /// Validates that the specified fencing token matches the current, unexpired lock stored under the key.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="fencingToken">The fencing token to validate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if an unexpired lock exists and its fencing token sequence number equals <paramref name="fencingToken"/>; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="key"/> is empty.</exception>
     public Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
