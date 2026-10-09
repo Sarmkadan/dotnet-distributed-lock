@@ -23,13 +23,19 @@ public sealed class LockMonitor : IDisposable
 
     public LockMonitor(ILockService lockService, ILogger<LockMonitor> logger)
     {
-        _lockService = lockService ?? throw new ArgumentNullException(nameof(lockService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(lockService);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _lockService = lockService;
+        _logger = logger;
     }
 
     // Registers a lock for monitoring and auto-renewal
     public void RegisterLock(string lockKey, string ownerId, TimeSpan renewalInterval, TimeSpan lockDuration)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         _lockSlim.EnterWriteLock();
         try
         {
@@ -55,6 +61,8 @@ public sealed class LockMonitor : IDisposable
     // Unregisters a lock from monitoring
     public void UnregisterLock(string lockKey)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+
         _lockSlim.EnterWriteLock();
         try
         {
