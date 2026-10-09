@@ -17,9 +17,17 @@ namespace SarmKadan.DistributedLock.Backends.SQLite;
 /// </summary>
 public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
 {
+    private const string TableName = "distributed_locks";
+    private const string OwnerIdIndexName = "idx_owner_id";
+    private const string ExpiresAtIndexName = "idx_expires_at";
+    private const string DateTimeFormat = "O";
+    private const int InitialRenewalCount = 0;
+    private const int SemaphoreInitialCount = 1;
+    private const int SemaphoreMaxCount = 1;
+
     private readonly string _connectionString;
     private readonly ILogger<SqliteLockRepository> _logger;
-    private readonly SemaphoreSlim _initSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _initSemaphore = new(SemaphoreInitialCount, SemaphoreMaxCount);
     private bool _initialized = false;
 
     /// <summary>
@@ -66,8 +74,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
             await connection.OpenAsync();
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = @"
-                    CREATE TABLE IF NOT EXISTS distributed_locks (
+                command.CommandText = $@"
+                    CREATE TABLE IF NOT EXISTS {TableName} (
                         lock_key TEXT PRIMARY KEY,
                         owner_id TEXT NOT NULL,
                         status INTEGER NOT NULL,
@@ -79,8 +87,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                         metadata TEXT,
                         lock_data TEXT NOT NULL
                     );
-                    CREATE INDEX IF NOT EXISTS idx_owner_id ON distributed_locks(owner_id);
-                    CREATE INDEX IF NOT EXISTS idx_expires_at ON distributed_locks(expires_at);
+                    CREATE INDEX IF NOT EXISTS {OwnerIdIndexName} ON {TableName}(owner_id);
+                    CREATE INDEX IF NOT EXISTS {ExpiresAtIndexName} ON {TableName}(expires_at);
                 ";
                 await command.ExecuteNonQueryAsync();
             }
@@ -109,17 +117,17 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = @"
-                        INSERT OR IGNORE INTO distributed_locks
+                    command.CommandText = $@"
+                        INSERT OR IGNORE INTO {TableName}
                         (lock_key, owner_id, status, acquired_at, expires_at, renewal_count, duration_seconds, lock_data)
-                        VALUES (@key, @owner, @status, @acquired, @expires, 0, @duration, @data)
+                        VALUES (@key, @owner, @status, @acquired, @expires, {InitialRenewalCount}, @duration, @data)
                     ";
 
                     command.Parameters.AddWithValue("@key", @lock.Key);
                     command.Parameters.AddWithValue("@owner", @lock.OwnerId);
                     command.Parameters.AddWithValue("@status", (int)@lock.Status);
-                    command.Parameters.AddWithValue("@acquired", @lock.AcquiredAt.ToString("O"));
-                    command.Parameters.AddWithValue("@expires", @lock.ExpiresAt.ToString("O"));
+                    command.Parameters.AddWithValue("@acquired", @lock.AcquiredAt.ToString(DateTimeFormat));
+                    command.Parameters.AddWithValue("@expires", @lock.ExpiresAt.ToString(DateTimeFormat));
                     command.Parameters.AddWithValue("@duration", (int)@lock.Duration.TotalSeconds);
                     command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
 
@@ -154,7 +162,7 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE lock_key = @key";
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE lock_key = @key";
                     command.Parameters.AddWithValue("@key", key);
 
                     using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -222,8 +230,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = @"
-                        UPDATE distributed_locks
+                    command.CommandText = $@"
+                        UPDATE {TableName}
                         SET status = @status, expires_at = @expires, renewed_at = @renewed,
                             renewal_count = @renewal_count, lock_data = @data
                         WHERE lock_key = @key
@@ -231,8 +239,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
 
                     command.Parameters.AddWithValue("@key", @lock.Key);
                     command.Parameters.AddWithValue("@status", (int)@lock.Status);
-                    command.Parameters.AddWithValue("@expires", @lock.ExpiresAt.ToString("O"));
-                    command.Parameters.AddWithValue("@renewed", @lock.RenewedAt?.ToString("O") ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@expires", @lock.ExpiresAt.ToString(DateTimeFormat));
+                    command.Parameters.AddWithValue("@renewed", @lock.RenewedAt?.ToString(DateTimeFormat) ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@renewal_count", @lock.RenewalCount);
                     command.Parameters.AddWithValue("@data", JsonSerializer.Serialize(@lock));
 
@@ -294,7 +302,7 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND owner_id = @owner";
+                    command.CommandText = $"DELETE FROM {TableName} WHERE lock_key = @key AND owner_id = @owner";
                     command.Parameters.AddWithValue("@key", key);
                     command.Parameters.AddWithValue("@owner", ownerId);
 
@@ -341,8 +349,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at > @now";
-                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("O"));
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE expires_at > @now";
+                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString(DateTimeFormat));
 
                     using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                     {
@@ -403,8 +411,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE expires_at <= @now";
-                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("O"));
+                    command.CommandText = $"DELETE FROM {TableName} WHERE expires_at <= @now";
+                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString(DateTimeFormat));
 
                     return await command.ExecuteNonQueryAsync(cancellationToken);
                 }
@@ -430,8 +438,8 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at <= @now";
-                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString("O"));
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE expires_at <= @now";
+                    command.Parameters.AddWithValue("@now", DateTime.UtcNow.ToString(DateTimeFormat));
 
                     using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                     {
@@ -469,9 +477,9 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND expires_at = @expected";
+                    command.CommandText = $"DELETE FROM {TableName} WHERE lock_key = @key AND expires_at = @expected";
                     command.Parameters.AddWithValue("@key", key);
-                    command.Parameters.AddWithValue("@expected", expectedExpiresAt.ToString("O"));
+                    command.Parameters.AddWithValue("@expected", expectedExpiresAt.ToString(DateTimeFormat));
 
                     var result = await command.ExecuteNonQueryAsync(cancellationToken);
                     return result > 0;
@@ -502,7 +510,7 @@ public sealed class SqliteLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks";
+                    command.CommandText = $"DELETE FROM {TableName}";
                     return await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
