@@ -22,11 +22,24 @@ public sealed class LockService : ILockService
     private readonly LockMetrics _metrics;
     private readonly ILockRetryPolicy _retryPolicy;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LockService"/> class using the default retry policy.
+    /// </summary>
+    /// <param name="repository">The repository used to persist and query lock state.</param>
+    /// <param name="logger">The logger for lock operations.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="repository"/> or <paramref name="logger"/> is null.</exception>
     public LockService(ILockRepository repository, ILogger<LockService> logger)
         : this(repository, logger, new DefaultLockRetryPolicy())
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LockService"/> class with a custom retry policy.
+    /// </summary>
+    /// <param name="repository">The repository used to persist and query lock state.</param>
+    /// <param name="logger">The logger for lock operations.</param>
+    /// <param name="retryPolicy">The policy that controls retry count and delay between acquisition attempts.</param>
+    /// <exception cref="ArgumentNullException">Thrown if any argument is null.</exception>
     public LockService(ILockRepository repository, ILogger<LockService> logger, ILockRetryPolicy retryPolicy)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -35,6 +48,18 @@ public sealed class LockService : ILockService
         _metrics = new LockMetrics();
     }
 
+    /// <summary>
+    /// Makes a single non-blocking attempt to acquire a lock.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="duration">The optional duration to hold the lock. Defaults to <c>LockConstants.DefaultLockTimeout</c>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// A tuple of success flag, the acquired lock (if successful), and an error message (if failed).
+    /// Repository exceptions are caught and reported through the error message rather than thrown.
+    /// </returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null, empty, or whitespace.</exception>
     public async Task<(bool Success, Lock? Lock, string? ErrorMessage)> TryAcquireAsync(
         string lockKey,
         string ownerId,
@@ -72,6 +97,16 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Acquires a lock, retrying with the configured retry policy until it succeeds or attempts are exhausted.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="duration">The optional duration to hold the lock. Defaults to <c>LockConstants.DefaultLockTimeout</c>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The acquired lock.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="LockAcquisitionException">Thrown if the lock could not be acquired within the retry limit or the acquisition timeout.</exception>
     public async Task<Lock> AcquireAsync(
         string lockKey,
         string ownerId,
@@ -116,6 +151,15 @@ public sealed class LockService : ILockService
         throw new LockAcquisitionException(lockKey, acquisitionTimeout, maxRetries);
     }
 
+    /// <summary>
+    /// Renews a lock held by the specified owner.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="newDuration">The new duration to hold the lock. Defaults to <c>LockConstants.DefaultLockTimeout</c>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was renewed; false if it does not exist, the owner does not match, or an error occurred.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null, empty, or whitespace.</exception>
     public async Task<bool> RenewAsync(
         string lockKey,
         string ownerId,
@@ -150,6 +194,16 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Extends a lock held by the specified owner by the given duration.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="extension">The duration to extend the lock by. Must be positive.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was extended; false if it does not exist, the owner does not match, or an error occurred.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="extension"/> is zero or negative.</exception>
     public async Task<bool> TryExtendAsync(
         string lockKey,
         string ownerId,
@@ -190,6 +244,17 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Renews a lock after validating the caller's fencing token, and returns the refreshed lock.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="fencingToken">The fencing token previously issued for this lock.</param>
+    /// <param name="newDuration">The new duration to hold the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The renewed lock.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="InvalidFencingTokenException">Thrown if the fencing token is no longer valid for this lock.</exception>
+    /// <exception cref="Core.Exceptions.LockRenewalFailedException">Thrown if the lock is not found or the renewal could not be applied.</exception>
     public async Task<Lock> RenewLockAsync(
         string lockKey,
         ulong fencingToken,
@@ -221,6 +286,14 @@ public sealed class LockService : ILockService
             ?? throw new Core.Exceptions.LockRenewalFailedException(lockKey, $"Lock '{lockKey}' not found after renewal.");
     }
 
+    /// <summary>
+    /// Releases a lock held by the specified owner.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="ownerId">The unique identifier for the lock owner.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock was released; false if it does not exist, the owner does not match, or an error occurred.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> or <paramref name="ownerId"/> is null, empty, or whitespace.</exception>
     public async Task<bool> ReleaseAsync(
         string lockKey,
         string ownerId,
@@ -256,6 +329,13 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Gets the current lock for the specified key.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if one exists; otherwise, null. Repository errors are logged and reported as null.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> is null, empty, or whitespace.</exception>
     public async Task<Lock?> GetLockAsync(string lockKey, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
@@ -270,6 +350,13 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Checks whether a lock currently exists for the specified key.
+    /// </summary>
+    /// <param name="lockKey">The unique identifier for the resource.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>True if the lock exists; otherwise, false. Repository errors are logged and reported as false.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="lockKey"/> is null, empty, or whitespace.</exception>
     public async Task<bool> IsLockedAsync(string lockKey, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(lockKey);
@@ -284,6 +371,11 @@ public sealed class LockService : ILockService
         }
     }
 
+    /// <summary>
+    /// Gets all currently active locks.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The active locks, or an empty sequence if the repository query fails (the error is logged).</returns>
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -326,5 +418,9 @@ public sealed class LockService : ILockService
         return new LockHandle(this, @lock, renewalInterval, @lock.Duration);
     }
 
+    /// <summary>
+    /// Gets the metrics collected by this service instance.
+    /// </summary>
+    /// <returns>The <see cref="LockMetrics"/> instance tracking acquisitions, renewals, and releases.</returns>
     public LockMetrics GetMetrics() => _metrics;
 }
