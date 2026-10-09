@@ -17,11 +17,43 @@ using SarmKadan.DistributedLock.Utilities.Extensions;
 /// </summary>
 public interface ILockCacheManager
 {
+    /// <summary>
+    /// Gets a cached lock by its identifier.
+    /// Returns <c>null</c> on a cache miss or when the entry has expired.
+    /// </summary>
+    /// <param name="lockId">The lock identifier (key). Must not be null or empty.</param>
+    /// <returns>The cached lock, or <c>null</c> if not found or expired.</returns>
     Task<Lock?> GetAsync(string lockId);
+
+    /// <summary>
+    /// Adds or updates a lock in the cache, replacing any existing entry with the same key.
+    /// May evict the least recently used entry when the cache is full.
+    /// </summary>
+    /// <param name="lock">The lock to cache. Must not be null.</param>
     Task SetAsync(Lock @lock);
+
+    /// <summary>
+    /// Removes a lock from the cache. Does nothing if the lock is not cached.
+    /// </summary>
+    /// <param name="lockId">The lock identifier (key). Must not be null or empty.</param>
     Task RemoveAsync(string lockId);
+
+    /// <summary>
+    /// Gets all non-expired locks currently held in the cache.
+    /// Expired entries are purged before the result is returned.
+    /// </summary>
+    /// <returns>A new list containing the cached locks.</returns>
     Task<List<Lock>> GetAllAsync();
+
+    /// <summary>
+    /// Removes all entries from the cache and resets hit/miss statistics.
+    /// </summary>
     Task ClearAsync();
+
+    /// <summary>
+    /// Gets a snapshot of the cache statistics.
+    /// </summary>
+    /// <returns>Current item count, hit/miss counters, hit rate and the snapshot timestamp (UTC).</returns>
     CacheStatistics GetStatistics();
 }
 
@@ -37,12 +69,21 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
     private long _hits;
     private long _misses;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryLockCacheManager"/> class.
+    /// </summary>
+    /// <param name="config">Cache behavior settings. When <c>null</c>, default <see cref="CacheConfiguration"/> values are used.</param>
     public InMemoryLockCacheManager(CacheConfiguration? config = null)
     {
         _config = config ?? new CacheConfiguration();
         _cache = new ConcurrentDictionary<string, CachedLock>();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// An expired entry is removed on access and counted as a miss.
+    /// A successful lookup refreshes the entry's last access time used for LRU eviction.
+    /// </remarks>
     public async Task<Lock?> GetAsync(string lockId)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockId);
@@ -66,6 +107,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
         return null;
     }
 
+    /// <inheritdoc/>
     public async Task SetAsync(Lock @lock)
     {
         ArgumentNullException.ThrowIfNull(@lock);
@@ -86,6 +128,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
         _cache.AddOrUpdate(@lock.Key, cachedLock, (_, __) => cachedLock);
     }
 
+    /// <inheritdoc/>
     public async Task RemoveAsync(string lockId)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockId);
@@ -93,6 +136,7 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
         _cache.TryRemove(lockId, out _);
     }
 
+    /// <inheritdoc/>
     public async Task<List<Lock>> GetAllAsync()
     {
         CleanExpiredEntries();
@@ -103,12 +147,14 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
             .ToList();
     }
 
+    /// <inheritdoc/>
     public async Task ClearAsync()
     {
         _cache.Clear();
         ResetStatistics();
     }
 
+    /// <inheritdoc/>
     public CacheStatistics GetStatistics()
     {
         _statsLock.EnterReadLock();
@@ -203,12 +249,25 @@ public sealed class InMemoryLockCacheManager : ILockCacheManager
         }
     }
 
+    /// <summary>
+    /// Wrapper that stores a cached lock together with its caching and access timestamps.
+    /// </summary>
     private class CachedLock
     {
+        /// <summary>The cached lock instance.</summary>
         public required Lock Lock { get; init; }
+
+        /// <summary>UTC time when the entry was stored. Used for TTL expiration.</summary>
         public DateTime CachedAt { get; init; }
+
+        /// <summary>UTC time of the last successful read. Used for LRU eviction.</summary>
         public DateTime LastAccessTime { get; set; }
 
+        /// <summary>
+        /// Determines whether the entry has outlived its time-to-live.
+        /// </summary>
+        /// <param name="ttlSeconds">Time-to-live in seconds.</param>
+        /// <returns><c>true</c> if the entry age exceeds <paramref name="ttlSeconds"/>; otherwise <c>false</c>.</returns>
         public bool IsExpired(int ttlSeconds) =>
             (DateTime.UtcNow - CachedAt).TotalSeconds > ttlSeconds;
     }
@@ -241,10 +300,18 @@ public sealed class CacheConfiguration
 /// </summary>
 public record CacheStatistics
 {
+    /// <summary>Number of entries currently stored in the cache.</summary>
     public int CachedItems { get; init; }
+
+    /// <summary>Total number of successful cache lookups.</summary>
     public long Hits { get; init; }
+
+    /// <summary>Total number of failed lookups (absent or expired entries).</summary>
     public long Misses { get; init; }
+
     /// <summary>Hit ratio as a fraction between 0 and 1.</summary>
     public double HitRate { get; init; }
+
+    /// <summary>UTC time at which the statistics snapshot was taken.</summary>
     public DateTime Timestamp { get; init; }
 }
