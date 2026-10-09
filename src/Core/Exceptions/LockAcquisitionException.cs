@@ -18,6 +18,8 @@ public class LockAcquisitionException : DistributedLockException
     public LockAcquisitionException(string lockKey, TimeSpan timeout, int retryCount = 0)
         : base($"Failed to acquire lock '{lockKey}' within {timeout.TotalSeconds}s after {retryCount} retries.")
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+
         LockKey = lockKey;
         Timeout = timeout;
         RetryCount = retryCount;
@@ -26,6 +28,9 @@ public class LockAcquisitionException : DistributedLockException
     public LockAcquisitionException(string lockKey, TimeSpan timeout, int retryCount, Exception innerException)
         : base($"Failed to acquire lock '{lockKey}' within {timeout.TotalSeconds}s after {retryCount} retries.", innerException)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(innerException);
+
         LockKey = lockKey;
         Timeout = timeout;
         RetryCount = retryCount;
