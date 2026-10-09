@@ -20,7 +20,8 @@ public abstract class LockEventSubscriber
 
     protected LockEventSubscriber(ILogger logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
     }
 
     /// <summary>
@@ -32,6 +33,8 @@ public abstract class LockEventSubscriber
         TEvent @event,
         Func<TEvent, Task> handler) where TEvent : LockEvent
     {
+        ArgumentNullException.ThrowIfNull(handler);
+
         try
         {
             _logger.LogDebug("Handling event: {EventType}", typeof(TEvent).Name);
@@ -55,6 +58,8 @@ public sealed class LoggingLockEventSubscriber : LockEventSubscriber
 
     public override async Task RegisterAsync(ILockEventPublisher publisher)
     {
+        ArgumentNullException.ThrowIfNull(publisher);
+
         publisher.Subscribe<LockAcquiredEvent>(OnLockAcquired);
         publisher.Subscribe<LockReleasedEvent>(OnLockReleased);
         publisher.Subscribe<LockExpiredEvent>(OnLockExpired);
@@ -167,6 +172,8 @@ public sealed class MetricsTrackingEventSubscriber : LockEventSubscriber
 
     public override async Task RegisterAsync(ILockEventPublisher publisher)
     {
+        ArgumentNullException.ThrowIfNull(publisher);
+
         publisher.Subscribe<LockAcquiredEvent>(OnLockAcquired);
         publisher.Subscribe<LockReleasedEvent>(OnLockReleased);
         publisher.Subscribe<LockAcquisitionFailedEvent>(OnAcquisitionFailed);
@@ -242,6 +249,8 @@ public static class LockEventSubscriberExtensions
     /// </summary>
     public static IServiceCollection AddLockEventSubscribers(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.AddSingleton<LoggingLockEventSubscriber>();
         services.AddSingleton<MetricsTrackingEventSubscriber>();
 
@@ -254,6 +263,8 @@ public static class LockEventSubscriberExtensions
     /// </summary>
     public static async Task InitializeLockEventSubscribersAsync(this IServiceProvider serviceProvider)
     {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
         var publisher = serviceProvider.GetRequiredService<ILockEventPublisher>();
 
         var loggingSubscriber = serviceProvider.GetService<LoggingLockEventSubscriber>();
