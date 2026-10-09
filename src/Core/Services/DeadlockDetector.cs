@@ -71,6 +71,16 @@ public interface IDeadlockDetector
 /// </summary>
 public sealed class DeadlockDetector : IDeadlockDetector
 {
+    /// <summary>Log template emitted when an owner is registered as a waiter.</summary>
+    private const string WaiterRegisteredMessage = "Owner {OwnerId} registered as waiter for lock {LockKey}";
+
+    /// <summary>Log template emitted when an owner's wait ends. Wait time is formatted with two decimals.</summary>
+    private const string WaitEndedMessage = "Owner {OwnerId} ended wait for lock {LockKey} after {WaitTimeMs:F2}ms";
+
+    /// <summary>Log template emitted when a circular wait chain is detected.</summary>
+    private const string PotentialDeadlockMessage =
+        "Potential deadlock: owner {OwnerId} waiting for lock {LockKey} would form a circular wait chain";
+
     /// <summary>Maps each lock key to the owner currently holding it.</summary>
     private readonly ConcurrentDictionary<string, string> _ownership = new(StringComparer.Ordinal);
 
@@ -101,7 +111,7 @@ public sealed class DeadlockDetector : IDeadlockDetector
         _waitingFor[ownerId] = lockKey;
         GetOrCreateMetrics(lockKey).RecordWaiterAdded();
 
-        _logger.LogDebug("Owner {OwnerId} registered as waiter for lock {LockKey}", ownerId, lockKey);
+        _logger.LogDebug(WaiterRegisteredMessage, ownerId, lockKey);
         return Task.CompletedTask;
     }
 
@@ -118,9 +128,7 @@ public sealed class DeadlockDetector : IDeadlockDetector
         _waitingFor.TryRemove(ownerId, out _);
         GetOrCreateMetrics(lockKey).RecordWaiterRemoved(waitTimeMs);
 
-        _logger.LogDebug(
-            "Owner {OwnerId} ended wait for lock {LockKey} after {WaitTimeMs:F2}ms",
-            ownerId, lockKey, waitTimeMs);
+        _logger.LogDebug(WaitEndedMessage, ownerId, lockKey, waitTimeMs);
         return Task.CompletedTask;
     }
 
@@ -161,9 +169,7 @@ public sealed class DeadlockDetector : IDeadlockDetector
             {
                 // Circular dependency detected: record it against the requested lock.
                 GetOrCreateMetrics(lockKey).RecordDeadlock();
-                _logger.LogWarning(
-                    "Potential deadlock: owner {OwnerId} waiting for lock {LockKey} would form a circular wait chain",
-                    ownerId, lockKey);
+                _logger.LogWarning(PotentialDeadlockMessage, ownerId, lockKey);
                 return true;
             }
 
