@@ -23,6 +23,8 @@ public sealed class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var requestId = context.TraceIdentifier;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
