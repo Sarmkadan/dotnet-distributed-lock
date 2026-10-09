@@ -71,15 +71,16 @@ public interface IDeadlockDetector
 /// </summary>
 public sealed class DeadlockDetector : IDeadlockDetector
 {
-    // lockKey → ownerId currently holding that lock
+    /// <summary>Maps each lock key to the owner currently holding it.</summary>
     private readonly ConcurrentDictionary<string, string> _ownership = new(StringComparer.Ordinal);
 
-    // ownerId → lockKey it is currently waiting for
+    /// <summary>Maps each waiting owner to the lock key it is currently waiting for (the wait-for graph edges).</summary>
     private readonly ConcurrentDictionary<string, string> _waitingFor = new(StringComparer.Ordinal);
 
-    // lockKey → per-key contention metrics
+    /// <summary>Maps each lock key to its accumulated contention metrics.</summary>
     private readonly ConcurrentDictionary<string, ContentionMetrics> _metrics = new(StringComparer.Ordinal);
 
+    /// <summary>Logger used for deadlock warnings and debug diagnostics.</summary>
     private readonly ILogger<DeadlockDetector> _logger;
 
     /// <summary>Initializes a new <see cref="DeadlockDetector"/>.</summary>
@@ -183,6 +184,11 @@ public sealed class DeadlockDetector : IDeadlockDetector
     public IReadOnlyCollection<ContentionMetrics> GetAllMetrics() =>
         _metrics.Values.ToList();
 
+    /// <summary>
+    /// Returns the metrics instance for <paramref name="lockKey"/>, creating it on first access.
+    /// </summary>
+    /// <param name="lockKey">Lock key whose metrics are requested.</param>
+    /// <returns>The existing or newly created <see cref="ContentionMetrics"/> for the key.</returns>
     private ContentionMetrics GetOrCreateMetrics(string lockKey) =>
         _metrics.GetOrAdd(lockKey, key => new ContentionMetrics(key));
 }
