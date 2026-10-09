@@ -221,18 +221,33 @@ public class LockRenewalWorker : BackgroundService
 public class LockRenewalWorkerOptions
 {
     /// <summary>
+    /// Default interval between renewal checks (milliseconds).
+    /// </summary>
+    public const int DefaultCheckIntervalMs = 5000;
+
+    /// <summary>
+    /// Default delay before retrying failed renewals (seconds).
+    /// </summary>
+    public const int DefaultRetryDelaySeconds = 10;
+
+    /// <summary>
+    /// Default maximum jitter applied to renewal timing (percentage).
+    /// </summary>
+    public const double DefaultJitterPercentage = 10;
+
+    /// <summary>
     /// How often to check for locks that need renewal (milliseconds).
     /// </summary>
-    public int CheckIntervalMs { get; set; } = 5000;
+    public int CheckIntervalMs { get; set; } = DefaultCheckIntervalMs;
 
     /// <summary>
     /// Delay before retrying failed renewals (seconds).
     /// </summary>
-    public int RetryDelaySeconds { get; set; } = 10;
+    public int RetryDelaySeconds { get; set; } = DefaultRetryDelaySeconds;
 
     /// <summary>
     /// Maximum jitter to apply to renewal timing (percentage).
     /// Prevents thundering herd of renewals at same time.
     /// </summary>
-    public double JitterPercentage { get; set; } = 10;
+    public double JitterPercentage { get; set; } = DefaultJitterPercentage;
 }
