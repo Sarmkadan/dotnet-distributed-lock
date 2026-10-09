@@ -93,6 +93,8 @@ public sealed class DistributedLockController : ControllerBase
         [FromQuery] ulong fencingToken,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         _logger.LogInformation("Releasing lock: {LockId}", lockId);
 
         try
@@ -125,6 +127,8 @@ public sealed class DistributedLockController : ControllerBase
         [FromQuery] int additionalSeconds = 30,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         _logger.LogInformation("Renewing lock: {LockId} for {Seconds} seconds", lockId, additionalSeconds);
 
         try
@@ -168,6 +172,9 @@ public sealed class DistributedLockController : ControllerBase
         [FromQuery] int extensionSeconds = 30,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         _logger.LogInformation(
             "Extending lock: {LockId} for {Seconds} seconds by owner {OwnerId}",
             lockId,
@@ -208,6 +215,8 @@ public sealed class DistributedLockController : ControllerBase
         [FromRoute] string lockId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         _logger.LogInformation("Getting status for lock: {LockId}", lockId);
 
         try
