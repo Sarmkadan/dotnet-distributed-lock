@@ -13,6 +13,12 @@ namespace SarmKadan.DistributedLock.Api.Middleware;
 /// </summary>
 public sealed class RateLimitingMiddleware
 {
+    private const string ForwardedForHeaderName = "X-Forwarded-For";
+    private const string UnknownClientIp = "unknown";
+    private const string JsonContentType = "application/json";
+    private const string RateLimitExceededMessage = "Rate limit exceeded. Please try again later.";
+    private const int MaxTrackedClientsBeforeCleanup = 10000;
+
     private readonly RequestDelegate _next;
     private readonly ILogger<RateLimitingMiddleware> _logger;
     private readonly RateLimitingOptions _options;
@@ -38,10 +44,10 @@ public sealed class RateLimitingMiddleware
         {
             _logger.LogWarning("Rate limit exceeded for client {ClientIp}, returning 429", clientIp);
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-            context.Response.ContentType = "application/json";
+            context.Response.ContentType = JsonContentType;
             await context.Response.WriteAsJsonAsync(new
             {
-                message = "Rate limit exceeded. Please try again later.",
+                message = RateLimitExceededMessage,
                 retryAfterSeconds = _options.WindowSizeSeconds
             });
             return;
@@ -90,7 +96,7 @@ public sealed class RateLimitingMiddleware
             window.Timestamps.Add(now);
 
             // Clean up old entries periodically
-            if (_requestWindows.Count > 10000)
+            if (_requestWindows.Count > MaxTrackedClientsBeforeCleanup)
             {
                 var oldEntries = _requestWindows
                     .Where(x => x.Value.Timestamps.Count == 0)
@@ -110,13 +116,13 @@ public sealed class RateLimitingMiddleware
     private static string GetClientIp(HttpContext context)
     {
         // Check for IP from forwarded header (when behind proxy)
-        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwarded))
+        if (context.Request.Headers.TryGetValue(ForwardedForHeaderName, out var forwarded))
         {
             return forwarded.ToString().Split(',').First().Trim();
         }
 
         // Fall back to remote IP
-        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return context.Connection.RemoteIpAddress?.ToString() ?? UnknownClientIp;
     }
 
     private class RequestWindow
@@ -131,15 +137,21 @@ public sealed class RateLimitingMiddleware
 /// </summary>
 public sealed class RateLimitingOptions
 {
+    /// <summary>Default maximum number of requests per client within the window.</summary>
+    public const int DefaultMaxRequestsPerWindow = 100;
+
+    /// <summary>Default size of the sliding time window in seconds (1 minute).</summary>
+    public const int DefaultWindowSizeSeconds = 60;
+
     /// <summary>
     /// Maximum number of requests allowed per client within the window.
     /// Default: 100 requests
     /// </summary>
-    public int MaxRequestsPerWindow { get; set; } = 100;
+    public int MaxRequestsPerWindow { get; set; } = DefaultMaxRequestsPerWindow;
 
     /// <summary>
     /// Size of the sliding time window in seconds.
     /// Default: 60 seconds (1 minute)
     /// </summary>
-    public int WindowSizeSeconds { get; set; } = 60;
+    public int WindowSizeSeconds { get; set; } = DefaultWindowSizeSeconds;
 }
