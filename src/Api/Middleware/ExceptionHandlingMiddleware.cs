@@ -5,7 +5,7 @@
 // =============================================================================
 
 using System.Text.Json;
-using SarmKadan.DistributedLock.Core.Exceptions;
+using SarmKadan.DistributedLock.Exceptions;
 
 namespace SarmKadan.DistributedLock.Api.Middleware;
 
@@ -21,14 +21,17 @@ public sealed class ExceptionHandlingMiddleware
 
     public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
-        _next = next ?? throw new ArgumentNullException(nameof(next));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(logger);
 
-    public override string ToString() => $"ExceptionHandlingMiddleware {{ Message = {Message}, ErrorCode = {ErrorCode}, Timestamp = {Timestamp} }}";
+        _next = next;
+        _logger = logger;
+    }
 
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         _logger.LogInformation("ExceptionHandlingMiddleware InvokeAsync started with {Path}", context.Request.Path);
         try
         {
@@ -46,8 +49,11 @@ public sealed class ExceptionHandlingMiddleware
     /// Converts exceptions to appropriate HTTP status codes and error responses.
     /// Maps domain exceptions to their corresponding HTTP status codes for client clarity.
     /// </summary>
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(exception);
+
         context.Response.ContentType = "application/json";
 
         var response = new ErrorResponseBody();
