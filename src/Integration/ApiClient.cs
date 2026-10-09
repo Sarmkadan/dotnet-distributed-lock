@@ -40,6 +40,8 @@ public class HttpLockApiClient : ILockApiClient
         AcquireLockRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         try
         {
             _logger.LogInformation("Acquiring lock: {LockName}", request.LockName);
@@ -65,6 +67,8 @@ public class HttpLockApiClient : ILockApiClient
         ulong fencingToken,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         try
         {
             _logger.LogInformation("Releasing lock: {LockId}", lockId);
@@ -89,6 +93,8 @@ public class HttpLockApiClient : ILockApiClient
         int additionalSeconds = 30,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         try
         {
             _logger.LogInformation("Renewing lock: {LockId}", lockId);
@@ -114,6 +120,8 @@ public class HttpLockApiClient : ILockApiClient
         string lockId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         try
         {
             _logger.LogInformation("Getting lock status: {LockId}", lockId);
@@ -194,6 +202,9 @@ public static class LockApiClientExtensions
         this IServiceCollection services,
         Uri baseAddress)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(baseAddress);
+
         services.AddHttpClient<ILockApiClient, HttpLockApiClient>(client =>
         {
             client.BaseAddress = baseAddress;
@@ -211,6 +222,9 @@ public static class LockApiClientExtensions
         this IServiceCollection services,
         Action<HttpClient> configureClient)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configureClient);
+
         services.AddHttpClient<ILockApiClient, HttpLockApiClient>(configureClient);
         return services;
     }
