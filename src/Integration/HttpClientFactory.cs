@@ -28,18 +28,25 @@ public class DefaultHttpClientFactory : IHttpClientFactory
 
     public DefaultHttpClientFactory(System.Net.Http.IHttpClientFactory factory, ILogger<DefaultHttpClientFactory> logger)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _factory = factory;
+        _logger = logger;
     }
 
     public HttpClient CreateClient(string name)
     {
+        ArgumentNullException.ThrowIfNull(name);
+
         _logger.LogInformation("Creating HTTP client: {ClientName}", name);
         return _factory.CreateClient(name);
     }
 
     public HttpClient GetClient(string name)
     {
+        ArgumentNullException.ThrowIfNull(name);
+
         return _factory.CreateClient(name);
     }
 }
@@ -95,8 +102,11 @@ public class LockServiceHttpClient
         ILogger<LockServiceHttpClient> logger,
         HttpClientConfiguration? config = null)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _httpClient = httpClient;
+        _logger = logger;
         _config = config ?? new HttpClientConfiguration();
 
         ConfigureClient();
