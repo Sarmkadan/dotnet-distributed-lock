@@ -19,7 +19,13 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
 {
     private readonly string _connectionString;
     private readonly ILogger<PostgresLockRepository> _logger;
-    private readonly SemaphoreSlim _initSemaphore = new(1, 1);
+    private const string TableName = "distributed_locks";
+    private const string AdvisoryLockParameter = "@advisoryLockKey";
+    private const string AdvisoryLockSql = "SELECT pg_advisory_lock(@advisoryLockKey)";
+    private const string AdvisoryUnlockSql = "SELECT pg_advisory_unlock(@advisoryLockKey)";
+    private const int InitSemaphoreCount = 1;
+
+    private readonly SemaphoreSlim _initSemaphore = new(InitSemaphoreCount, InitSemaphoreCount);
     private bool _initialized = false;
 
     /// <summary>
@@ -117,8 +123,8 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 var advisoryLockKey = GetAdvisoryLockKey(@lock.Key);
                 await using (var advisoryCommand = connection.CreateCommand())
                 {
-                    advisoryCommand.CommandText = "SELECT pg_advisory_lock(@advisoryLockKey)";
-                    advisoryCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                    advisoryCommand.CommandText = AdvisoryLockSql;
+                    advisoryCommand.Parameters.AddWithValue(AdvisoryLockParameter, advisoryLockKey);
                     await advisoryCommand.ExecuteNonQueryAsync(cancellationToken);
                 }
 
@@ -153,8 +159,8 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                         // If table lock not acquired, release the advisory lock immediately
                         await using (var advisoryReleaseCommand = connection.CreateCommand())
                         {
-                            advisoryReleaseCommand.CommandText = "SELECT pg_advisory_unlock(@advisoryLockKey)";
-                            advisoryReleaseCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                            advisoryReleaseCommand.CommandText = AdvisoryUnlockSql;
+                            advisoryReleaseCommand.Parameters.AddWithValue(AdvisoryLockParameter, advisoryLockKey);
                             await advisoryReleaseCommand.ExecuteNonQueryAsync(cancellationToken);
                         }
                     }
@@ -189,7 +195,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE lock_key = @key";
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE lock_key = @key";
                     command.Parameters.AddWithValue("@key", key);
 
                     await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -336,7 +342,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 {
                     await using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND owner_id = @owner";
+                        command.CommandText = $"DELETE FROM {TableName} WHERE lock_key = @key AND owner_id = @owner";
                         command.Parameters.AddWithValue("@key", key);
                         command.Parameters.AddWithValue("@owner", ownerId);
 
@@ -352,8 +358,8 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                     var advisoryLockKey = GetAdvisoryLockKey(key);
                     await using (var advisoryReleaseCommand = connection.CreateCommand())
                     {
-                        advisoryReleaseCommand.CommandText = "SELECT pg_advisory_unlock(@advisoryLockKey)";
-                        advisoryReleaseCommand.Parameters.AddWithValue("@advisoryLockKey", advisoryLockKey);
+                        advisoryReleaseCommand.CommandText = AdvisoryUnlockSql;
+                        advisoryReleaseCommand.Parameters.AddWithValue(AdvisoryLockParameter, advisoryLockKey);
                         await advisoryReleaseCommand.ExecuteNonQueryAsync(cancellationToken);
                     }
                 }
@@ -399,7 +405,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at > now()";
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE expires_at > now()";
 
                     await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                     {
@@ -461,7 +467,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE expires_at <= now()";
+                    command.CommandText = $"DELETE FROM {TableName} WHERE expires_at <= now()";
                     return await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
@@ -486,7 +492,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT lock_data FROM distributed_locks WHERE expires_at <= now()";
+                    command.CommandText = $"SELECT lock_data FROM {TableName} WHERE expires_at <= now()";
 
                     await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                     {
@@ -524,7 +530,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks WHERE lock_key = @key AND expires_at = @expected";
+                    command.CommandText = $"DELETE FROM {TableName} WHERE lock_key = @key AND expires_at = @expected";
                     command.Parameters.AddWithValue("@key", key);
                     command.Parameters.AddWithValue("@expected", expectedExpiresAt);
 
@@ -558,7 +564,7 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
                 await connection.OpenAsync(cancellationToken);
                 await using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM distributed_locks";
+                    command.CommandText = $"DELETE FROM {TableName}";
                     return await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
