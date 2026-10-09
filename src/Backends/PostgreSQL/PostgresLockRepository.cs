@@ -22,6 +22,14 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
     private readonly SemaphoreSlim _initSemaphore = new(1, 1);
     private bool _initialized = false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PostgresLockRepository"/> class.
+    /// The database schema is created lazily on the first operation, not in the constructor.
+    /// </summary>
+    /// <param name="connectionString">The PostgreSQL connection string. Must not be null, empty, or whitespace.</param>
+    /// <param name="logger">The logger used for diagnostics.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is null, empty, or whitespace.</exception>
     public PostgresLockRepository(string connectionString, ILogger<PostgresLockRepository> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -84,6 +92,17 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         _logger.LogInformation("PostgreSQL schema initialized");
     }
 
+    /// <summary>
+    /// Attempts to acquire a lock by inserting a row into the <c>distributed_locks</c> table.
+    /// A PostgreSQL session-level advisory lock is taken for the duration of the attempt and is released
+    /// immediately if the row insert does not succeed.
+    /// </summary>
+    /// <param name="lock">The lock to acquire. Its <see cref="Lock.Status"/> is set to <see cref="Enums.LockStatus.Acquired"/> on return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// <see langword="true"/> if the row was inserted; <see langword="false"/> if a lock with the same key already exists.
+    /// </returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> AcquireAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -152,6 +171,13 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves a lock by its key, regardless of whether it has expired.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The deserialized lock if a row exists; otherwise, <see langword="null"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<Lock?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
         try
@@ -187,6 +213,14 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves a lock by key only if it is owned by the specified owner and has not expired.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The lock if it exists, belongs to <paramref name="ownerId"/>, and is not expired; otherwise, <see langword="null"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<Lock?> GetByKeyAndOwnerAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -204,6 +238,13 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Persists the status, expiration, renewal data, and serialized state of an existing lock.
+    /// </summary>
+    /// <param name="lock">The lock to update. Identified by its <see cref="Lock.Key"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> if a row was updated; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> UpdateAsync(Lock @lock, CancellationToken cancellationToken = default)
     {
         try
@@ -241,6 +282,19 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Extends the expiration of a lock held by the specified owner.
+    /// The lock is loaded via <see cref="GetByKeyAndOwnerAsync"/>, renewed in memory, and then saved with <see cref="UpdateAsync"/>.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="newDuration">The new duration applied to the lock.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// <see langword="true"/> if the lock was renewed; <see langword="false"/> if it does not exist,
+    /// is owned by another owner, or has expired.
+    /// </returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> RenewAsync(string key, string ownerId, TimeSpan newDuration, CancellationToken cancellationToken = default)
     {
         try
@@ -259,6 +313,14 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Releases a lock held by the specified owner by deleting its row and unlocking the associated advisory lock.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="ownerId">The lock owner identifier. Only a lock with this owner is deleted.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> if a row was deleted; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> ReleaseAsync(string key, string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -306,12 +368,25 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Determines whether a non-expired lock exists for the specified key.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> if a lock exists and has not expired; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var @lock = await GetByKeyAsync(key, cancellationToken);
         return @lock is not null && !@lock.IsExpired;
     }
 
+    /// <summary>
+    /// Retrieves all locks whose expiration is in the future.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A list of active locks. The list is empty if none exist.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<IEnumerable<Lock>> GetAllActiveLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -347,6 +422,14 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves all active (non-expired) locks owned by the specified owner.
+    /// The owner filter is applied in memory over the result of <see cref="GetAllActiveLockAsync"/>.
+    /// </summary>
+    /// <param name="ownerId">The lock owner identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A collection of locks owned by <paramref name="ownerId"/>. The collection is empty if none match.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<IEnumerable<Lock>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         try
@@ -361,6 +444,12 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes all locks whose expiration is at or before the current database time.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of deleted rows.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<int> DeleteExpiredLockAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -451,6 +540,13 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes every lock row from the <c>distributed_locks</c> table.
+    /// This does not release the PostgreSQL advisory locks held by other sessions.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of deleted rows.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<int> ClearAllAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -474,6 +570,14 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Checks whether the given fencing token is the current token of a non-expired lock.
+    /// </summary>
+    /// <param name="key">The lock key.</param>
+    /// <param name="fencingToken">The fencing token sequence number to validate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> if the lock exists, has not expired, and its sequence number matches; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="NpgsqlException">A database error occurred.</exception>
     public async Task<bool> ValidateFencingTokenAsync(string key, ulong fencingToken, CancellationToken cancellationToken = default)
     {
         try
@@ -488,6 +592,11 @@ public sealed class PostgresLockRepository : ILockRepository, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Releases resources used by the repository. Connections are opened and disposed per operation,
+    /// so this method currently has no resources to release.
+    /// </summary>
+    /// <returns>A <see cref="ValueTask"/> that completes immediately.</returns>
     public async ValueTask DisposeAsync()
     {
         await Task.CompletedTask;
