@@ -64,6 +64,8 @@ public class XmlLockSerializer
     /// </summary>
     public static string SerializeLocks(IEnumerable<Lock> locks)
     {
+        ArgumentNullException.ThrowIfNull(locks);
+
         try
         {
             var lockList = locks.ToList();
@@ -164,6 +166,8 @@ public class XmlLockSerializer
     /// </summary>
     public static string ExportMetrics(IEnumerable<LockMetrics> metrics)
     {
+        ArgumentNullException.ThrowIfNull(metrics);
+
         try
         {
             var xDoc = new XmlDocument();
