@@ -35,6 +35,11 @@ public interface ILockRetryPolicy
 /// </summary>
 public sealed class DefaultLockRetryPolicy : ILockRetryPolicy
 {
+    private const double DefaultJitterFactor = 0.1;
+    private const double MinJitterFactor = 0;
+    private const double MaxJitterFactor = 1;
+    private const double ExponentialBackoffBase = 2;
+
     private static readonly Random _random = new();
 
     public int MaxRetries { get; }
@@ -46,11 +51,11 @@ public sealed class DefaultLockRetryPolicy : ILockRetryPolicy
         int maxRetries = Constants.LockConstants.DefaultMaxRetries,
         TimeSpan? initialDelay = null,
         TimeSpan? maxDelay = null,
-        double jitterFactor = 0.1)
+        double jitterFactor = DefaultJitterFactor)
     {
         if (maxRetries < 0)
             throw new ArgumentOutOfRangeException(nameof(maxRetries), "Must be non-negative.");
-        if (jitterFactor is < 0 or > 1)
+        if (jitterFactor is < MinJitterFactor or > MaxJitterFactor)
             throw new ArgumentOutOfRangeException(nameof(jitterFactor), "Must be between 0 and 1.");
 
         MaxRetries = maxRetries;
@@ -61,8 +66,8 @@ public sealed class DefaultLockRetryPolicy : ILockRetryPolicy
 
     public TimeSpan GetDelay(int attempt)
     {
-        // Exponential backoff: initialDelay * 2^attempt
-        var exponentialMs = InitialDelay.TotalMilliseconds * Math.Pow(2, attempt);
+        // Exponential backoff: initialDelay * base^attempt
+        var exponentialMs = InitialDelay.TotalMilliseconds * Math.Pow(ExponentialBackoffBase, attempt);
         var cappedMs = Math.Min(exponentialMs, MaxDelay.TotalMilliseconds);
 
         // Apply jitter
