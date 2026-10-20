@@ -61,14 +61,22 @@ public readonly record struct LockResult<T>
     /// </summary>
     /// <param name="errorMessage">The error message describing why acquisition failed.</param>
     /// <returns>A contended <see cref="LockResult{T}"/>.</returns>
-    public static LockResult<T> Contended(string errorMessage) => new(LockAcquisitionStatus.Contended, default, errorMessage);
+    public static LockResult<T> Contended(string errorMessage)
+    {
+        ArgumentNullException.ThrowIfNull(errorMessage);
+        return new(LockAcquisitionStatus.Contended, default, errorMessage);
+    }
 
     /// <summary>
     /// Creates a result indicating the lock acquisition failed due to an error.
     /// </summary>
     /// <param name="exception">The exception that caused the failure.</param>
     /// <returns>A faulted <see cref="LockResult{T}"/>.</returns>
-    public static LockResult<T> Faulted(Exception exception) => new(LockAcquisitionStatus.Faulted, default, exception.Message, exception);
+    public static LockResult<T> Faulted(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return new(LockAcquisitionStatus.Faulted, default, exception.Message, exception);
+    }
 
     /// <summary>
     /// Gets a value indicating whether the lock was successfully acquired.
@@ -167,14 +175,22 @@ public readonly record struct LockResult
     /// </summary>
     /// <param name="errorMessage">The error message describing why acquisition failed.</param>
     /// <returns>A contended <see cref="LockResult"/>.</returns>
-    public static LockResult Contended(string errorMessage) => new(LockAcquisitionStatus.Contended, errorMessage);
+    public static LockResult Contended(string errorMessage)
+    {
+        ArgumentNullException.ThrowIfNull(errorMessage);
+        return new(LockAcquisitionStatus.Contended, errorMessage);
+    }
 
     /// <summary>
     /// Creates a result indicating the lock acquisition failed due to an error.
     /// </summary>
     /// <param name="exception">The exception that caused the failure.</param>
     /// <returns>A faulted <see cref="LockResult"/>.</returns>
-    public static LockResult Faulted(Exception exception) => new(LockAcquisitionStatus.Faulted, exception.Message, exception);
+    public static LockResult Faulted(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return new(LockAcquisitionStatus.Faulted, exception.Message, exception);
+    }
 
     /// <summary>
     /// Gets a value indicating whether the lock was successfully acquired.
