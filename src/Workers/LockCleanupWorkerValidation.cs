@@ -34,9 +34,10 @@ public static class LockCleanupWorkerValidation
             errors.Add($"Initial delay must be non-negative, but was {options.InitialDelayMs}.");
         }
 
-        if (options.CleanupIntervalMs <= 0)
+        if (options.CleanupIntervalMs < LockCleanupWorkerOptions.MinCleanupIntervalMs)
         {
-            errors.Add($"Cleanup interval must be positive, but was {options.CleanupIntervalMs}.");
+            errors.Add(
+                $"Cleanup interval must be at least {LockCleanupWorkerOptions.MinCleanupIntervalMs} ms, but was {options.CleanupIntervalMs}.");
         }
 
         if (options.BatchSize <= 0)
@@ -44,9 +45,10 @@ public static class LockCleanupWorkerValidation
             errors.Add($"Batch size must be positive, but was {options.BatchSize}.");
         }
 
-        if (options.BatchSize > 100_000)
+        if (options.BatchSize > LockCleanupWorkerOptions.MaxBatchSize)
         {
-            errors.Add($"Batch size {options.BatchSize} is excessively large (max recommended: 100,000).");
+            errors.Add(
+                $"Batch size {options.BatchSize} is excessively large (max: {LockCleanupWorkerOptions.MaxBatchSize:N0}).");
         }
 
         // VerboseLogging is a boolean, no validation needed

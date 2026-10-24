@@ -196,7 +196,7 @@ public class LockCleanupWorkerTests
         var options = new LockCleanupWorkerOptions
         {
             InitialDelayMs = 100,
-            CleanupIntervalMs = 200,
+            CleanupIntervalMs = 1000,
             BatchSize = 10,
             VerboseLogging = true,
             MinimumExpiredDuration = TimeSpan.FromMinutes(2)
@@ -209,7 +209,7 @@ public class LockCleanupWorkerTests
 
         // Assert
         result.Should().Contain("InitialDelayMs = 100");
-        result.Should().Contain("CleanupIntervalMs = 200");
+        result.Should().Contain("CleanupIntervalMs = 1000");
         result.Should().Contain("BatchSize = 10");
         result.Should().Contain("VerboseLogging = True");
         result.Should().Contain("MinimumExpiredDuration = 00:02:00");

@@ -34,6 +34,16 @@ public class LockCleanupWorker : BackgroundService
     private readonly LockCleanupWorkerOptions _options;
     private int _cleanedCount;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LockCleanupWorker"/> class.
+    /// </summary>
+    /// <param name="repository">The lock repository to clean up.</param>
+    /// <param name="logger">The logger used for sweep statistics.</param>
+    /// <param name="options">The cleanup options; defaults are used when <see langword="null"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="repository"/> or <paramref name="logger"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="options"/> has a batch size outside the allowed range or a cleanup interval below the safe floor.
+    /// </exception>
     public LockCleanupWorker(
         ILockRepository repository,
         ILogger<LockCleanupWorker> logger,
@@ -45,6 +55,7 @@ public class LockCleanupWorker : BackgroundService
         _repository = repository;
         _logger = logger;
         _options = options ?? new LockCleanupWorkerOptions();
+        _options.EnsureValid();
     }
 
     public override string ToString() =>
@@ -199,6 +210,16 @@ public class LockCleanupWorkerOptions
     public static readonly TimeSpan DefaultMinimumExpiredDuration = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// Largest allowed <see cref="BatchSize"/>; bounds the number of deletions per sweep.
+    /// </summary>
+    public const int MaxBatchSize = 100_000;
+
+    /// <summary>
+    /// Smallest allowed <see cref="CleanupIntervalMs"/> (one second); prevents tight-loop hammering of the backend.
+    /// </summary>
+    public const int MinCleanupIntervalMs = 1_000;
+
+    /// <summary>
     /// Initial delay before first cleanup (milliseconds).
     /// Allows system to stabilize before starting cleanup operations.
     /// </summary>
@@ -206,12 +227,12 @@ public class LockCleanupWorkerOptions
 
     /// <summary>
     /// Interval between cleanup runs (milliseconds).
-    /// Default: run every hour.
+    /// Must be at least <see cref="MinCleanupIntervalMs"/>. Default: run every hour.
     /// </summary>
     public int CleanupIntervalMs { get; set; } = DefaultCleanupIntervalMs;
 
     /// <summary>
-    /// Batch size for cleanup operations.
+    /// Batch size for cleanup operations, between 1 and <see cref="MaxBatchSize"/> inclusive.
     /// Prevents overwhelming the backend with single large operation.
     /// </summary>
     public int BatchSize { get; set; } = DefaultBatchSize;
@@ -226,4 +247,18 @@ public class LockCleanupWorkerOptions
     /// Prevents over-aggressive cleanup of locks that just expired.
     /// </summary>
     public TimeSpan MinimumExpiredDuration { get; set; } = DefaultMinimumExpiredDuration;
+
+    /// <summary>
+    /// Ensures the batch size and cleanup interval are within their safe bounds.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <see cref="BatchSize"/> is less than 1 or greater than <see cref="MaxBatchSize"/>,
+    /// or <see cref="CleanupIntervalMs"/> is less than <see cref="MinCleanupIntervalMs"/>.
+    /// </exception>
+    public void EnsureValid()
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(BatchSize, 1, nameof(BatchSize));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(BatchSize, MaxBatchSize, nameof(BatchSize));
+        ArgumentOutOfRangeException.ThrowIfLessThan(CleanupIntervalMs, MinCleanupIntervalMs, nameof(CleanupIntervalMs));
+    }
 }

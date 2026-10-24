@@ -82,9 +82,16 @@ public static class LockCleanupWorkerExtensions
     /// <param name="interval">Cleanup interval to set.</param>
     /// <returns>The same worker instance for method chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="worker"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="interval"/> is below <see cref="LockCleanupWorkerOptions.MinCleanupIntervalMs"/> or too large to represent in milliseconds.
+    /// </exception>
     public static LockCleanupWorker WithTestInterval(this LockCleanupWorker worker, TimeSpan interval)
     {
         ArgumentNullException.ThrowIfNull(worker);
+        ArgumentOutOfRangeException.ThrowIfLessThan(
+            interval, TimeSpan.FromMilliseconds(LockCleanupWorkerOptions.MinCleanupIntervalMs), nameof(interval));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(
+            interval, TimeSpan.FromMilliseconds(int.MaxValue), nameof(interval));
 
         var optionsField = typeof(LockCleanupWorker).GetField("_options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (optionsField?.GetValue(worker) is LockCleanupWorkerOptions options)
