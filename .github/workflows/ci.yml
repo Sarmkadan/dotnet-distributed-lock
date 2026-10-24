@@ -1,43 +1,55 @@
+# CI: restore, build and test the solution on every push and pull request to main/master.
+#
+# Target framework: all projects in the solution target net10.0, so the SDK must be 10.0.x.
+# An 8.0.x SDK cannot build net10.0 projects (NETSDK1045), so it is not part of the matrix.
+#
+# Dependencies: no service container is needed. The SQLite tests write to a temp file, and the
+# Redis/PostgreSQL repository tests are placeholders that never connect to a server. If a test
+# that needs a live Redis/PostgreSQL is added later, prefer Testcontainers (it cleans up after
+# itself) over a `services:` block, or exclude it here with a trait filter such as
+# `--filter "Category!=Integration"` and tag the test with [Trait("Category", "Integration")].
+#
+# The solution file is passed explicitly: the repo root holds both a .csproj and a .sln, so a
+# bare `dotnet restore` / `dotnet build` fails with MSB1011.
+
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
-    name: Build & Test (.NET ${{ matrix.dotnet-version }})
+    name: Build & Test (.NET 10)
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        dotnet-version: ['8.0.x', '10.0.x']
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ matrix.dotnet-version }}
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          dotnet-version: 10.0.x
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore dotnet-distributed-lock.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build dotnet-distributed-lock.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test dotnet-distributed-lock.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.dotnet-version }}
+          name: test-results
           path: '**/TestResults/*.trx'
           retention-days: 7
