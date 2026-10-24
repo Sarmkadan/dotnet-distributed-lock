@@ -34,6 +34,8 @@ public static class CacheKeyGenerator
     private const char QueryNameSeparator = ':';
     private const string BitConverterSeparator = "-";
     private const int QueryHashLength = 16;
+    private const int MaxLockIdentifierLength = 256;
+    private const char GlobEscapeCharacter = '\\';
 
     private const string LockIdEmptyMessage = "Lock ID cannot be empty";
     private const string LockNameEmptyMessage = "Lock name cannot be empty";
@@ -41,6 +43,12 @@ public static class CacheKeyGenerator
     private const string QueryNameEmptyMessage = "Query name cannot be empty";
     private const string ConfigNameEmptyMessage = "Config name cannot be empty";
     private const string TagRequiredMessage = "At least one tag is required";
+    private const string IdentifierTooLongMessage = "Lock identifier exceeds the maximum allowed length";
+    private const string ControlCharacterMessage = "Lock identifier cannot contain control characters";
+    private const string ReservedLockIdMessage = "Lock ID cannot start with a reserved namespace prefix (name:, owner:, active:)";
+    private const string SystemMetricsLockIdMessage = "Lock ID 'system' is reserved for system-wide metrics";
+
+    private static readonly string[] ReservedLockIdPrefixes = [NamePrefix, OwnerPrefix, ActivePrefix];
 
     private static readonly int LockPrefixLength = Prefix.Length;
     private static readonly int MetricsPrefixLength = MetricsPrefix.Length;
@@ -48,16 +56,19 @@ public static class CacheKeyGenerator
     private static readonly int QueryPrefixLength = QueryPrefix.Length;
     private static readonly int ConfigPrefixLength = ConfigPrefix.Length;
     private static readonly int TagPrefixLength = TagPrefix.Length;
-    private static readonly int NamePrefixLength = NamePrefix.Length;
     private static readonly int OwnerPrefixLength = OwnerPrefix.Length;
 
     /// <summary>
     /// Generates a cache key for a single lock by ID.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="lockId"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty, contains control characters, or starts with a reserved namespace prefix.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateLockKey(string lockId)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockId);
+        ValidateLockId(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[LockPrefixLength + lockId.Length], $"{Prefix}{lockId}");
     }
@@ -66,46 +77,63 @@ public static class CacheKeyGenerator
     /// Generates a cache key for a single lock by ID using span-based allocation.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty, contains control characters, or starts with a reserved namespace prefix.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateLockKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
             throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
+        ValidateLockId(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[LockPrefixLength + lockId.Length], $"{Prefix}{lockId}");
     }
 
     /// <summary>
     /// Generates a cache key for locks by name pattern.
-    /// Useful for finding all locks matching a pattern.
+    /// Glob metacharacters (<c>*</c>, <c>?</c>, <c>[</c>, <c>]</c>, <c>\</c>) in the name are backslash-escaped,
+    /// so the key matches only the literal lock name when used as a pattern.
     /// </summary>
-    /// <param name="lockName">The lock name pattern to match.</param>
+    /// <param name="lockName">The lock name to match.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="lockName"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="lockName"/> is empty or contains control characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockName"/> exceeds 256 characters.</exception>
     public static string GenerateLockNameKey(string lockName)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockName);
+        ValidateIdentifier(lockName, nameof(lockName));
 
-        return string.Create(null, stackalloc char[LockPrefixLength + NamePrefixLength + lockName.Length], $"{Prefix}{NamePrefix}{lockName}");
+        return Prefix + NamePrefix + EscapeGlobPattern(lockName);
     }
 
     /// <summary>
     /// Generates a cache key for locks by name pattern using span-based allocation.
-    /// Useful for finding all locks matching a pattern.
+    /// Glob metacharacters (<c>*</c>, <c>?</c>, <c>[</c>, <c>]</c>, <c>\</c>) in the name are backslash-escaped,
+    /// so the key matches only the literal lock name when used as a pattern.
     /// </summary>
-    /// <param name="lockName">The lock name pattern to match.</param>
+    /// <param name="lockName">The lock name to match.</param>
+    /// <exception cref="ArgumentException"><paramref name="lockName"/> is empty or contains control characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockName"/> exceeds 256 characters.</exception>
     public static string GenerateLockNameKey(ReadOnlySpan<char> lockName)
     {
         if (lockName.IsEmpty)
             throw new ArgumentException(LockNameEmptyMessage, nameof(lockName));
+        ValidateIdentifier(lockName, nameof(lockName));
 
-        return string.Create(null, stackalloc char[LockPrefixLength + NamePrefixLength + lockName.Length], $"{Prefix}{NamePrefix}{lockName}");
+        return Prefix + NamePrefix + EscapeGlobPattern(lockName);
     }
 
     /// <summary>
     /// Generates a cache key for metrics of a specific lock.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="lockId"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty, contains control characters, or equals <c>system</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateMetricsKey(string lockId)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockId);
+        ValidateIdentifier(lockId, nameof(lockId));
+        ValidateNotSystemMetricsId(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[MetricsPrefixLength + lockId.Length], $"{MetricsPrefix}{lockId}");
     }
@@ -114,10 +142,14 @@ public static class CacheKeyGenerator
     /// Generates a cache key for metrics of a specific lock using span-based allocation.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty, contains control characters, or equals <c>system</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateMetricsKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
             throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
+        ValidateIdentifier(lockId, nameof(lockId));
+        ValidateNotSystemMetricsId(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[MetricsPrefixLength + lockId.Length], $"{MetricsPrefix}{lockId}");
     }
@@ -134,9 +166,13 @@ public static class CacheKeyGenerator
     /// Generates a cache key for lock status.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="lockId"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty or contains control characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateStatusKey(string lockId)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockId);
+        ValidateIdentifier(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[StatusPrefixLength + lockId.Length], $"{StatusPrefix}{lockId}");
     }
@@ -145,10 +181,13 @@ public static class CacheKeyGenerator
     /// Generates a cache key for lock status using span-based allocation.
     /// </summary>
     /// <param name="lockId">The unique identifier for the lock.</param>
+    /// <exception cref="ArgumentException"><paramref name="lockId"/> is empty or contains control characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="lockId"/> exceeds 256 characters.</exception>
     public static string GenerateStatusKey(ReadOnlySpan<char> lockId)
     {
         if (lockId.IsEmpty)
             throw new ArgumentException(LockIdEmptyMessage, nameof(lockId));
+        ValidateIdentifier(lockId, nameof(lockId));
 
         return string.Create(null, stackalloc char[StatusPrefixLength + lockId.Length], $"{StatusPrefix}{lockId}");
     }
@@ -403,6 +442,76 @@ public static class CacheKeyGenerator
         if (cacheKey.IsEmpty)
             return false;
         return cacheKey.StartsWith(MetricsPrefix.AsSpan());
+    }
+
+    /// <summary>
+    /// Validates a lock identifier that is embedded as a literal segment of a cache key.
+    /// Rejects oversized values and control characters.
+    /// </summary>
+    /// <param name="value">The identifier to validate.</param>
+    /// <param name="paramName">The name of the parameter being validated.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The identifier exceeds the maximum allowed length.</exception>
+    /// <exception cref="ArgumentException">The identifier contains control characters.</exception>
+    private static void ValidateIdentifier(ReadOnlySpan<char> value, string paramName)
+    {
+        // Length is capped before any stackalloc so caller input cannot force an oversized stack buffer.
+        if (value.Length > MaxLockIdentifierLength)
+            throw new ArgumentOutOfRangeException(paramName, IdentifierTooLongMessage);
+
+        foreach (var c in value)
+        {
+            if (char.IsControl(c))
+                throw new ArgumentException(ControlCharacterMessage, paramName);
+        }
+    }
+
+    /// <summary>
+    /// Validates a lock ID used in the <c>lock:</c> key space, rejecting IDs that would collide with
+    /// the name, owner, or active key namespaces (for example, lock ID <c>name:x</c> versus lock name <c>x</c>).
+    /// </summary>
+    /// <param name="lockId">The lock ID to validate.</param>
+    /// <param name="paramName">The name of the parameter being validated.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The lock ID exceeds the maximum allowed length.</exception>
+    /// <exception cref="ArgumentException">The lock ID contains control characters or a reserved prefix.</exception>
+    private static void ValidateLockId(ReadOnlySpan<char> lockId, string paramName)
+    {
+        ValidateIdentifier(lockId, paramName);
+
+        foreach (var prefix in ReservedLockIdPrefixes)
+        {
+            if (lockId.StartsWith(prefix, StringComparison.Ordinal))
+                throw new ArgumentException(ReservedLockIdMessage, paramName);
+        }
+    }
+
+    /// <summary>
+    /// Rejects the lock ID <c>system</c> for metrics keys, since <c>metrics:system</c> is the system-wide metrics key.
+    /// </summary>
+    /// <param name="lockId">The lock ID to check.</param>
+    /// <param name="paramName">The name of the parameter being validated.</param>
+    /// <exception cref="ArgumentException">The lock ID equals <c>system</c>.</exception>
+    private static void ValidateNotSystemMetricsId(ReadOnlySpan<char> lockId, string paramName)
+    {
+        if (lockId.SequenceEqual(SystemSuffix))
+            throw new ArgumentException(SystemMetricsLockIdMessage, paramName);
+    }
+
+    /// <summary>
+    /// Backslash-escapes glob metacharacters so the value matches only itself when used as a Redis-style pattern.
+    /// </summary>
+    /// <param name="value">The literal value to escape.</param>
+    /// <returns>The escaped value.</returns>
+    private static string EscapeGlobPattern(ReadOnlySpan<char> value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (var c in value)
+        {
+            if (c is '*' or '?' or '[' or ']' or GlobEscapeCharacter)
+                builder.Append(GlobEscapeCharacter);
+            builder.Append(c);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
