@@ -135,10 +135,11 @@ public class MetricsCollectionWorker : BackgroundService
             Timestamp = DateTime.UtcNow,
             CacheStatistics = new CacheStatistics
             {
-                CachedItems = (int)snapshots.Average(s => s.CacheStatistics.CachedItems),
-                Hits = snapshots.Sum(s => s.CacheStatistics.Hits),
-                Misses = snapshots.Sum(s => s.CacheStatistics.Misses),
-                HitRate = snapshots.Average(s => s.CacheStatistics.HitRate)
+                // Snapshots are only ever created by CollectMetricsAsync, which always sets CacheStatistics.
+                CachedItems = (int)snapshots.Average(s => s.CacheStatistics!.CachedItems),
+                Hits = snapshots.Sum(s => s.CacheStatistics!.Hits),
+                Misses = snapshots.Sum(s => s.CacheStatistics!.Misses),
+                HitRate = snapshots.Average(s => s.CacheStatistics!.HitRate)
             }
         };
     }

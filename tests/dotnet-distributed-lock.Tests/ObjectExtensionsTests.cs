@@ -3,10 +3,9 @@ using System;
 using System.Text.Json;
 using SarmKadan.DistributedLock.Utilities.Extensions;
 
-namespace dotnet_distributed_lock.Tests
+namespace dotnet_distributed_lock.Tests;
+
+public class ObjectExtensionsTests
 {
-    public class ObjectExtensionsTests
-    {
-        // ... entire file content ...
-    }
+    // ... entire file content ...
 }

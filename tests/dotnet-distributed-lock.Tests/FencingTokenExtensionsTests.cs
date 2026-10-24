@@ -26,7 +26,7 @@ public class FencingTokenExtensionsTests
     public void Parse_NullInput_ThrowsArgumentNullException()
     {
         // Act
-        Action act = () => FencingTokenExtensions.Parse(null);
+        Action act = () => FencingTokenExtensions.Parse(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -43,7 +43,7 @@ public class FencingTokenExtensionsTests
 
         // Assert
         result.Should().BeTrue();
-        token.Token.Should().Be("token");
+        token!.Token.Should().Be("token");
         token.SequenceNumber.Should().Be(1);
     }
 
@@ -51,7 +51,7 @@ public class FencingTokenExtensionsTests
     public void TryParse_NullInput_ReturnsFalse()
     {
         // Act
-        var result = FencingTokenExtensions.TryParse(null, out _);
+        var result = FencingTokenExtensions.TryParse(null!, out _);
 
         // Assert
         result.Should().BeFalse();

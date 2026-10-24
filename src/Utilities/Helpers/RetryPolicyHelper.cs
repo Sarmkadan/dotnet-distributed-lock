@@ -106,7 +106,7 @@ public static class RetryPolicyHelper
             {
                 return await operation();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (attempt == maxRetries)
                     throw;
