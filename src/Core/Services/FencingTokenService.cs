@@ -91,30 +91,16 @@ public sealed class FencingTokenService
     {
         ArgumentNullException.ThrowIfNull(lockKey);
         _logger.LogInformation("Incrementing fencing token for {LockKey}", lockKey);
-        // Use AddOrUpdate to atomically get or create the token and update the sequence counter
-        var newToken = _tokens.AddOrUpdate(
+        // Advance the counter here, not inside the _tokens.AddOrUpdate delegates: ConcurrentDictionary
+        // may re-run an update delegate under contention, and every re-run would skip a sequence number.
+        // The counter's update is pure, so its retries are harmless and each caller gets a distinct number.
+        var sequenceNumber = _sequenceCounters.AddOrUpdate(
             lockKey,
-            key =>
-            {
-                // Key doesn't exist - create initial token with sequence number 1
-                var sequenceNumber = _sequenceCounters.AddOrUpdate(
-                    key,
-                    _ => 1L,
-                    (_, current) => current + 1
-                );
-                return new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
-            },
-            (key, existingToken) =>
-            {
-                // Key exists - increment the sequence number atomically
-                var newSequenceNumber = _sequenceCounters.AddOrUpdate(
-                    key,
-                    _ => existingToken.SequenceNumber + 1,
-                    (_, current) => current + 1
-                );
-                return new FencingToken(Guid.NewGuid().ToString("N")[..16], newSequenceNumber);
-            }
+            _ => 1L,
+            (_, current) => current + 1
         );
+        var newToken = new FencingToken(Guid.NewGuid().ToString("N")[..16], sequenceNumber);
+        _tokens[lockKey] = newToken;
         _logger.LogInformation("Incremented fencing token for {LockKey}", lockKey);
         _logger.LogDebug("Incremented fencing token for {LockKey}", lockKey);
         return newToken;

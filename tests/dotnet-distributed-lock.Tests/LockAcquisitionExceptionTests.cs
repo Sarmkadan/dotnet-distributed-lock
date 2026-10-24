@@ -56,23 +56,32 @@ public class LockAcquisitionExceptionTests
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Constructor_WithVariousLockKey_HandlesNullOrEmptyValues(string? lockKey)
+    public void Constructor_WithVariousLockKey_HandlesNullOrEmptyValues(string lockKey)
     {
         // Arrange
         var timeout = TimeSpan.FromSeconds(5);
-        var expectedKey = lockKey; // may be null or empty
+        var expectedKey = lockKey; // may be empty or whitespace
 
         // Act
-        var ex = new LockAcquisitionException(lockKey!, timeout);
+        var ex = new LockAcquisitionException(lockKey, timeout);
 
         // Assert
         ex.LockKey.Should().Be(expectedKey);
         // Message should still be well‑formed – the interpolated lock key will appear as empty string if null/whitespace
         ex.Message.Should().Contain("Failed to acquire lock");
         ex.Message.Should().Contain($"{timeout.TotalSeconds}s");
+    }
+
+    [Fact]
+    public void Constructor_WithNullLockKey_ThrowsArgumentNullException()
+    {
+        // Act
+        var act = () => new LockAcquisitionException(null!, TimeSpan.FromSeconds(5));
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("lockKey");
     }
 
     [Fact]

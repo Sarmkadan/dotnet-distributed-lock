@@ -12,16 +12,15 @@ namespace dotnet_distributed_lock.Tests
 {
     public class LockMonitorExtensionsTests
     {
+        // LockMonitor is sealed, so it is exercised directly rather than through a mock.
         private static LockMonitor CreateMonitor(IEnumerable<string>? initialLocks = null)
         {
-            var lockServiceMock = new Mock<ILockService>();
-            var monitorMock = new Mock<LockMonitor>(MockBehavior.Default, lockServiceMock.Object, NullLogger<LockMonitor>.Instance)
+            var monitor = new LockMonitor(new Mock<ILockService>().Object, NullLogger<LockMonitor>.Instance);
+            foreach (var key in initialLocks ?? Enumerable.Empty<string>())
             {
-                CallBase = true
-            };
-            monitorMock.Setup(m => m.GetMonitoredLocks())
-                       .Returns(initialLocks ?? Enumerable.Empty<string>());
-            return monitorMock.Object;
+                monitor.RegisterLock(key, "owner", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+            }
+            return monitor;
         }
 
         [Fact]
@@ -40,7 +39,14 @@ namespace dotnet_distributed_lock.Tests
 
             Assert.Throws<ArgumentException>(() => monitor.IsLockMonitored(string.Empty));
             Assert.Throws<ArgumentException>(() => monitor.IsLockMonitored("   "));
-            Assert.Throws<ArgumentException>(() => monitor.IsLockMonitored(null!));
+        }
+
+        [Fact]
+        public void IsLockMonitored_NullKey_ThrowsArgumentNullException()
+        {
+            var monitor = CreateMonitor(new[] { "key" });
+
+            Assert.Throws<ArgumentNullException>(() => monitor.IsLockMonitored(null!));
         }
 
         [Fact]
@@ -84,18 +90,16 @@ namespace dotnet_distributed_lock.Tests
         [Fact]
         public async Task WaitForLockReleaseAsync_ReturnsTrueWhenLockIsReleasedBeforeTimeout()
         {
-            var lockServiceMock = new Mock<ILockService>();
-            var monitorMock = new Mock<LockMonitor>(MockBehavior.Default, lockServiceMock.Object, NullLogger<LockMonitor>.Instance)
+            var monitor = CreateMonitor(new[] { "key1" });
+
+            // Release the lock shortly after the wait starts.
+            _ = Task.Run(async () =>
             {
-                CallBase = true
-            };
+                await Task.Delay(50);
+                monitor.UnregisterLock("key1");
+            });
 
-            // First call reports the lock is present, second call reports it is gone.
-            monitorMock.SetupSequence(m => m.GetMonitoredLocks())
-                       .Returns(new List<string> { "key1" })
-                       .Returns(new List<string>());
-
-            bool result = await monitorMock.Object.WaitForLockReleaseAsync("key1", TimeSpan.FromSeconds(1));
+            bool result = await monitor.WaitForLockReleaseAsync("key1", TimeSpan.FromSeconds(5));
 
             Assert.True(result);
         }
@@ -103,17 +107,10 @@ namespace dotnet_distributed_lock.Tests
         [Fact]
         public async Task WaitForLockReleaseAsync_ReturnsFalseWhenTimeoutExpires()
         {
-            var lockServiceMock = new Mock<ILockService>();
-            var monitorMock = new Mock<LockMonitor>(MockBehavior.Default, lockServiceMock.Object, NullLogger<LockMonitor>.Instance)
-            {
-                CallBase = true
-            };
+            // The lock stays monitored for the whole wait.
+            var monitor = CreateMonitor(new[] { "key1" });
 
-            // Always report the lock as still being monitored.
-            monitorMock.Setup(m => m.GetMonitoredLocks())
-                       .Returns(new List<string> { "key1" });
-
-            bool result = await monitorMock.Object.WaitForLockReleaseAsync("key1", TimeSpan.FromMilliseconds(200));
+            bool result = await monitor.WaitForLockReleaseAsync("key1", TimeSpan.FromMilliseconds(200));
 
             Assert.False(result);
         }

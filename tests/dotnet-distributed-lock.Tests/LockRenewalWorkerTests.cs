@@ -69,7 +69,7 @@ public class LockRenewalWorkerTests
     {
         var worker = CreateWorker();
 
-        Assert.Throws<ArgumentException>(() => worker.IsRegisteredForRenewal(null!));
+        Assert.Throws<ArgumentNullException>(() => worker.IsRegisteredForRenewal(null!));
         Assert.Throws<ArgumentException>(() => worker.IsRegisteredForRenewal(string.Empty));
         Assert.Throws<ArgumentException>(() => worker.IsRegisteredForRenewal("   "));
     }
@@ -99,7 +99,7 @@ public class LockRenewalWorkerTests
     {
         var worker = CreateWorker();
 
-        Assert.Throws<ArgumentException>(() => worker.TryGetRenewalSchedule(null!, out _));
+        Assert.Throws<ArgumentNullException>(() => worker.TryGetRenewalSchedule(null!, out _));
         Assert.Throws<ArgumentException>(() => worker.TryGetRenewalSchedule(string.Empty, out _));
         Assert.Throws<ArgumentException>(() => worker.TryGetRenewalSchedule("   ", out _));
     }
@@ -115,13 +115,14 @@ public class LockRenewalWorkerTests
 
         var before = DateTime.UtcNow;
         worker.RegisterForRenewal(lockId, token, interval);
-        var after = DateTime.UtcNow;
 
         var remaining = worker.GetTimeUntilNextRenewal(lockId);
+        var checkedAt = DateTime.UtcNow;
         Assert.NotNull(remaining);
 
-        // The remaining time should be between (interval - elapsed) and interval.
-        var elapsed = after - before;
+        // The remaining time should be between (interval - elapsed) and interval, where elapsed
+        // covers everything from before registration up to the moment the remaining time was read.
+        var elapsed = checkedAt - before;
         var minExpected = interval - elapsed;
         Assert.InRange(remaining!.Value, minExpected, interval);
     }
@@ -131,7 +132,7 @@ public class LockRenewalWorkerTests
     {
         var worker = CreateWorker();
 
-        Assert.Throws<ArgumentException>(() => worker.GetTimeUntilNextRenewal(null!));
+        Assert.Throws<ArgumentNullException>(() => worker.GetTimeUntilNextRenewal(null!));
         Assert.Throws<ArgumentException>(() => worker.GetTimeUntilNextRenewal(string.Empty));
         Assert.Throws<ArgumentException>(() => worker.GetTimeUntilNextRenewal("   "));
     }

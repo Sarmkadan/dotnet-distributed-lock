@@ -46,14 +46,14 @@ public sealed class FencingTokenServiceConcurrencyTests
         // Wait for all tasks to complete
         Task.WaitAll(tasks);
 
-        // Assert - all sequence numbers should be unique and strictly increasing
+        // Assert - results are collected by task index, not completion order, so check the set:
+        // every sequence number 1..100 is issued exactly once.
         results.Should().HaveCount(100);
         results.Should().OnlyHaveUniqueItems();
-        results.Should().BeInAscendingOrder();
+        results.Should().BeEquivalentTo(Enumerable.Range(1, 100).Select(i => (long)i));
 
-        // Verify the last token has sequence number 100
-        var lastToken = tasks[99].Result;
-        lastToken.SequenceNumber.Should().Be(100);
+        // Verify the highest sequence number issued is 100
+        results.Max().Should().Be(100);
     }
 
     /// <summary>
@@ -91,12 +91,16 @@ public sealed class FencingTokenServiceConcurrencyTests
         // Wait for all tasks to complete
         Task.WaitAll(tasks);
 
-        // Assert - each resource should have strictly increasing sequence numbers
+        // Assert - each resource should issue every sequence number 1..n exactly once.
+        // Completion order across threads is not deterministic, so compare as a set.
         foreach (var resourceKey in resourceKeys)
         {
             var sequenceNumbers = results[resourceKey];
             sequenceNumbers.Should().HaveCountGreaterThan(0);
-            sequenceNumbers.Should().BeInAscendingOrder("Sequence numbers for {0} should be strictly increasing", resourceKey);
+            sequenceNumbers.Should().OnlyHaveUniqueItems("Sequence numbers for {0} should be unique", resourceKey);
+            sequenceNumbers.Should().BeEquivalentTo(
+                Enumerable.Range(1, sequenceNumbers.Count).Select(i => (long)i),
+                "Sequence numbers for {0} should be contiguous from 1", resourceKey);
         }
     }
 
@@ -128,13 +132,13 @@ public sealed class FencingTokenServiceConcurrencyTests
         // Wait for all tasks to complete
         Task.WaitAll(tasks);
 
-        // Assert - all sequence numbers should be unique and strictly increasing
+        // Assert - results are collected by task index, not completion order, so check the set:
+        // sequence numbers 2..101 (initial token 1, then 100 increments) are each issued exactly once.
         results.Should().HaveCount(100);
         results.Should().OnlyHaveUniqueItems();
-        results.Should().BeInAscendingOrder();
+        results.Should().BeEquivalentTo(Enumerable.Range(2, 100).Select(i => (long)i));
 
-        // Verify the last token has sequence number 101 (1 initial + 100 increments)
-        var lastToken = tasks[99].Result;
-        lastToken.SequenceNumber.Should().Be(101);
+        // Verify the highest sequence number issued is 101 (1 initial + 100 increments)
+        results.Max().Should().Be(101);
     }
 }
