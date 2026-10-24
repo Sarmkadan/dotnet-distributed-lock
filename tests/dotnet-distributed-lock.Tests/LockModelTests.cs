@@ -404,17 +404,20 @@ public class LockModelTests
     }
 
     /// <summary>
-    /// Tests that <see cref="FencingToken.IsGreaterThan"/> returns true when compared to null,
-    /// following the null comparison semantics of the method.
+    /// Tests that <see cref="FencingToken.IsGreaterThan"/> rejects a null comparand
+    /// with an <see cref="ArgumentNullException"/>.
     /// </summary>
     [Fact]
-    public void FencingToken_IsGreaterThan_WhenComparedToNull_ReturnsTrue()
+    public void FencingToken_IsGreaterThan_WhenComparedToNull_ThrowsArgumentNullException()
     {
         // Arrange
         var token = new FencingToken("sometoken123456", 1);
 
-        // Act & Assert
-        token.IsGreaterThan(null!).Should().BeTrue();
+        // Act
+        Action act = () => token.IsGreaterThan(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("other");
     }
 
     /// <summary>

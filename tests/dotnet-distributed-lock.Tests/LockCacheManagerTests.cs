@@ -64,31 +64,25 @@ public class InMemoryLockCacheManagerTests
     }
 
     /// <summary>
-    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns null when the requested key is null.
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> throws an <see cref="ArgumentNullException"/> when the requested key is null.
     /// </summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
-    public async Task GetAsync_WithNullId_ReturnsNull()
+    public async Task GetAsync_WithNullId_ThrowsArgumentNullException()
     {
-        // Act
-        var result = await _cache.GetAsync(null!);
-
-        // Assert
-        result.Should().BeNull();
+        // Act & Assert
+        await _cache.Invoking(c => c.GetAsync(null!)).Should().ThrowAsync<ArgumentNullException>();
     }
 
     /// <summary>
-    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> returns null when the requested key is empty.
+    /// Verifies that <see cref="InMemoryLockCacheManager.GetAsync(string)"/> throws an <see cref="ArgumentException"/> when the requested key is empty.
     /// </summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
-    public async Task GetAsync_WithEmptyId_ReturnsNull()
+    public async Task GetAsync_WithEmptyId_ThrowsArgumentException()
     {
-        // Act
-        var result = await _cache.GetAsync("");
-
-        // Assert
-        result.Should().BeNull();
+        // Act & Assert
+        await _cache.Invoking(c => c.GetAsync("")).Should().ThrowAsync<ArgumentException>();
     }
 
     // -------------------------------------------------------------------------
@@ -96,14 +90,14 @@ public class InMemoryLockCacheManagerTests
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Verifies that <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> does not throw an exception when the lock is null.
+    /// Verifies that <see cref="InMemoryLockCacheManager.SetAsync(Lock)"/> throws an <see cref="ArgumentNullException"/> when the lock is null.
     /// </summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
-    public async Task SetAsync_WithNullLock_DoesNotThrow()
+    public async Task SetAsync_WithNullLock_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await _cache.Invoking(c => c.SetAsync(null!)).Should().NotThrowAsync();
+        await _cache.Invoking(c => c.SetAsync(null!)).Should().ThrowAsync<ArgumentNullException>();
     }
 
     /// <summary>
@@ -209,14 +203,14 @@ public class InMemoryLockCacheManagerTests
     }
 
     /// <summary>
-    /// Verifies that <see cref="InMemoryLockCacheManager.RemoveAsync(string)"/> does not throw when the key is empty.
+    /// Verifies that <see cref="InMemoryLockCacheManager.RemoveAsync(string)"/> throws an <see cref="ArgumentException"/> when the key is empty.
     /// </summary>
     /// <returns>A task representing the asynchronous test operation.</returns>
     [Fact]
-    public async Task RemoveAsync_WithEmptyId_DoesNotThrow()
+    public async Task RemoveAsync_WithEmptyId_ThrowsArgumentException()
     {
         // Act & Assert
-        await _cache.Invoking(c => c.RemoveAsync("")).Should().NotThrowAsync();
+        await _cache.Invoking(c => c.RemoveAsync("")).Should().ThrowAsync<ArgumentException>();
     }
 
     // -------------------------------------------------------------------------

@@ -63,9 +63,9 @@ public class LockCleanupWorkerTests
         // Arrange
         var expiredLocks = new[]
         {
-            new Lock("lock1", "owner1", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddSeconds(-10) },
-            new Lock("lock2", "owner2", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddSeconds(-20) },
-            new Lock("lock3", "owner3", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddSeconds(-30) }
+            new Lock("lock1", "owner1", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddMinutes(-10) },
+            new Lock("lock2", "owner2", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddMinutes(-20) },
+            new Lock("lock3", "owner3", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddMinutes(-30) }
         };
 
         _repositoryMock
@@ -113,8 +113,8 @@ public class LockCleanupWorkerTests
         // Arrange
         var expiredLocks = new[]
         {
-            new Lock("lock1", "owner1", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddSeconds(-10) },
-            new Lock("lock2", "owner2", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddSeconds(-20) }
+            new Lock("lock1", "owner1", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddMinutes(-10) },
+            new Lock("lock2", "owner2", TimeSpan.FromSeconds(30)) { ExpiresAt = DateTime.UtcNow.AddMinutes(-20) }
         };
 
         _repositoryMock

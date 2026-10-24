@@ -205,7 +205,8 @@ public class LockExtensionsTests
         var originalExpires = @lock.ExpiresAt;
 
         // Act
-        var result = @lock.SafeRenew(TimeSpan.FromSeconds(30));
+        // Renew for longer than the remaining lifetime so the new expiry is observably later.
+        var result = @lock.SafeRenew(TimeSpan.FromMinutes(5));
 
         // Assert
         result.Should().BeTrue();

@@ -48,16 +48,16 @@ public class CacheKeyGeneratorTests
     }
 
     /// <summary>
-    /// Tests that GenerateLockKey throws ArgumentException when lockId is null.
+    /// Tests that GenerateLockKey throws ArgumentNullException when lockId is null.
     /// </summary>
     [Fact]
-    public void GenerateLockKey_WithNullLockId_ThrowsArgumentException()
+    public void GenerateLockKey_WithNullLockId_ThrowsArgumentNullException()
     {
         // Arrange
         string? lockId = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateLockKey(lockId));
+        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateLockKey(lockId));
     }
 
     /// <summary>
@@ -447,16 +447,16 @@ public class CacheKeyGeneratorTests
     }
 
     /// <summary>
-    /// Tests that GenerateTagKey throws ArgumentException when tags is null.
+    /// Tests that GenerateTagKey throws ArgumentNullException when tags is null.
     /// </summary>
     [Fact]
-    public void GenerateTagKey_WithNullTags_ThrowsArgumentException()
+    public void GenerateTagKey_WithNullTags_ThrowsArgumentNullException()
     {
         // Arrange
         string[]? tags = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => CacheKeyGenerator.GenerateTagKey(tags));
+        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateTagKey(tags));
     }
 
     /// <summary>
@@ -528,19 +528,16 @@ public class CacheKeyGeneratorTests
     }
 
     /// <summary>
-    /// Tests that ExtractLockIdFromKey returns null when given an empty string.
+    /// Tests that ExtractLockIdFromKey throws ArgumentException when given an empty string, matching GenerateLockKey.
     /// </summary>
     [Fact]
-    public void ExtractLockIdFromKey_WithEmptyString_ReturnsNull()
+    public void ExtractLockIdFromKey_WithEmptyString_ThrowsArgumentException()
     {
         // Arrange
         var emptyKey = string.Empty;
 
-        // Act
-        var result = CacheKeyGenerator.ExtractLockIdFromKey(emptyKey);
-
-        // Assert
-        result.Should().BeNull();
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => CacheKeyGenerator.ExtractLockIdFromKey(emptyKey));
     }
 
     /// <summary>
