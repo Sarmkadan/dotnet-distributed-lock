@@ -1,7 +1,7 @@
 ---
-name: Bug Report
-about: Report a bug to help improve dotnet-distributed-lock
-title: '[BUG] '
+name: Bug report
+about: Report a reproducible problem with dotnet-distributed-lock
+title: '[Bug]: '
 labels: bug
 assignees: ''
 ---
@@ -10,6 +10,12 @@ assignees: ''
 A clear and concise description of the bug.
 
 ## Steps to Reproduce
+Please provide a minimal, self-contained code sample that reproduces the problem.
+
+```csharp
+// Minimal reproduction
+```
+
 1. Step one
 2. Step two
 3. Step three
@@ -18,12 +24,17 @@ A clear and concise description of the bug.
 What you expected to happen.
 
 ## Actual Behavior
-What actually happened.
+What actually happened, including any exception messages or stack traces.
 
 ## Environment
-- OS: [e.g., Windows 11, Ubuntu 22.04]
-- .NET Version: [e.g., 8.0]
-- Package Version: [e.g., 1.0.0]
+- .NET version: [e.g., 10.0.100]
+- OS: [e.g., Ubuntu 24.04, Windows 11]
+- Package version: [e.g., 1.2.0]
+- Lock backend (if applicable): [e.g., In-memory, Redis, PostgreSQL, SQLite]
+- Backend server version (if applicable): [e.g., Redis 7.2, PostgreSQL 16]
 
-## Additional Context
-Add any other context, logs, or screenshots.
+## Logs
+Relevant log output (set the logging level to `Debug` for the `SarmKadan.DistributedLock` namespace if possible). Remove any secrets or connection strings before pasting.
+
+```
+```
