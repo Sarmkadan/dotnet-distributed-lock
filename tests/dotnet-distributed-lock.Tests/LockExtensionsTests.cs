@@ -213,5 +213,56 @@ public class LockExtensionsTests
         @lock.ExpiresAt.Should().BeAfter(originalExpires);
     }
 
+    [Fact]
+    public void SafeRenew_WhenExpiredHeldLock_ReleasesWithoutRenewing()
+    {
+        // Arrange
+        var @lock = CreateLock(LockStatus.Held, DateTime.UtcNow.AddSeconds(-1));
+
+        // Act
+        var result = @lock.SafeRenew();
+
+        // Assert
+        result.Should().BeFalse();
+        @lock.Status.Should().Be(LockStatus.Released);
+        @lock.ExpiresAt.Should().BeOnOrBefore(DateTime.UtcNow);
+        @lock.RenewalCount.Should().Be(0);
+        @lock.RenewedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void SafeRenew_WhenLockAlreadyReleasedAndPastExpiry_ReturnsFalseAndStaysReleased()
+    {
+        // Arrange
+        var @lock = CreateLock(LockStatus.Released, DateTime.UtcNow.AddSeconds(-1));
+
+        // Act
+        var result = @lock.SafeRenew(TimeSpan.FromMinutes(5));
+
+        // Assert
+        result.Should().BeFalse();
+        @lock.Status.Should().Be(LockStatus.Released);
+        @lock.RenewalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void SafeRenew_WhenCalledTwiceOnActiveLock_RenewsEachTime()
+    {
+        // Arrange
+        var @lock = CreateLock(LockStatus.Acquiring, DateTime.UtcNow.AddMinutes(1));
+
+        // Act
+        var first = @lock.SafeRenew(TimeSpan.FromMinutes(5));
+        var second = @lock.SafeRenew(TimeSpan.FromMinutes(5));
+
+        // Assert
+        first.Should().BeTrue();
+        second.Should().BeTrue();
+        @lock.Status.Should().Be(LockStatus.Held);
+        @lock.RenewalCount.Should().Be(2);
+        @lock.RenewedAt.Should().NotBeNull();
+        @lock.IsExpired.Should().BeFalse();
+    }
+
     #endregion
 }
