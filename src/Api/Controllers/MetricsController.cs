@@ -6,7 +6,9 @@
 
 namespace SarmKadan.DistributedLock.Api.Controllers;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SarmKadan.DistributedLock.Configuration;
 using SarmKadan.DistributedLock.Services;
 using SarmKadan.DistributedLock.Utilities.Extensions;
@@ -54,11 +56,20 @@ public sealed class MetricsController : ControllerBase
     /// </summary>
     [HttpGet("system")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<SystemMetricsResponse> GetSystemMetrics()
     {
         _logger.LogInformation("Retrieving system-wide lock metrics");
 
-        var allMetrics = _metricsStore.GetAllLockMetrics().Values;
+        IReadOnlyList<LockMetricsSnapshot> allMetrics;
+        try
+        {
+            allMetrics = _metricsStore.GetAllLockMetrics().Values.ToList();
+        }
+        catch (Exception ex)
+        {
+            return MetricsStoreUnavailable(ex);
+        }
 
         var totalAttempts = allMetrics.Sum(m => m.AcquisitionAttempts);
         var totalSuccesses = allMetrics.Sum(m => m.SuccessfulAcquisitions);
@@ -88,6 +99,7 @@ public sealed class MetricsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<LockMetricsResponse> GetLockMetrics([FromRoute] string lockName)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockName);
@@ -99,8 +111,16 @@ public sealed class MetricsController : ControllerBase
 
         _logger.LogInformation("Retrieving metrics for lock: {LockName}", lockName);
 
-        if (!_metricsStore.TryGetLockMetrics(lockName, out var metrics) || metrics is null)
-            return NotFound($"No metrics found for lock: {lockName}");
+        LockMetricsSnapshot? metrics;
+        try
+        {
+            if (!_metricsStore.TryGetLockMetrics(lockName, out metrics) || metrics is null)
+                return NotFound($"No metrics found for lock: {lockName}");
+        }
+        catch (Exception ex)
+        {
+            return MetricsStoreUnavailable(ex);
+        }
 
         return Ok(new LockMetricsResponse
         {
@@ -124,14 +144,23 @@ public sealed class MetricsController : ControllerBase
     /// </summary>
     [HttpGet("performance")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<PerformanceMetricsResponse> GetPerformanceMetrics()
     {
         _logger.LogInformation("Retrieving performance metrics");
 
-        var holdTimes = _metricsStore.GetAllLockMetrics().Values
-            .Select(m => m.AverageHoldTimeMs)
-            .OrderBy(x => x)
-            .ToList();
+        List<double> holdTimes;
+        try
+        {
+            holdTimes = _metricsStore.GetAllLockMetrics().Values
+                .Select(m => m.AverageHoldTimeMs)
+                .OrderBy(x => x)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            return MetricsStoreUnavailable(ex);
+        }
 
         return Ok(new PerformanceMetricsResponse
         {
@@ -146,6 +175,22 @@ public sealed class MetricsController : ControllerBase
             MaxAcquisitionTimeMs = holdTimes.Any() ? holdTimes.Max() : 0,
             Timestamp = DateTime.UtcNow
         });
+    }
+
+    /// <summary>
+    /// Builds the 503 response returned when the metrics store cannot be read, and logs the failure.
+    /// </summary>
+    /// <param name="exception">The exception raised while reading from the metrics store.</param>
+    /// <returns>A 503 Service Unavailable result.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exception"/> is null.</exception>
+    private ObjectResult MetricsStoreUnavailable(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        _logger.LogError(exception, "Metrics store is unavailable");
+        return StatusCode(
+            StatusCodes.Status503ServiceUnavailable,
+            new { Message = "Metrics are temporarily unavailable" });
     }
 
     /// <summary>
