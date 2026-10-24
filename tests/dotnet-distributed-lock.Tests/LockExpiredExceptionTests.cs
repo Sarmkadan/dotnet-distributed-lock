@@ -37,13 +37,12 @@ public class LockExpiredExceptionTests
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Constructor_WithNullOrEmptyLockKey_HandlesAllValidInputs(string? lockKey)
+    public void Constructor_WithEmptyOrWhitespaceLockKey_HandlesAllValidInputs(string lockKey)
     {
         var expirationTime = DateTime.UtcNow.AddMinutes(-5);
-        var ex = new LockExpiredException(lockKey!, expirationTime);
+        var ex = new LockExpiredException(lockKey, expirationTime);
 
         ex.LockKey.Should().Be(lockKey);
         ex.ExpirationTime.Should().Be(expirationTime);
