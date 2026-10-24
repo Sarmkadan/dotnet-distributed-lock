@@ -33,7 +33,9 @@ public static class ServiceCollectionExtensions
     /// </code>
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the configuration is invalid.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the configuration is invalid or distributed locking is already registered in <paramref name="services"/>.
+    /// </exception>
     public static IServiceCollection AddDistributedLocking(
         this IServiceCollection services,
         Action<DistributedLockOptions>? configureOptions = null)
@@ -72,7 +74,9 @@ public static class ServiceCollectionExtensions
     /// </param>
     /// <param name="configureOptions">Optional callback to configure additional options.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="retryPolicy"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the configuration is invalid.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the configuration is invalid or distributed locking is already registered in <paramref name="services"/>.
+    /// </exception>
     /// <example>
     /// <code>
     /// // Plug in a custom Polly-based retry policy:
@@ -109,6 +113,14 @@ public static class ServiceCollectionExtensions
         ILockRetryPolicy retryPolicy,
         DistributedLockOptions options)
     {
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(DistributedLockOptions)))
+        {
+            throw new InvalidOperationException(
+                "Distributed locking is already registered in this service collection. " +
+                "Call AddDistributedLocking exactly once per container."
+            );
+        }
+
         services.AddSingleton(options);
         services.AddSingleton(retryPolicy);
         services.AddRepository(options.BackendType, options.ConnectionString);
@@ -130,7 +142,7 @@ public static class ServiceCollectionExtensions
     /// <param name="connectionString">The connection string for the backend storage.</param>
     /// <returns>The configured service collection.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is null or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is null or empty for a backend that requires one.</exception>
     /// <exception cref="NotSupportedException">Thrown when the backend type is not supported.</exception>
     private static IServiceCollection AddRepository(
         this IServiceCollection services,
@@ -138,7 +150,10 @@ public static class ServiceCollectionExtensions
         string connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrEmpty(connectionString, nameof(connectionString));
+        if (backendType != BackendType.InMemory)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(connectionString, nameof(connectionString));
+        }
 
         return backendType switch
         {
