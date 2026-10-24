@@ -9,6 +9,7 @@ namespace SarmKadan.DistributedLock.Api.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using SarmKadan.DistributedLock.Configuration;
 using SarmKadan.DistributedLock.Services;
+using SarmKadan.DistributedLock.Utilities.Extensions;
 
 /// <summary>
 /// Metrics and monitoring endpoints for distributed lock operations.
@@ -73,7 +74,7 @@ public sealed class MetricsController : ControllerBase
             FailedAcquisitions = totalFailures,
             SuccessRate = totalAttempts > 0 ? (double)totalSuccesses / totalAttempts * 100 : 0,
             AverageHoldTimeMs = avgHoldTime,
-            ActiveLocks = allMetrics.Count,
+            ActiveLocks = allMetrics.Count(),
             Timestamp = DateTime.UtcNow
         });
     }
@@ -82,12 +83,19 @@ public sealed class MetricsController : ControllerBase
     /// Gets detailed metrics for a specific lock.
     /// </summary>
     /// <param name="lockName">The name of the lock to retrieve metrics for</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lockName"/> is null or empty.</exception>
     [HttpGet("lock/{lockName}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult<LockMetricsResponse> GetLockMetrics([FromRoute] string lockName)
     {
         ArgumentException.ThrowIfNullOrEmpty(lockName);
+
+        // Lock names are validated on write, so a malformed or oversized name cannot have metrics.
+        // Rejecting it here keeps such route values out of logs and the store lookup.
+        if (!lockName.IsValidLockName())
+            return BadRequest("Lock name must be 1-256 characters: letters, digits, '-', '_', '.', ':'.");
 
         _logger.LogInformation("Retrieving metrics for lock: {LockName}", lockName);
 
