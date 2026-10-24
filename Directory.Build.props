@@ -1,0 +1,41 @@
+<Project>
+
+  <!--
+    Shared build settings for every project under this directory (library, tests, benchmarks).
+    Project files only declare what is specific to them (TargetFramework, package id, references).
+  -->
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      NU1903: SQLitePCLRaw.lib.e_sqlite3 2.1.6 (transitive via Microsoft.Data.Sqlite 8.0.10) has a known
+      advisory (GHSA-2m69-gcr7-jv3q). Kept as a visible warning rather than suppressed; fixing it means
+      bumping the Microsoft.Data.Sqlite dependency, which is tracked separately.
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
+    <!--
+      IDE0073: .editorconfig requires the one-line "Copyright (c) 2026 ..." file header, but the sources use the
+      "// ===== Author: ... =====" banner. Migrating ~80 files is out of scope; the banner is the project convention.
+    -->
+    <!--
+      CS1591: about 290 public members (mostly properties, options, and exception ctors) lack XML doc comments.
+      Still generated into the package docs; suppressed until they are documented in a dedicated pass.
+    -->
+    <NoWarn>$(NoWarn);IDE0073;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Vladyslav Zaiets</Authors>
+    <Copyright>Copyright (c) 2026 Vladyslav Zaiets</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/sarmkadan/dotnet-distributed-lock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+</Project>

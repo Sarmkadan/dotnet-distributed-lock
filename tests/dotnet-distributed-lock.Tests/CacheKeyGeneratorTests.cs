@@ -57,7 +57,7 @@ public class CacheKeyGeneratorTests
         string? lockId = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateLockKey(lockId));
+        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateLockKey(lockId!));
     }
 
     /// <summary>
@@ -456,7 +456,7 @@ public class CacheKeyGeneratorTests
         string[]? tags = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateTagKey(tags));
+        Assert.Throws<ArgumentNullException>(() => CacheKeyGenerator.GenerateTagKey(tags!));
     }
 
     /// <summary>

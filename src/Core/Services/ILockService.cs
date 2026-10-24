@@ -4,6 +4,7 @@
 // CTO & Software Architect
 // =====================================================================
 
+using SarmKadan.DistributedLock.Exceptions;
 using SarmKadan.DistributedLock.Models;
 
 namespace SarmKadan.DistributedLock.Services;

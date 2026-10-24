@@ -59,7 +59,6 @@ public class LockRequestContext
     // Marks the request as completed
     public void MarkCompleted(bool successful, string? failureReason = null)
     {
-        ArgumentNullException.ThrowIfNull(nameof(successful));
         CompletedAt = DateTime.UtcNow;
         Successful = successful;
         FailureReason = failureReason;
@@ -101,7 +100,6 @@ public class LockRequestContext
     // Increments retry count
     public void IncrementRetryCount()
     {
-        ArgumentNullException.ThrowIfNull(nameof(RetryCount));
         RetryCount++;
     }
 

@@ -4,10 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using SarmKadan.DistributedLock.Utilities.Extensions;
 
-namespace dotnet_distributed_lock.Tests
+namespace dotnet_distributed_lock.Tests;
+
+public class CollectionExtensionsTests
 {
-    public class CollectionExtensionsTests
-    {
-        // ... entire file content ...
-    }
+    // ... entire file content ...
 }

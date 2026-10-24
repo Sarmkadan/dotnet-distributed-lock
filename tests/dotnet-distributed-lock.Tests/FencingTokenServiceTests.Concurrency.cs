@@ -24,7 +24,7 @@ public sealed class FencingTokenServiceConcurrencyTests
     /// Tests that issuing 100 tokens in parallel produces 100 unique strictly-increasing sequence numbers.
     /// </summary>
     [Fact]
-    public void IssueToken_100ParallelRequests_ProducesUniqueStrictlyIncreasingTokens()
+    public async Task IssueToken_100ParallelRequests_ProducesUniqueStrictlyIncreasingTokens()
     {
         // Arrange
         var lockKey = "resource:concurrent-test";
@@ -44,7 +44,7 @@ public sealed class FencingTokenServiceConcurrencyTests
         }
 
         // Wait for all tasks to complete
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         // Assert - results are collected by task index, not completion order, so check the set:
         // every sequence number 1..100 is issued exactly once.
@@ -60,7 +60,7 @@ public sealed class FencingTokenServiceConcurrencyTests
     /// Tests that issuing tokens for different resources in parallel maintains strict monotonicity.
     /// </summary>
     [Fact]
-    public void IssueToken_ParallelForDifferentResources_ProducesStrictlyIncreasingSequence()
+    public async Task IssueToken_ParallelForDifferentResources_ProducesStrictlyIncreasingSequence()
     {
         // Arrange
         var resourceKeys = new[] { "resource:A", "resource:B", "resource:C", "resource:D", "resource:E" };
@@ -89,7 +89,7 @@ public sealed class FencingTokenServiceConcurrencyTests
         }
 
         // Wait for all tasks to complete
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         // Assert - each resource should issue every sequence number 1..n exactly once.
         // Completion order across threads is not deterministic, so compare as a set.
@@ -108,7 +108,7 @@ public sealed class FencingTokenServiceConcurrencyTests
     /// Tests that IncrementToken is also thread-safe and produces strictly monotonic sequence numbers.
     /// </summary>
     [Fact]
-    public void IncrementToken_100ParallelRequests_ProducesUniqueStrictlyIncreasingTokens()
+    public async Task IncrementToken_100ParallelRequests_ProducesUniqueStrictlyIncreasingTokens()
     {
         // Arrange
         var lockKey = "resource:increment-test";
@@ -130,7 +130,7 @@ public sealed class FencingTokenServiceConcurrencyTests
         }
 
         // Wait for all tasks to complete
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         // Assert - results are collected by task index, not completion order, so check the set:
         // sequence numbers 2..101 (initial token 1, then 100 increments) are each issued exactly once.

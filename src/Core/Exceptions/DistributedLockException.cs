@@ -13,6 +13,6 @@ public class DistributedLockException : Exception
 {
     public DistributedLockException(string message) : base(message) { }
 
-    public DistributedLockException(string message, Exception innerException)
+    public DistributedLockException(string message, Exception? innerException)
         : base(message, innerException) { }
 }

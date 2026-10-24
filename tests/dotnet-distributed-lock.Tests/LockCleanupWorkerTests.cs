@@ -85,7 +85,7 @@ public class LockCleanupWorkerTests
 
         // Assert
         var cleanedCountField = typeof(LockCleanupWorker).GetField("_cleanedCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var cleanedCount = (int)cleanedCountField.GetValue(_worker)!;
+        var cleanedCount = (int)cleanedCountField!.GetValue(_worker)!;
         cleanedCount.Should().Be(3);
         _repositoryMock.Verify(
             r => r.DeleteLockIfExpirationMatchesAsync(
@@ -141,7 +141,7 @@ public class LockCleanupWorkerTests
 
         // Assert
         var cleanedCountField = typeof(LockCleanupWorker).GetField("_cleanedCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var cleanedCount = (int)cleanedCountField.GetValue(_worker)!;
+        var cleanedCount = (int)cleanedCountField!.GetValue(_worker)!;
         cleanedCount.Should().Be(1); // only the first lock counted as cleaned
         _repositoryMock.Verify(
             r => r.DeleteLockIfExpirationMatchesAsync(

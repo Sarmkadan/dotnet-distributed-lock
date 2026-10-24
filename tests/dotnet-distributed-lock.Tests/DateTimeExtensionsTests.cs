@@ -7,44 +7,43 @@ using System.Threading;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
-namespace dotnet_distributed_lock.Tests
+namespace dotnet_distributed_lock.Tests;
+
+public class DateTimeExtensionsTests
 {
-    public class DateTimeExtensionsTests
+    [Fact]
+    public void HappyPath_IsExpired()
     {
-        [Fact]
-        public void HappyPath_IsExpired()
-        {
-            // Test implementation here
-        }
+        // Test implementation here
+    }
 
-        [Fact]
-        public void EdgeCase_IsExpired_NullInput()
-        {
-            // Test implementation here
-        }
+    [Fact]
+    public void EdgeCase_IsExpired_NullInput()
+    {
+        // Test implementation here
+    }
 
-        [Fact]
-        public void ErrorPath_IsExpired_InvalidInput()
-        {
-            // Test implementation here
-        }
+    [Fact]
+    public void ErrorPath_IsExpired_InvalidInput()
+    {
+        // Test implementation here
+    }
 
-        [Fact]
-        public void HappyPath_IsValid()
-        {
-            // Test implementation here
-        }
+    [Fact]
+    public void HappyPath_IsValid()
+    {
+        // Test implementation here
+    }
 
-        [Fact]
-        public void EdgeCase_IsValid_NullInput()
-        {
-            // Test implementation here
-        }
+    [Fact]
+    public void EdgeCase_IsValid_NullInput()
+    {
+        // Test implementation here
+    }
 
-        [Fact]
-        public void ErrorPath_IsValid_InvalidInput()
-        {
-            // Test implementation here
-        }
+    [Fact]
+    public void ErrorPath_IsValid_InvalidInput()
+    {
+        // Test implementation here
     }
 }

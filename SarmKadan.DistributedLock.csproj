@@ -2,22 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
     <RootNamespace>SarmKadan.DistributedLock</RootNamespace>
     <AssemblyName>SarmKadan.DistributedLock</AssemblyName>
     <PackageId>SarmKadan.DistributedLock</PackageId>
     <Version>1.0.0</Version>
-    <Authors>Vladyslav Zaiets</Authors>
     <Description>A distributed lock implementation for .NET applications, supporting multiple backends like Redis, PostgreSQL, and SQLite.</Description>
     <PackageTags>distributed-lock dotnet redis postgresql sqlite locking</PackageTags>
     <PackageProjectUrl>https://github.com/sarmkadan/dotnet-distributed-lock</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/sarmkadan/dotnet-distributed-lock</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -46,7 +39,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="StackExchange.Redis" Version="2.8.13" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.14" />
     <PackageReference Include="Npgsql" Version="8.0.4" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />

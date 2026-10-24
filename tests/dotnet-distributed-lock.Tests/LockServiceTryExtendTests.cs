@@ -107,7 +107,6 @@ public class LockServiceTryExtendTests : IDisposable
     {
         // Arrange
         var lockKey = "resource:checkout";
-        var ownerId = "worker-1";
         var otherOwnerId = "worker-2";
 
         _repositoryMock
