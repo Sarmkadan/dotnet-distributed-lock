@@ -19,7 +19,6 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +31,15 @@
   -->
   <ItemGroup>
     <Compile Include="../../src/Integration/WebhookPublisher.cs" Link="Integration/WebhookPublisher.cs" />
+  </ItemGroup>
+
+  <!--
+    src/Api is excluded from the library build as well. MetricsController needs the ASP.NET Core MVC types,
+    so the test assembly references the shared framework and compiles that single controller source.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="../../src/Api/Controllers/MetricsController.cs" Link="Api/Controllers/MetricsController.cs" />
   </ItemGroup>
 
 </Project>
