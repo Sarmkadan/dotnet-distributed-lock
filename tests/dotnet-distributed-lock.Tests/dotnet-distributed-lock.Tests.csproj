@@ -26,4 +26,12 @@
     <ProjectReference Include="../../SarmKadan.DistributedLock.csproj" />
   </ItemGroup>
 
+  <!--
+    src/Integration is excluded from the library build (see SarmKadan.DistributedLock.csproj), so the
+    webhook publisher sources are compiled directly into the test assembly.
+  -->
+  <ItemGroup>
+    <Compile Include="../../src/Integration/WebhookPublisher.cs" Link="Integration/WebhookPublisher.cs" />
+  </ItemGroup>
+
 </Project>

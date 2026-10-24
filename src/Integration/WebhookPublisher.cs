@@ -9,7 +9,8 @@ namespace SarmKadan.DistributedLock.Integration;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
-using SarmKadan.DistributedLock.Core.Models;
+using Microsoft.Extensions.Logging;
+using SarmKadan.DistributedLock.Models;
 
 /// <summary>
 /// Publishes lock events to external webhook endpoints.
@@ -496,39 +497,57 @@ public record WebhookPayload
 }
 
 /// <summary>
-/// No-op implementation for testing or when webhooks are disabled.
+/// No-op implementation for testing or when webhooks are disabled. Never sends or blocks,
+/// but validates its arguments the same way <see cref="HttpWebhookPublisher"/> does so it
+/// can be swapped in without changing caller-visible behavior.
 /// </summary>
 public class NoOpWebhookPublisher : IWebhookPublisher
 {
     /// <summary>
-    /// Does nothing and returns a completed task.
+    /// Validates the lock and returns a completed task without publishing anything.
     /// </summary>
-    /// <param name="lock">Ignored.</param>
+    /// <param name="lock">The lock the event would pertain to. Must not be null.</param>
     /// <param name="cancellationToken">Ignored.</param>
-    public Task PublishLockAcquiredAsync(Lock @lock, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown (via the returned task) when <paramref name="lock"/> is null.</exception>
+    public async Task PublishLockAcquiredAsync(Lock @lock, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(@lock);
+        await Task.CompletedTask;
+    }
 
     /// <summary>
-    /// Does nothing and returns a completed task.
+    /// Validates the lock and returns a completed task without publishing anything.
     /// </summary>
-    /// <param name="lock">Ignored.</param>
+    /// <param name="lock">The lock the event would pertain to. Must not be null.</param>
     /// <param name="cancellationToken">Ignored.</param>
-    public Task PublishLockReleasedAsync(Lock @lock, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown (via the returned task) when <paramref name="lock"/> is null.</exception>
+    public async Task PublishLockReleasedAsync(Lock @lock, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(@lock);
+        await Task.CompletedTask;
+    }
 
     /// <summary>
-    /// Does nothing and returns a completed task.
+    /// Validates the lock and returns a completed task without publishing anything.
     /// </summary>
-    /// <param name="lock">Ignored.</param>
+    /// <param name="lock">The lock the event would pertain to. Must not be null.</param>
     /// <param name="cancellationToken">Ignored.</param>
-    public Task PublishLockExpiredAsync(Lock @lock, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown (via the returned task) when <paramref name="lock"/> is null.</exception>
+    public async Task PublishLockExpiredAsync(Lock @lock, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(@lock);
+        await Task.CompletedTask;
+    }
 
     /// <summary>
-    /// Does nothing and returns a completed task.
+    /// Validates the lock and returns a completed task without publishing anything.
     /// </summary>
-    /// <param name="lock">Ignored.</param>
+    /// <param name="lock">The lock the event would pertain to. Must not be null.</param>
     /// <param name="cancellationToken">Ignored.</param>
-    public Task PublishLockRenewedAsync(Lock @lock, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown (via the returned task) when <paramref name="lock"/> is null.</exception>
+    public async Task PublishLockRenewedAsync(Lock @lock, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(@lock);
+        await Task.CompletedTask;
+    }
 }
