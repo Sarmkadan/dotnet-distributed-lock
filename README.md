@@ -339,6 +339,71 @@ Controllers live in `src/Api/Controllers/`. All of them are `[ApiController]` wi
 
 `DistributedLockControllerValidation` and `HealthCheckControllerExtensions` are static helper classes in the same folder. They define no routes.
 
+## Caching
+
+The `src/Caching/` folder contains two building blocks for reducing load on the lock backend: `LockCacheManager` keeps recently read locks in process memory, and `CacheKeyGenerator` produces deterministic keys so that every component addresses the same cache entry for the same lock.
+
+### LockCacheManager
+
+`ILockCacheManager` is the caching contract. `InMemoryLockCacheManager` is its implementation: a `ConcurrentDictionary`-backed cache that is thread-safe and suited to single-instance deployments.
+
+Behavior is controlled by `CacheConfiguration`:
+
+| Property | Default | Meaning |
+|----------|---------|---------|
+| `TtlSeconds` | `300` | Entry lifetime measured from when it was stored. Expired entries are removed on access and counted as misses. |
+| `MaxCacheSize` | `10000` | When the cache is full, `SetAsync` evicts the least recently used entry first. |
+| `EnableCompression` | `false` | Defined but not applied by the current implementation. |
+
+Hits, misses, and hit rate are reported by `GetStatistics()` as a `CacheStatistics` record. `MetricsCollectionWorker` reads these figures for its metrics output.
+
+#### How it reduces backend load
+
+A `GetAsync` hit is served from memory, so repeated reads of the same lock do not go to Redis, PostgreSQL, or SQLite. `LockService` does not consult the cache on its own. Code that wants this benefit must route its lookups through `ILockCacheManager`.
+
+Cached entries can be up to `TtlSeconds` old. Fencing tokens still guard renew and release, so the backend remains the source of truth for ownership decisions. Treat a cached `Lock` as a read-only snapshot.
+
+#### Usage Example
+
+```csharp
+using SarmKadan.DistributedLock.Caching;
+
+var cache = new InMemoryLockCacheManager(new CacheConfiguration
+{
+    TtlSeconds = 60,
+    MaxCacheSize = 1000
+});
+
+await cache.SetAsync(myLock);                    // store after reading from the backend
+var cached = await cache.GetAsync(myLock.Key);   // served from memory while the entry is fresh
+
+var stats = cache.GetStatistics();
+Console.WriteLine($"Items: {stats.CachedItems}, hit rate: {stats.HitRate:P0}");
+```
+
+### CacheKeyGenerator
+
+`CacheKeyGenerator` is a static class. It sets the key format for every cache entry in the library. Keys are validated: lock IDs may not be empty, contain control characters, or start with a reserved namespace prefix, and they are capped at 256 characters.
+
+| Method | Key format |
+|--------|------------|
+| `GenerateLockKey(lockId)` | `lock:{lockId}` |
+| `GenerateLockNameKey(lockName)` | `lock:name:{lockName}`, with glob characters escaped |
+| `GenerateMetricsKey(lockId)` | `metrics:{lockId}` |
+| `GenerateSystemMetricsKey()` | `metrics:system` |
+| `GenerateStatusKey(lockId)` | `status:{lockId}` |
+| `GenerateOwnerLocksKey(ownerId)` | `lock:owner:{ownerId}` |
+| `GenerateQueryKey(queryName, params)` | `query:{16 hex chars}`, a truncated SHA-256 of the query name and parameters |
+| `GenerateConfigurationKey(configName)` | `config:{configName}` |
+| `GenerateTagKey(tags)` | `tag:{tag1}:{tag2}...` |
+
+Two further helpers reduce load and keep cached data consistent:
+
+- `CacheKeySets.GetKeysByAcquisition` and `CacheKeySets.GetKeysByRelease` return the exact keys affected by an acquire or release. Pass them to your cache's remove calls so that only those entries are dropped and the rest of the cache stays warm.
+- `CacheKeyPatterns` (for example `AllLocks = "lock:*"`) provides glob patterns for bulk operations such as invalidating every lock entry.
+
+Because the keys are deterministic, two services that look up the same lock always share one cache entry. The per-method examples are in the [CacheKeyGenerator](#cachekeygenerator) section below.
+
 ## CacheKeyGenerator
 
 The `CacheKeyGenerator` class provides utility methods for generating consistent, predictable cache keys used throughout the distributed lock system. It ensures consistent key formats across all components for cache coordination, supports pattern matching for bulk operations, and provides methods for extracting information from keys. The generator creates keys for individual locks, lock families, metrics, status, owners, queries, configurations, and tags, with helper methods to identify key types and extract lock IDs.
