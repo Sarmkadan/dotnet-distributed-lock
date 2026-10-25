@@ -42,6 +42,9 @@ public class LockAcquisition
 
     public LockAcquisition(string lockKey, string requesterId, AcquisitionMode mode, TimeSpan timeout, int maxRetries = 3)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(requesterId);
+
         if (string.IsNullOrWhiteSpace(lockKey))
             throw new ArgumentException("Lock key cannot be null or empty.", nameof(lockKey));
 
