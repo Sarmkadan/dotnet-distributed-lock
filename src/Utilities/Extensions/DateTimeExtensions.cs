@@ -82,6 +82,39 @@ public static class DateTimeExtensions
     }
 
     /// <summary>
+    /// Determines if a lock has expired relative to a supplied reference time.
+    /// Unlike <see cref="IsExpired"/>, this does not read the system clock, so it is deterministic and easy to test.
+    /// </summary>
+    /// <param name="expiresAt">The expiration DateTime to check.</param>
+    /// <param name="referenceTime">The point in time to evaluate expiration against.</param>
+    /// <returns><see langword="true"/> if <paramref name="referenceTime"/> is at or past <paramref name="expiresAt"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool IsExpiredAt(this DateTime expiresAt, DateTime referenceTime)
+    {
+        return referenceTime >= expiresAt;
+    }
+
+    /// <summary>
+    /// Calculates the fraction of a lock's lifetime that remains at a supplied reference time.
+    /// Useful for deciding when to renew (e.g., renew once less than 25% of the lifetime is left).
+    /// Returns 0 if the lock has no positive lifetime or has already expired, and 1 if the reference time precedes the issue time.
+    /// </summary>
+    /// <param name="expiresAt">The expiration DateTime of the lock.</param>
+    /// <param name="issuedAt">The DateTime at which the lock was issued.</param>
+    /// <param name="referenceTime">The point in time to measure the remaining lifetime at.</param>
+    /// <returns>A value between 0 and 1 inclusive representing the remaining fraction of the lock's lifetime.</returns>
+    public static double GetRemainingFraction(this DateTime expiresAt, DateTime issuedAt, DateTime referenceTime)
+    {
+        var lifetime = expiresAt - issuedAt;
+        if (lifetime <= TimeSpan.Zero)
+        {
+            return 0;
+        }
+
+        var remaining = expiresAt - referenceTime;
+        return Math.Clamp(remaining.Ticks / (double)lifetime.Ticks, 0d, 1d);
+    }
+
+    /// <summary>
     /// Formats a DateTime as an ISO 8601 string with UTC timezone.
     /// </summary>
     /// <param name="dateTime">The DateTime to format.</param>
