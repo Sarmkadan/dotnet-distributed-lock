@@ -17,6 +17,9 @@ public class InvalidFencingTokenException : DistributedLockException
     public InvalidFencingTokenException(string providedToken, string currentToken)
         : base($"Fencing token '{providedToken}' is invalid or superseded by '{currentToken}'.")
     {
+        ArgumentNullException.ThrowIfNull(providedToken);
+        ArgumentNullException.ThrowIfNull(currentToken);
+
         ProvidedToken = providedToken;
         CurrentToken = currentToken;
     }
@@ -24,6 +27,9 @@ public class InvalidFencingTokenException : DistributedLockException
     public InvalidFencingTokenException(string providedToken, string currentToken, Exception innerException)
         : base($"Fencing token '{providedToken}' is invalid or superseded by '{currentToken}'.", innerException)
     {
+        ArgumentNullException.ThrowIfNull(providedToken);
+        ArgumentNullException.ThrowIfNull(currentToken);
+
         ProvidedToken = providedToken;
         CurrentToken = currentToken;
     }
