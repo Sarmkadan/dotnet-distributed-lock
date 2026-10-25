@@ -14,7 +14,18 @@ namespace SarmKadan.DistributedLock.Configuration;
 public class DistributedLockOptions
 {
     public BackendType BackendType { get; set; } = BackendType.InMemory;
-    public string ConnectionString { get; set; } = string.Empty;
+    private string _connectionString = string.Empty;
+
+    public string ConnectionString
+    {
+        get => _connectionString;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _connectionString = value;
+        }
+    }
+
     public TimeSpan DefaultLockDuration { get; set; } = Constants.LockConstants.DefaultLockTimeout;
     public TimeSpan DefaultAcquisitionTimeout { get; set; } = Constants.LockConstants.DefaultAcquisitionTimeout;
     public TimeSpan DefaultRenewalInterval { get; set; } = Constants.LockConstants.DefaultRenewalInterval;
