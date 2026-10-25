@@ -202,4 +202,32 @@ public static class CollectionExtensions
 
         return list[index];
     }
+
+    /// <summary>
+    /// Filters out <see langword="null"/> references from a sequence.
+    /// The returned sequence is lazily evaluated.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is <see langword="null"/></exception>
+    public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> items) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        foreach (var item in items)
+        {
+            if (item is not null)
+                yield return item;
+        }
+    }
+
+    /// <summary>
+    /// Returns the sequence as a read-only list, copying it only if it is not already an <see cref="IReadOnlyList{T}"/>.
+    /// Returns an empty list if the collection is <see langword="null"/>.
+    /// </summary>
+    public static IReadOnlyList<T> ToReadOnlyList<T>(this IEnumerable<T>? items)
+    {
+        if (items is null)
+            return Array.Empty<T>();
+
+        return items as IReadOnlyList<T> ?? items.ToList();
+    }
 }
