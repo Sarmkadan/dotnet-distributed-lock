@@ -11,7 +11,10 @@ namespace SarmKadan.DistributedLock.Exceptions;
 /// </summary>
 public class DistributedLockException : Exception
 {
-    public DistributedLockException(string message) : base(message) { }
+    public DistributedLockException(string message) : base(message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+    }
 
     public DistributedLockException(string message, Exception? innerException)
         : base(message, innerException) { }
