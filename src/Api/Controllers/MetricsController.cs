@@ -24,10 +24,25 @@ using SarmKadan.DistributedLock.Utilities.Extensions;
 /// enabled or disabled via the <see cref="DistributedLockOptions.EnableMetricsResetEndpoint"/> option.
 /// </remarks>
 [ApiController]
-[Route("api/[controller]")]
-[Produces("application/json")]
+[Route(BaseRoute)]
+[Produces(JsonContentType)]
 public sealed class MetricsController : ControllerBase
 {
+    private const string BaseRoute = "api/[controller]";
+    private const string JsonContentType = "application/json";
+
+    private const string SystemRoute = "system";
+    private const string LockRoute = "lock/{lockName}";
+    private const string PerformanceRoute = "performance";
+    private const string ResetRoute = "reset";
+
+    private const string InvalidLockNameMessage =
+        "Lock name must be 1-256 characters: letters, digits, '-', '_', '.', ':'.";
+    private const string LockNotFoundMessagePrefix = "No metrics found for lock: ";
+    private const string StoreUnavailableMessage = "Metrics are temporarily unavailable";
+    private const string ResetDisabledMessage = "Metrics reset endpoint is disabled";
+    private const string ResetCompletedMessage = "All metrics have been reset";
+
     private readonly IMetricsStore _metricsStore;
     private readonly ILogger<MetricsController> _logger;
     private readonly DistributedLockOptions _options;
@@ -54,7 +69,7 @@ public sealed class MetricsController : ControllerBase
     /// Gets overall metrics for lock operations across the system.
     /// Includes acquisition attempts, successes, failures, and average hold times.
     /// </summary>
-    [HttpGet("system")]
+    [HttpGet(SystemRoute)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<SystemMetricsResponse> GetSystemMetrics()
@@ -95,7 +110,7 @@ public sealed class MetricsController : ControllerBase
     /// </summary>
     /// <param name="lockName">The name of the lock to retrieve metrics for</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="lockName"/> is null or empty.</exception>
-    [HttpGet("lock/{lockName}")]
+    [HttpGet(LockRoute)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -107,7 +122,7 @@ public sealed class MetricsController : ControllerBase
         // Lock names are validated on write, so a malformed or oversized name cannot have metrics.
         // Rejecting it here keeps such route values out of logs and the store lookup.
         if (!lockName.IsValidLockName())
-            return BadRequest("Lock name must be 1-256 characters: letters, digits, '-', '_', '.', ':'.");
+            return BadRequest(InvalidLockNameMessage);
 
         _logger.LogInformation("Retrieving metrics for lock: {LockName}", lockName);
 
@@ -115,7 +130,7 @@ public sealed class MetricsController : ControllerBase
         try
         {
             if (!_metricsStore.TryGetLockMetrics(lockName, out metrics) || metrics is null)
-                return NotFound($"No metrics found for lock: {lockName}");
+                return NotFound($"{LockNotFoundMessagePrefix}{lockName}");
         }
         catch (Exception ex)
         {
@@ -142,7 +157,7 @@ public sealed class MetricsController : ControllerBase
     /// <summary>
     /// Gets performance-related metrics including latency percentiles.
     /// </summary>
-    [HttpGet("performance")]
+    [HttpGet(PerformanceRoute)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<PerformanceMetricsResponse> GetPerformanceMetrics()
@@ -190,7 +205,7 @@ public sealed class MetricsController : ControllerBase
         _logger.LogError(exception, "Metrics store is unavailable");
         return StatusCode(
             StatusCodes.Status503ServiceUnavailable,
-            new { Message = "Metrics are temporarily unavailable" });
+            new { Message = StoreUnavailableMessage });
     }
 
     /// <summary>
@@ -201,7 +216,7 @@ public sealed class MetricsController : ControllerBase
     /// This endpoint requires no authentication in the current implementation.
     /// Consider securing it in production environments if metrics reset should be restricted.
     /// </remarks>
-    [HttpPost("reset")]
+    [HttpPost(ResetRoute)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public ActionResult ResetMetrics()
@@ -209,12 +224,12 @@ public sealed class MetricsController : ControllerBase
         if (!_options.EnableMetricsResetEndpoint)
         {
             _logger.LogWarning("Metrics reset attempted but endpoint is disabled via configuration");
-            return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Metrics reset endpoint is disabled" });
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ResetDisabledMessage });
         }
 
         _logger.LogWarning("Metrics reset triggered");
         _metricsStore.Reset();
-        return Ok(new { Message = "All metrics have been reset" });
+        return Ok(new { Message = ResetCompletedMessage });
     }
 }
 
