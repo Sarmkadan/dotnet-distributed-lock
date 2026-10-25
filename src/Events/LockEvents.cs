@@ -47,6 +47,9 @@ public sealed class LockAcquiredEvent : LockEvent
     [SetsRequiredMembers]
     public LockAcquiredEvent(string lockKey, string ownerId, LockStatus status)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         LockId = lockKey;
         LockName = lockKey;
         OwnerId = ownerId;
@@ -75,6 +78,9 @@ public sealed class LockReleasedEvent : LockEvent
     [SetsRequiredMembers]
     public LockReleasedEvent(string lockKey, string ownerId)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         LockId = lockKey;
         LockName = lockKey;
         OwnerId = ownerId;
@@ -113,6 +119,9 @@ public sealed class LockRenewedEvent : LockEvent
     [SetsRequiredMembers]
     public LockRenewedEvent(string lockKey, string ownerId)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(ownerId);
+
         LockId = lockKey;
         LockName = lockKey;
         OwnerId = ownerId;
@@ -136,6 +145,10 @@ public sealed class LockFailedEvent : LockEvent
     [SetsRequiredMembers]
     public LockFailedEvent(string lockKey, string ownerId, string reason)
     {
+        ArgumentNullException.ThrowIfNull(lockKey);
+        ArgumentNullException.ThrowIfNull(ownerId);
+        ArgumentNullException.ThrowIfNull(reason);
+
         LockId = lockKey;
         OwnerId = ownerId;
         Reason = reason;
