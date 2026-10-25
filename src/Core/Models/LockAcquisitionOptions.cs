@@ -56,4 +56,13 @@ public class LockAcquisitionOptions
             );
         }
     }
+
+    /// <summary>
+    /// Returns a readable summary of the acquisition options for logging and debugging.
+    /// </summary>
+    /// <returns>A string listing the renewal settings.</returns>
+    public override string ToString()
+    {
+        return $"LockAcquisitionOptions {{ EnableAutoRenewal={EnableAutoRenewal}, RenewalFraction={RenewalFraction}, MaxRenewals={MaxRenewals} }}";
+    }
 }
