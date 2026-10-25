@@ -27,6 +27,9 @@ public class LockRenewalFailedException : DistributedLockException
     public LockRenewalFailedException(string lockId, string message, Exception? innerException = null)
         : base(message, innerException)
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+        ArgumentNullException.ThrowIfNull(message);
+
         LockId = lockId;
     }
 
@@ -37,6 +40,8 @@ public class LockRenewalFailedException : DistributedLockException
     public LockRenewalFailedException(string lockId)
         : base($"Failed to renew lock with ID '{lockId}'.")
     {
+        ArgumentNullException.ThrowIfNull(lockId);
+
         LockId = lockId;
     }
 }
