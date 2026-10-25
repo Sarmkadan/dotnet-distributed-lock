@@ -1002,6 +1002,60 @@ public class ExampleUsage
 }
 ```
 
+## Export Formats
+
+The `SarmKadan.DistributedLock.Formatters` namespace (source in `src/Formatters/`) turns lock data into external formats for API responses, persistence, logs, and integrations. Status and full API details are in [`docs/formatters.md`](docs/formatters.md).
+
+Important: `src/Formatters/**` is excluded from `SarmKadan.DistributedLock.csproj`, so these types are not part of the library build or the NuGet package. To use them, copy the files into your own project. Known issue: as committed, the method bodies in `JsonLockSerializer.cs` and `XmlLockSerializer.cs` are malformed and do not compile yet.
+
+| Type | Format | Status |
+|------|--------|--------|
+| `CsvLockExporter` | CSV | Placeholder. The class has no members yet. |
+| `JsonLockSerializer` | JSON | Static helper for locks and metrics, plus a generic `JsonLockSerializer<T>`. |
+| `XmlLockSerializer` | XML | Static helper for locks and metrics. |
+
+### CsvLockExporter
+
+`CsvLockExporter` is reserved for CSV export (spreadsheets, audits, bulk reporting). It is currently an empty class, so do not call it yet.
+
+### JsonLockSerializer
+
+- `SerializeLock`, `SerializeLocks`, `DeserializeLock`, `DeserializeLocks`, `SerializeMetrics`, and `SerializeLockPretty` convert `Lock` and `LockMetrics` to and from JSON.
+- Property names are camelCase, null properties are omitted, enums are written as camelCase strings, and `DateTime` values are written in UTC (ISO 8601, `"O"` format) by `UtcDateTimeConverter`.
+- `SerializeLockPretty` produces indented output for logs and debugging.
+- `JsonLockSerializer<T>` (implements `ILockSerializer<T>`) applies the same camelCase and null-omission rules to any reference type, but does not use `UtcDateTimeConverter`.
+
+```csharp
+using SarmKadan.DistributedLock.Formatters;
+
+string json = JsonLockSerializer.SerializeLock(myLock);
+Lock? restored = JsonLockSerializer.DeserializeLock(json);
+
+string pretty = JsonLockSerializer.SerializeLockPretty(myLock);
+```
+
+### XmlLockSerializer
+
+- `SerializeLock` and `DeserializeLock` use `XmlSerializer` on `Lock`. `SerializeLocks` wraps the locks in a `<Locks>` root with `Count` and `ExportTime` attributes.
+- Output is UTF-8, indented with two spaces, and uses the namespace `http://sarmkadan.com/distributedlock/2026`.
+- `ExportMetrics` writes a `<LockMetrics>` root with one `<Metric>` element per item.
+
+```csharp
+using SarmKadan.DistributedLock.Formatters;
+
+string xml = XmlLockSerializer.SerializeLock(myLock);
+Lock? restored = XmlLockSerializer.DeserializeLock(xml);
+
+string export = XmlLockSerializer.SerializeLocks(activeLocks);
+string metricsXml = XmlLockSerializer.ExportMetrics(metrics);
+```
+
+### Choosing a format
+
+- JSON for APIs, storage, and most modern consumers.
+- XML for systems that require XML or a fixed schema.
+- CSV is planned but not implemented.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE). Copyright (c) 2026 Vladyslav Zaiets.
