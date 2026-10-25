@@ -186,7 +186,18 @@ public static class ValidationHelper
 /// </summary>
 public class ValidationResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether validation passed without errors.
+    /// </summary>
     public bool IsValid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of validation error messages collected during validation.
+    /// </summary>
     public List<string> Errors { get; set; } = new();
+
+    /// <summary>
+    /// Gets all validation error messages joined into a single string separated by "; ".
+    /// </summary>
     public string ErrorMessage => string.Join("; ", Errors);
 }
