@@ -33,6 +33,24 @@ public static class ContentionMetricsExtensions
     }
 
     /// <summary>
+    /// Gets the share of waiter registrations that found at least one other waiter already queued,
+    /// as a percentage (0-100) of <see cref="ContentionMetrics.TotalWaiterRegistrations"/>.
+    /// Returns 0 when no waiters have been registered.
+    /// </summary>
+    /// <param name="metrics">The contention metrics instance.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="metrics"/> is null.</exception>
+    /// <returns>The contention event percentage (0-100).</returns>
+    public static double GetContentionEventPercentage(this ContentionMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+
+        var registrations = metrics.TotalWaiterRegistrations;
+        var events = metrics.TotalContentionEvents;
+
+        return registrations == 0 ? 0d : Math.Min(100d, (events * 100d) / registrations);
+    }
+
+    /// <summary>
     /// Gets a human-readable summary of the contention statistics.
     /// </summary>
     /// <param name="metrics">The contention metrics instance.</param>
